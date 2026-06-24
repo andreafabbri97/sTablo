@@ -125,17 +125,26 @@ export const playerCreateSchema = z.object({
   nickname: z.string().trim().max(24).optional().or(z.literal("")),
 });
 
+/** Single match/game score: a non-negative integer in a sane range. */
+export const scoreValueSchema = z.coerce.number().int().min(0).max(99);
+
+/** Allowed tournament formats — kept in sync with the `tournament_format` DB enum. */
+export const tournamentFormatSchema = z.enum([
+  "league",
+  "round_robin",
+  "single_elim",
+  "groups_knockout",
+  "swiss",
+  "americano",
+]);
+
+/** Allowed disciplines — kept in sync with the `tournament_discipline` DB enum. */
+export const tournamentDisciplineSchema = z.enum(["singles", "doubles", "teams"]);
+
 export const tournamentSchema = z.object({
   name: z.string().trim().min(2).max(60),
-  format: z.enum([
-    "league",
-    "round_robin",
-    "single_elim",
-    "groups_knockout",
-    "swiss",
-    "americano",
-  ]),
-  discipline: z.enum(["singles", "doubles", "teams"]),
+  format: tournamentFormatSchema,
+  discipline: tournamentDisciplineSchema,
   description: z.string().trim().max(280).optional().or(z.literal("")),
   ranked: z.boolean().default(true),
   doubleRound: z.boolean().optional(),

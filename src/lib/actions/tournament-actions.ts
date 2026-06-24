@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, inArray, and, ne } from "drizzle-orm";
 import { bustDataCache } from "@/lib/cache";
 import { db } from "@/lib/db";
 import {
@@ -14,7 +14,13 @@ import {
   players,
   type TournamentConfig,
 } from "@/lib/db/schema";
-import { tournamentSchema, type TournamentInput } from "@/lib/validation";
+import {
+  tournamentSchema,
+  type TournamentInput,
+  scoreValueSchema,
+  tournamentFormatSchema,
+  tournamentDisciplineSchema,
+} from "@/lib/validation";
 import { assertAdmin, assertAuth } from "@/lib/auth-helpers";
 import { slugify } from "@/lib/utils";
 import {
@@ -510,10 +516,18 @@ export async function recordTournamentMatch(
 
   try {
     await db.transaction(async (tx) => {
-      await tx
+      // Guard anti doppio-invio: l'UPDATE condizionale vince una sola volta.
+      // Senza, due richieste concorrenti applicherebbero l'ELO incrementale due
+      // volte (righe partecipanti ed eloHistory duplicate). Se non tocca righe,
+      // annulliamo la transazione.
+      const updated = await tx
         .update(matches)
         .set({ scoreA, scoreB, winner, status: "completed", playedAt: new Date() })
-        .where(eq(matches.id, matchId));
+        .where(and(eq(matches.id, matchId), ne(matches.status, "completed")))
+        .returning({ id: matches.id });
+      if (updated.length === 0) {
+        throw new Error("ALREADY_RECORDED");
+      }
 
       await applyMatchResult(tx, {
         matchId,
@@ -547,6 +561,9 @@ export async function recordTournamentMatch(
     revalidatePath("/classifica");
     return { ok: true };
   } catch (error) {
+    if (error instanceof Error && error.message === "ALREADY_RECORDED") {
+      return { ok: false, error: "Risultato già registrato" };
+    }
     console.error("[recordTournamentMatch]", error);
     return { ok: false, error: "Errore nel salvataggio del risultato" };
   }
@@ -568,6 +585,15 @@ export async function recordAmericanoMatch(
   }
   // L'Americano usa un punteggio per game configurabile ("Punti per game") ed è
   // volutamente libero: si vieta solo il pareggio, non la regola tavolino a 15.
+  // Validiamo comunque che siano interi nel range sensato: senza questo guard un
+  // client potrebbe inviare NaN/float/999999 e corrompere il ricalcolo ELO.
+  const parsedA = scoreValueSchema.safeParse(scoreA);
+  const parsedB = scoreValueSchema.safeParse(scoreB);
+  if (!parsedA.success || !parsedB.success) {
+    return { ok: false, error: "Punteggio non valido (interi tra 0 e 99)" };
+  }
+  scoreA = parsedA.data;
+  scoreB = parsedB.data;
   if (scoreA === scoreB) {
     return { ok: false, error: "Il punteggio non può finire in parità" };
   }
@@ -599,10 +625,16 @@ export async function recordAmericanoMatch(
   const winner: "A" | "B" = scoreA > scoreB ? "A" : "B";
 
   try {
-    await db
+    // Guard anti doppio-invio: solo la prima richiesta concorrente vince
+    // (status passa da non-completed a completed in modo atomico).
+    const updated = await db
       .update(matches)
       .set({ scoreA, scoreB, winner, status: "completed", playedAt: new Date() })
-      .where(eq(matches.id, matchId));
+      .where(and(eq(matches.id, matchId), ne(matches.status, "completed")))
+      .returning({ id: matches.id });
+    if (updated.length === 0) {
+      return { ok: false, error: "Risultato già registrato" };
+    }
 
     // Participants were written at schedule time, so we only set the score and
     // replay ratings — calling applyMatchResult here would duplicate them.
@@ -978,6 +1010,16 @@ export async function createOpenTournament(
   }
 
   if (!input.name?.trim()) return { ok: false, error: "Inserisci un nome" };
+
+  // I valori finiscono in colonne enum del DB: validiamoli invece di castarli,
+  // così un payload manomesso riceve un errore chiaro anziché un 500 grezzo.
+  const formatParse = tournamentFormatSchema.safeParse(input.format);
+  if (!formatParse.success) return { ok: false, error: "Formato non valido" };
+  const disciplineParse = tournamentDisciplineSchema.safeParse(input.discipline);
+  if (!disciplineParse.success) {
+    return { ok: false, error: "Disciplina non valida" };
+  }
+
   const token = crypto.randomUUID();
   const slug = await uniqueTournamentSlug(input.name);
   const config: TournamentConfig = {
@@ -995,8 +1037,8 @@ export async function createOpenTournament(
     await db.insert(tournaments).values({
       name: input.name.trim(),
       slug,
-      format: input.format as typeof tournaments.$inferInsert["format"],
-      discipline: input.discipline as typeof tournaments.$inferInsert["discipline"],
+      format: formatParse.data,
+      discipline: disciplineParse.data,
       status: "draft",
       description: input.description || null,
       config,
@@ -1114,6 +1156,11 @@ export async function inviteFriendsToTournament(
     user = await assertAuth();
   } catch {
     return { ok: false, error: "Devi accedere" };
+  }
+
+  // Difesa: rifiuta payload abnormi prima di toccare il DB.
+  if (!Array.isArray(userIds) || userIds.length > 200) {
+    return { ok: false, error: "Troppi destinatari" };
   }
 
   const t = await db.query.tournaments.findFirst({
