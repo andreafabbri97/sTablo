@@ -73,31 +73,43 @@ export function MatchExplorer({
           ))}
         </div>
 
-        {/* Search + dates */}
-        <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        {/* Search */}
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cerca giocatore…"
+            className="pl-9"
+          />
+        </div>
+
+        {/* Dates — always on a single row */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted">
+              📅 Dal
+            </label>
             <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cerca giocatore…"
-              className="pl-9"
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              aria-label="Dal giorno"
+              className="w-full"
             />
           </div>
-          <Input
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            aria-label="Dal"
-            className="sm:w-[150px]"
-          />
-          <Input
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            aria-label="Al"
-            className="sm:w-[150px]"
-          />
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted">
+              📅 Al
+            </label>
+            <Input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              aria-label="Al giorno"
+              className="w-full"
+            />
+          </div>
         </div>
 
         <div className="flex items-center justify-between px-1">
