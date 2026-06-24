@@ -11,8 +11,10 @@ import { FifaCard } from "@/components/player/fifa-card";
 import { LevelBar } from "@/components/player/level-bar";
 import { AttributeBars } from "@/components/player/attribute-bars";
 import { EloChart } from "@/components/player/elo-chart";
+import { BadgeShelf } from "@/components/player/badge-shelf";
 import { getPlayerWithStatsBySlug } from "@/lib/stats";
 import { getEloSeries, getMatchesForPlayer, getPlayerSlugById } from "@/lib/queries";
+import { computeBadges } from "@/lib/badges";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { userIdForPlayer, getFriendState } from "@/lib/friends";
 import { AddFriendButton } from "@/components/friends/add-friend-button";
@@ -41,7 +43,17 @@ export default async function PlayerPage({
   const data = await safe(() => getPlayerWithStatsBySlug(slug), null);
   if (!data) notFound();
 
-  const { player, stats, level, attributes, overall } = data;
+  const { player, stats, level, attributes, overall, tournamentsWon } = data;
+  const badges = computeBadges({
+    played: stats.played,
+    won: stats.won,
+    winRate: stats.winRate,
+    bestStreak: stats.bestStreak,
+    currentStreak: stats.currentStreak,
+    peakElo: player.peakElo,
+    tournamentsWon,
+    level: level.level,
+  });
   const [user, series, recent] = await Promise.all([
     getCurrentUser(),
     safe(() => getEloSeries(player.id, "player_singles"), []),
@@ -162,6 +174,9 @@ export default async function PlayerPage({
         <StatBox label="Striscia" value={streakLabel(stats.currentStreak)} />
         <StatBox label="Miglior serie" value={`${stats.bestStreak}V`} />
       </div>
+
+      {/* Trofei — sbloccati dalle statistiche pubbliche */}
+      <BadgeShelf badges={badges} ownerName={player.name} />
 
       {/* Elo chart */}
       <Card>

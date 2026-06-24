@@ -146,6 +146,7 @@ export type PlayerWithStats = {
   level: LevelInfo;
   attributes: Attributes;
   overall: number;
+  tournamentsWon: number;
 };
 
 export const getPlayerWithStats = cachedQuery(
@@ -194,7 +195,14 @@ async function buildPlayerWithStats(
     },
     player.playStyle,
   );
-  return { player, stats, level, attributes, overall: overall(attributes) };
+  return {
+    player,
+    stats,
+    level,
+    attributes,
+    overall: overall(attributes),
+    tournamentsWon,
+  };
 }
 
 async function countTournamentWins(playerId: string): Promise<number> {
