@@ -27,7 +27,7 @@ export function TournamentForm({ players }: { players: Option[] }) {
 
   const [name, setName] = useState("");
   const [format, setFormat] = useState<Format>("league");
-  const [discipline, setDiscipline] = useState<Discipline>("singles");
+  const [discipline, setDiscipline] = useState<Discipline>("doubles");
   const [ranked, setRanked] = useState(false);
   const [doubleRound, setDoubleRound] = useState(false);
   const [thirdPlace, setThirdPlace] = useState(false);
