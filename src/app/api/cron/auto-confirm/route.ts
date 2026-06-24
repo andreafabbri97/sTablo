@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { updateTag } from "next/cache";
-import { DATA_TAG } from "@/lib/cache";
+import { bustDataCache } from "@/lib/cache";
 import { autoConfirmExpired } from "@/lib/match-engine";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +26,7 @@ export async function GET(request: Request) {
 
   try {
     const confirmed = await autoConfirmExpired();
-    if (confirmed > 0) updateTag(DATA_TAG);
+    if (confirmed > 0) bustDataCache();
     return NextResponse.json({ ok: true, confirmed });
   } catch (error) {
     console.error("[cron/auto-confirm]", error);

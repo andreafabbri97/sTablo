@@ -1,9 +1,9 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { eq, and, ne } from "drizzle-orm";
 import { compare, hash } from "bcryptjs";
-import { DATA_TAG } from "@/lib/cache";
+import { bustDataCache } from "@/lib/cache";
 import { db } from "@/lib/db";
 import { players, teams, users } from "@/lib/db/schema";
 import {
@@ -78,7 +78,7 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
     const updated = await db.query.players.findFirst({
       where: eq(players.id, user.playerId),
     });
-    updateTag(DATA_TAG);
+    bustDataCache();
     revalidatePath("/profilo");
     if (updated) revalidatePath(`/giocatori/${updated.slug}`);
     return { ok: true };
@@ -151,7 +151,7 @@ export async function createPlayer(input: unknown): Promise<ActionResult> {
       slug,
       avatarColor: colorFromString(name),
     });
-    updateTag(DATA_TAG);
+    bustDataCache();
     revalidatePath("/giocatori");
     revalidatePath("/admin");
     return { ok: true };
@@ -191,7 +191,7 @@ export async function createTeam(input: unknown): Promise<ActionResult> {
       player2Id: p2,
       avatarColor: colorFromString(name),
     });
-    updateTag(DATA_TAG);
+    bustDataCache();
     revalidatePath("/admin");
     revalidatePath("/classifica");
     return { ok: true };

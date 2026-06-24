@@ -1,9 +1,9 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { eq, and, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { DATA_TAG } from "@/lib/cache";
+import { bustDataCache } from "@/lib/cache";
 import { matches, teams, users } from "@/lib/db/schema";
 import { matchSchema } from "@/lib/validation";
 import { assertAuth, assertAdmin } from "@/lib/auth-helpers";
@@ -32,7 +32,7 @@ async function resolveDoublesSide(
 }
 
 function refresh() {
-  updateTag(DATA_TAG);
+  bustDataCache();
   revalidatePath("/");
   revalidatePath("/partite");
 }

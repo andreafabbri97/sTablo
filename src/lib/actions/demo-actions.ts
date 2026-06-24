@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { assertAdmin } from "@/lib/auth-helpers";
-import { DATA_TAG } from "@/lib/cache";
+import { bustDataCache } from "@/lib/cache";
 import { clearDemoMatches, insertDemoMatches } from "@/lib/demo";
 import type { ActionResult } from "./auth-actions";
 
@@ -14,7 +14,7 @@ export async function removeDemoMatches(): Promise<ActionResult> {
   }
   try {
     await clearDemoMatches();
-    updateTag(DATA_TAG);
+    bustDataCache();
     revalidatePath("/");
     revalidatePath("/admin");
     return { ok: true };
@@ -32,7 +32,7 @@ export async function regenerateDemoMatches(): Promise<ActionResult> {
   }
   try {
     await insertDemoMatches();
-    updateTag(DATA_TAG);
+    bustDataCache();
     revalidatePath("/");
     revalidatePath("/admin");
     return { ok: true };

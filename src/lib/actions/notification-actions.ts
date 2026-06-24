@@ -1,8 +1,7 @@
 "use server";
 
-import { updateTag } from "next/cache";
 import { assertAuth } from "@/lib/auth-helpers";
-import { DATA_TAG } from "@/lib/cache";
+import { bustDataCache } from "@/lib/cache";
 import { getIncomingRequests, type FriendProfile } from "@/lib/friends";
 import { getPendingMatches } from "@/lib/queries";
 import { canConfirmMatch } from "@/lib/match-perms";
@@ -35,7 +34,7 @@ export async function fetchNotifications(): Promise<Notifications> {
   try {
     // Opportunistic auto-confirm of expired results while users are active.
     const flipped = await autoConfirmExpired().catch(() => 0);
-    if (flipped > 0) updateTag(DATA_TAG);
+    if (flipped > 0) bustDataCache();
 
     const [friendRequests, pending, tournamentInvites] = await Promise.all([
       getIncomingRequests(user.id),

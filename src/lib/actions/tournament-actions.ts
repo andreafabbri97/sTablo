@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { eq, inArray, and } from "drizzle-orm";
-import { DATA_TAG } from "@/lib/cache";
+import { bustDataCache } from "@/lib/cache";
 import { db } from "@/lib/db";
 import {
   tournaments,
@@ -176,7 +176,7 @@ export async function createTournament(input: unknown): Promise<CreateResult> {
       }
     });
 
-    updateTag(DATA_TAG);
+    bustDataCache();
     revalidatePath("/tornei");
     return { ok: true, slug };
   } catch (error) {
@@ -541,7 +541,7 @@ export async function recordTournamentMatch(
     await maybeGenerateKnockout(tournament.id);
     await maybeCompleteTournament(tournament.id);
 
-    updateTag(DATA_TAG);
+    bustDataCache();
     revalidatePath(`/tornei/${tournament.slug}`);
     revalidatePath("/tornei");
     revalidatePath("/classifica");
@@ -611,7 +611,7 @@ export async function recordAmericanoMatch(
     }
     await maybeCompleteTournament(tournament.id);
 
-    updateTag(DATA_TAG);
+    bustDataCache();
     revalidatePath(`/tornei/${tournament.slug}`);
     revalidatePath("/tornei");
     revalidatePath("/classifica");
@@ -934,7 +934,7 @@ export async function generateNextSwissRound(
         .set({ currentRound: maxRound + 1 })
         .where(eq(tournaments.id, tournamentId));
     });
-    updateTag(DATA_TAG);
+    bustDataCache();
     revalidatePath(`/tornei/${t.slug}`);
     return { ok: true };
   } catch (error) {
@@ -1006,7 +1006,7 @@ export async function createOpenTournament(
       visibility: input.visibility === "private" ? "private" : "public",
       createdById: user.id,
     });
-    updateTag(DATA_TAG);
+    bustDataCache();
     revalidatePath("/tornei");
     return { ok: true, slug };
   } catch (error) {
@@ -1094,7 +1094,7 @@ export async function joinTournament(
       ),
     );
 
-  updateTag(DATA_TAG);
+  bustDataCache();
   revalidatePath(`/tornei/${t.slug}`);
   revalidatePath("/tornei");
   return { ok: true, slug: t.slug };
@@ -1158,7 +1158,7 @@ export async function inviteFriendsToTournament(
     });
   }
 
-  updateTag(DATA_TAG);
+  bustDataCache();
   revalidatePath(`/tornei/${t.slug}`);
   return { ok: true, invited: fresh.length };
 }
@@ -1213,7 +1213,7 @@ export async function startTournament(
           .set({ status: "active", currentRound: 1, startedAt: new Date() })
           .where(eq(tournaments.id, tournamentId));
       });
-      updateTag(DATA_TAG);
+      bustDataCache();
       revalidatePath(`/tornei/${t.slug}`);
       revalidatePath("/tornei");
       return { ok: true };
@@ -1251,7 +1251,7 @@ export async function startTournament(
         .set({ status: "active", currentRound: 1, startedAt: new Date() })
         .where(eq(tournaments.id, tournamentId));
     });
-    updateTag(DATA_TAG);
+    bustDataCache();
     revalidatePath(`/tornei/${t.slug}`);
     revalidatePath("/tornei");
     return { ok: true };
@@ -1277,7 +1277,7 @@ export async function deleteTournament(
     // Tournament matches affected Elo; rebuild to stay consistent.
     const { recomputeAllElo } = await import("@/lib/match-engine");
     await recomputeAllElo();
-    updateTag(DATA_TAG);
+    bustDataCache();
     revalidatePath("/tornei");
     revalidatePath("/classifica");
     if (t) revalidatePath(`/tornei/${t.slug}`);
