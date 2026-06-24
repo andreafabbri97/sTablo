@@ -43,6 +43,7 @@ import {
   type StandingMatch,
   type AmericanoParticipant,
 } from "@/lib/tournament/standings";
+import { pairSwissRound } from "@/lib/tournament/swiss";
 import { validateTavolinoScore } from "@/lib/score-rules";
 import type { ActionResult } from "./auth-actions";
 
@@ -879,59 +880,21 @@ export async function generateNextSwissRound(
   }));
   const standings = computeStandings(stEntrants, all.map(toStandingMatch));
 
-  // Avoid rematches
-  const played = new Set<string>();
-  for (const m of all) {
-    if (m.entrantAId && m.entrantBId) {
-      played.add(pairKey(m.entrantAId, m.entrantBId));
-    }
-  }
+  // Pure pairing core: avoid rematches, give the bye to the lowest-ranked
+  // entrant who has not already had one. (see tournament/swiss.ts)
+  const playedPairs = all
+    .filter((m) => m.entrantAId && m.entrantBId)
+    .map((m) => [m.entrantAId, m.entrantBId] as [string, string]);
+  const hadBye = all
+    .filter((m) => m.stage === "swiss" && !m.entrantBId && m.winner === "A")
+    .map((m) => m.entrantAId)
+    .filter((id): id is string => !!id);
 
-  const queue = standings.map((s) => s.entrant.id);
-
-  // Odd entrants → one player gets a bye (a free win). Prefer the lowest-ranked
-  // who has not already had a bye in this tournament.
-  let byeId: string | null = null;
-  if (queue.length % 2 === 1) {
-    const hadBye = new Set(
-      all
-        .filter((m) => m.stage === "swiss" && !m.entrantBId && m.winner === "A")
-        .map((m) => m.entrantAId),
-    );
-    for (let i = queue.length - 1; i >= 0; i--) {
-      if (!hadBye.has(queue[i])) {
-        byeId = queue[i];
-        break;
-      }
-    }
-    byeId ??= queue[queue.length - 1]; // everyone already had one
-    queue.splice(queue.indexOf(byeId), 1);
-  }
-
-  const pairs: [string, string][] = [];
-  const used = new Set<string>();
-  for (let i = 0; i < queue.length; i++) {
-    const a = queue[i];
-    if (used.has(a)) continue;
-    let partner: string | null = null;
-    for (let j = i + 1; j < queue.length; j++) {
-      const b = queue[j];
-      if (used.has(b)) continue;
-      if (!played.has(pairKey(a, b))) {
-        partner = b;
-        break;
-      }
-    }
-    // fallback: first available even if rematch
-    if (!partner) {
-      partner = queue.find((b) => b !== a && !used.has(b)) ?? null;
-    }
-    if (partner) {
-      used.add(a);
-      used.add(partner);
-      pairs.push([a, partner]);
-    }
-  }
+  const { pairs, byeId } = pairSwissRound({
+    ranked: standings.map((s) => s.entrant.id),
+    playedPairs,
+    hadBye,
+  });
 
   const matchFormat = t.discipline === "singles" ? "singles" : "doubles";
   try {
@@ -980,10 +943,6 @@ export async function generateNextSwissRound(
     console.error("[generateNextSwissRound]", error);
     return { ok: false, error: "Errore nella generazione del turno" };
   }
-}
-
-function pairKey(a: string, b: string): string {
-  return [a, b].sort().join(":");
 }
 
 /* ----------------------------------------------------------------------------
