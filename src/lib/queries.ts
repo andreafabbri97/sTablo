@@ -195,6 +195,19 @@ export const getPlayerOptions = cachedQuery(
   ["player-options"],
 );
 
+/** Slug for a player id — used to build links from a session (which has no slug). */
+export const getPlayerSlugById = cachedQuery(
+  async (playerId: string): Promise<string | null> => {
+    const row = await db
+      .select({ slug: players.slug })
+      .from(players)
+      .where(eq(players.id, playerId))
+      .limit(1);
+    return row[0]?.slug ?? null;
+  },
+  ["player-slug-by-id"],
+);
+
 export const getTeamOptions = cachedQuery(
   async () =>
     db

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Lock, Pencil, TrendingUp, Quote } from "lucide-react";
+import { Lock, Pencil, TrendingUp, Quote, Swords } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { LevelBar } from "@/components/player/level-bar";
 import { AttributeBars } from "@/components/player/attribute-bars";
 import { EloChart } from "@/components/player/elo-chart";
 import { getPlayerWithStatsBySlug } from "@/lib/stats";
-import { getEloSeries, getMatchesForPlayer } from "@/lib/queries";
+import { getEloSeries, getMatchesForPlayer, getPlayerSlugById } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { userIdForPlayer, getFriendState } from "@/lib/friends";
 import { AddFriendButton } from "@/components/friends/add-friend-button";
@@ -51,6 +51,12 @@ export default async function PlayerPage({
   const isOwner = user?.playerId === player.id;
   const showCard = player.statsPublic || isOwner || user?.role === "admin";
   const style = getPlayStyle(player.playStyle);
+
+  // Slug of the logged-in viewer's own profile, to build the head-to-head link.
+  const viewerSlug =
+    user?.playerId && user.playerId !== player.id
+      ? await safe(() => getPlayerSlugById(user.playerId as string), null)
+      : null;
 
   const targetUserId = await userIdForPlayer(player.id);
   const friendState = user
@@ -92,9 +98,19 @@ export default async function PlayerPage({
             </Link>
           </Button>
         ) : (
-          user &&
-          targetUserId && (
-            <AddFriendButton targetUserId={targetUserId} state={friendState} />
+          user && (
+            <div className="flex flex-col gap-2">
+              {targetUserId && (
+                <AddFriendButton targetUserId={targetUserId} state={friendState} />
+              )}
+              {viewerSlug && (
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/giocatori/${viewerSlug}/vs/${player.slug}`}>
+                    <Swords className="h-4 w-4" /> Testa a testa
+                  </Link>
+                </Button>
+              )}
+            </div>
           )
         )}
       </div>

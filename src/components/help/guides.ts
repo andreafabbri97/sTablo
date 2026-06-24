@@ -218,6 +218,7 @@ export const GUIDES: Record<string, Guide> = {
           "Usa la barra di ricerca per trovare subito un giocatore per nome o nickname.",
           "Tocca un giocatore per aprire il suo profilo completo.",
           "Vedi Elo, statistiche, stile di gioco e badge.",
+          "Dal profilo di un altro giocatore, tocca «Testa a testa» per vedere il vostro storico di sfide dirette.",
           "Aggiungi un giocatore agli amici per seguirlo più da vicino.",
         ],
       },
