@@ -3,10 +3,10 @@ import type { TournamentMatchView } from "@/lib/tournament/queries";
 
 export function Bracket({
   matches,
-  isAdmin,
+  canManage,
 }: {
   matches: TournamentMatchView[];
-  isAdmin: boolean;
+  canManage: boolean;
 }) {
   const main = matches.filter((m) => m.label !== "Finale 3°/4°");
   const thirdPlace = matches.find((m) => m.label === "Finale 3°/4°");
@@ -30,7 +30,7 @@ export function Bracket({
                 {col[0]?.label ?? `Turno ${r}`}
               </p>
               {col.map((m) => (
-                <MatchRow key={m.id} match={m} isAdmin={isAdmin} />
+                <MatchRow key={m.id} match={m} canManage={canManage} />
               ))}
             </div>
           );
@@ -42,7 +42,7 @@ export function Bracket({
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">
             Finale 3°/4° posto
           </p>
-          <MatchRow match={thirdPlace} isAdmin={isAdmin} />
+          <MatchRow match={thirdPlace} canManage={canManage} />
         </div>
       )}
     </div>

@@ -57,8 +57,15 @@ export default async function TournamentPage({
   const user = await getCurrentUser();
   const isAdmin = user?.role === "admin";
   const isCreator = !!user && tournament.createdById === user.id;
+  const canManage = isAdmin || isCreator;
   const meta = FORMAT_META[tournament.format];
   const ranked = tournament.config.ranked !== false;
+  const entrantLabel =
+    tournament.discipline === "singles"
+      ? "Giocatore"
+      : tournament.discipline === "teams"
+        ? "Squadra"
+        : "Coppia";
 
   const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "https";
@@ -146,7 +153,7 @@ export default async function TournamentPage({
       {tournament.status !== "draft" && (tournament.format === "league" || tournament.format === "round_robin") && (
         <>
           <Section title="Classifica">
-            <StandingsTable rows={standings} highlight={1} />
+            <StandingsTable rows={standings} highlight={1} entrantLabel={entrantLabel} />
           </Section>
           <Section title="Calendario">
             <div className="space-y-4">
@@ -157,7 +164,7 @@ export default async function TournamentPage({
                   </p>
                   <div className="space-y-2">
                     {ms.map((m) => (
-                      <MatchRow key={m.id} match={m} isAdmin={isAdmin} />
+                      <MatchRow key={m.id} match={m} canManage={canManage} />
                     ))}
                   </div>
                 </div>
@@ -170,7 +177,7 @@ export default async function TournamentPage({
       {tournament.status !== "draft" && tournament.format === "swiss" && (
         <>
           <Section title="Classifica">
-            <StandingsTable rows={standings} />
+            <StandingsTable rows={standings} entrantLabel={entrantLabel} />
           </Section>
           <Section title="Turni">
             <div className="space-y-4">
@@ -181,14 +188,14 @@ export default async function TournamentPage({
                   </p>
                   <div className="space-y-2">
                     {ms.map((m) => (
-                      <MatchRow key={m.id} match={m} isAdmin={isAdmin} />
+                      <MatchRow key={m.id} match={m} canManage={canManage} />
                     ))}
                   </div>
                 </div>
               ))}
             </div>
           </Section>
-          {isAdmin && tournament.status !== "completed" && (
+          {canManage && tournament.status !== "completed" && (
             <SwissControls
               tournamentId={tournament.id}
               disabled={(matchesByStage.swiss ?? []).some((m) => m.status !== "completed")}
@@ -199,7 +206,7 @@ export default async function TournamentPage({
 
       {tournament.status !== "draft" && tournament.format === "single_elim" && (
         <Section title="Tabellone">
-          <Bracket matches={matchesByStage.knockout ?? []} isAdmin={isAdmin} />
+          <Bracket matches={matchesByStage.knockout ?? []} canManage={canManage} />
         </Section>
       )}
 
@@ -213,12 +220,13 @@ export default async function TournamentPage({
                   <StandingsTable
                     rows={groupStandings[g]}
                     highlight={tournament.config.advancePerGroup ?? 2}
+                    entrantLabel={entrantLabel}
                   />
                   <div className="mt-2 space-y-2">
                     {(matchesByStage.group ?? [])
                       .filter((m) => m.groupName === g)
                       .map((m) => (
-                        <MatchRow key={m.id} match={m} isAdmin={isAdmin} />
+                        <MatchRow key={m.id} match={m} canManage={canManage} />
                       ))}
                   </div>
                 </div>
@@ -227,7 +235,7 @@ export default async function TournamentPage({
           </Section>
           {matchesByStage.knockout && matchesByStage.knockout.length > 0 ? (
             <Section title="Fase finale">
-              <Bracket matches={matchesByStage.knockout} isAdmin={isAdmin} />
+              <Bracket matches={matchesByStage.knockout} canManage={canManage} />
             </Section>
           ) : (
             <p className="text-sm text-muted">

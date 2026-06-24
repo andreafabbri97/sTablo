@@ -9,6 +9,7 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { AddFriendButton } from "@/components/friends/add-friend-button";
 import { RequestActions } from "@/components/friends/request-actions";
+import { RemoveFriendButton } from "@/components/friends/remove-friend-button";
 import { CopyLink } from "@/components/friends/copy-link";
 import { ProfileQr } from "@/components/friends/profile-qr";
 import { getCurrentUser } from "@/lib/auth-helpers";
@@ -105,7 +106,9 @@ export default async function AmiciPage() {
         ) : (
           <div className="grid gap-2 sm:grid-cols-2">
             {friends.map((f) => (
-              <FriendRow key={f.friendshipId} friend={f} />
+              <FriendRow key={f.friendshipId} friend={f}>
+                <RemoveFriendButton targetUserId={f.userId} />
+              </FriendRow>
             ))}
           </div>
         )}
@@ -151,17 +154,27 @@ function FriendRow({
   friend: FriendProfile;
   children?: React.ReactNode;
 }) {
-  const inner = (
-    <div className="card-surface flex items-center gap-3 p-3">
+  const identity = (
+    <>
       <Avatar name={friend.name} colorIndex={friend.avatarColor} size="sm" />
       <span className="flex-1 truncate text-sm font-semibold">{friend.name}</span>
+    </>
+  );
+  return (
+    <div className="card-surface flex items-center gap-3 p-3">
+      {friend.slug ? (
+        <Link
+          href={`/giocatori/${friend.slug}`}
+          className="flex min-w-0 flex-1 items-center gap-3 transition hover:text-brand"
+        >
+          {identity}
+        </Link>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-center gap-3">{identity}</div>
+      )}
       {children}
     </div>
   );
-  if (friend.slug && !children) {
-    return <Link href={`/giocatori/${friend.slug}`}>{inner}</Link>;
-  }
-  return inner;
 }
 
 function SectionTitle({ icon, title }: { icon: React.ReactNode; title: string }) {

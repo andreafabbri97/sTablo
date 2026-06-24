@@ -79,6 +79,11 @@ export default async function PlayerPage({
             <Badge tone="sea">Elo doppio {player.eloDoubles}</Badge>
             <Badge tone="gold">Picco {player.peakElo}</Badge>
           </div>
+          {player.bio && (
+            <p className="mt-3 max-w-prose whitespace-pre-line text-sm leading-relaxed text-muted">
+              {player.bio}
+            </p>
+          )}
         </div>
         {isOwner ? (
           <Button asChild variant="secondary" size="sm">

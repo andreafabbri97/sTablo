@@ -368,10 +368,11 @@ export async function recordTournamentMatch(
   scoreA: number,
   scoreB: number,
 ): Promise<ActionResult> {
+  let user;
   try {
-    await assertAdmin();
+    user = await assertAuth();
   } catch {
-    return { ok: false, error: "Azione riservata all'amministratore" };
+    return { ok: false, error: "Devi accedere" };
   }
   if (scoreA === scoreB) {
     return { ok: false, error: "Il punteggio non può finire in parità" };
@@ -394,6 +395,12 @@ export async function recordTournamentMatch(
     where: eq(tournaments.id, match.tournamentId),
   });
   if (!tournament) return { ok: false, error: "Torneo non trovato" };
+  if (user.role !== "admin" && tournament.createdById !== user.id) {
+    return {
+      ok: false,
+      error: "Solo l'organizzatore o un admin può inserire i risultati",
+    };
+  }
 
   const entrantRows = await db
     .select()
@@ -611,10 +618,11 @@ function toStandingMatch(m: typeof matches.$inferSelect): StandingMatch {
 export async function generateNextSwissRound(
   tournamentId: string,
 ): Promise<ActionResult> {
+  let user;
   try {
-    await assertAdmin();
+    user = await assertAuth();
   } catch {
-    return { ok: false, error: "Azione riservata all'amministratore" };
+    return { ok: false, error: "Devi accedere" };
   }
 
   const t = await db.query.tournaments.findFirst({
@@ -622,6 +630,12 @@ export async function generateNextSwissRound(
   });
   if (!t || t.format !== "swiss") {
     return { ok: false, error: "Torneo non valido" };
+  }
+  if (user.role !== "admin" && t.createdById !== user.id) {
+    return {
+      ok: false,
+      error: "Solo l'organizzatore o un admin può gestire il torneo",
+    };
   }
 
   const all = await db

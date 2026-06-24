@@ -8,14 +8,15 @@ import type { TournamentMatchView } from "@/lib/tournament/queries";
 
 export function MatchRow({
   match,
-  isAdmin,
+  canManage,
 }: {
   match: TournamentMatchView;
-  isAdmin: boolean;
+  /** Admin or the tournament organizer may record results. */
+  canManage: boolean;
 }) {
   const [editing, setEditing] = useState(false);
-  const [a, setA] = useState(18);
-  const [b, setB] = useState(15);
+  const [a, setA] = useState(0);
+  const [b, setB] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -60,7 +61,7 @@ export function MatchRow({
           {match.bName}
         </span>
 
-        {isAdmin && !completed && ready && !editing && (
+        {canManage && !completed && ready && !editing && (
           <button
             onClick={() => setEditing(true)}
             className="ml-1 grid h-7 w-7 place-items-center rounded-lg bg-brand text-white"
@@ -98,10 +99,16 @@ function ScoreInput({
   return (
     <input
       type="number"
+      inputMode="numeric"
       min={0}
       max={99}
       value={value}
-      onChange={(e) => onChange(Number(e.target.value))}
+      onFocus={(e) => e.target.select()}
+      onChange={(e) => {
+        const n = parseInt(e.target.value, 10);
+        onChange(Number.isNaN(n) ? 0 : Math.max(0, Math.min(99, n)));
+      }}
+      aria-label="Punteggio"
       className="h-9 w-12 rounded-lg border border-border bg-card text-center font-mono text-base font-bold"
     />
   );

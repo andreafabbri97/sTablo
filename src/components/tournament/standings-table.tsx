@@ -4,9 +4,12 @@ import type { StandingRow } from "@/lib/tournament/standings";
 export function StandingsTable({
   rows,
   highlight = 0,
+  entrantLabel = "Partecipante",
 }: {
   rows: StandingRow[];
   highlight?: number;
+  /** Column header for the entrant — depends on discipline (Giocatore/Coppia/Squadra). */
+  entrantLabel?: string;
 }) {
   if (rows.length === 0) return null;
   return (
@@ -15,7 +18,7 @@ export function StandingsTable({
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
             <th className="px-3 py-2 text-left font-semibold">#</th>
-            <th className="px-2 py-2 text-left font-semibold">Squadra</th>
+            <th className="px-2 py-2 text-left font-semibold">{entrantLabel}</th>
             <th className="px-2 py-2 text-center font-semibold">G</th>
             <th className="px-2 py-2 text-center font-semibold">V</th>
             <th className="px-2 py-2 text-center font-semibold">S</th>

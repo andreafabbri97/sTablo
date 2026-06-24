@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useTransition, useCallback } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Bell, Check, X, Clock } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
@@ -13,6 +14,7 @@ import {
 
 export function NotificationsBell() {
   const { status } = useSession();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<Notifications>({
     friendRequests: [],
@@ -25,16 +27,40 @@ export function NotificationsBell() {
     fetchNotifications().then(setData).catch(() => {});
   }, []);
 
+  // Refetch on auth and whenever the route changes (e.g. after confirming a
+  // match elsewhere), so the badge count never goes stale.
   useEffect(() => {
     if (status === "authenticated") load();
+  }, [status, load, pathname]);
+
+  // Keep fresh while the tab is open: poll lightly and on tab re-focus,
+  // but only when the page is actually visible.
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    const id = window.setInterval(onVisible, 60_000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(id);
+    };
   }, [status, load]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
     document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   if (status !== "authenticated") return null;
