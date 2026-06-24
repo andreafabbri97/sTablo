@@ -10,35 +10,36 @@ import { applyMatchResult, recomputeAllElo } from "./match-engine";
  * always have a creator, tournament matches always have a tournamentId, so the
  * marker never touches real data.
  *
- * Tavolino: si vince arrivando a 18.
+ * Tavolino: si vince arrivando a 15. Sul 14-14 si va ai vantaggi (due punti
+ * di scarto) fino al killer point: a 19-19 il 20° punto è decisivo (20-19).
  */
 type DemoSingle = [string, string, number, number, boolean];
 type DemoDouble = [[string, string], [string, string], number, number, boolean];
 
 export const DEMO_SINGLES: DemoSingle[] = [
-  ["mesh", "bernu", 18, 15, true],
-  ["edo", "toro", 18, 16, true],
-  ["dadda", "pau", 14, 18, true],
-  ["jaco", "mesh", 18, 17, true],
-  ["bernu", "edo", 18, 12, true],
-  ["toro", "dadda", 16, 18, false],
-  ["pau", "jaco", 18, 14, false],
-  ["mesh", "edo", 18, 13, false],
-  ["bernu", "pau", 11, 18, false],
-  ["dadda", "jaco", 20, 18, false],
+  ["mesh", "bernu", 15, 11, true],
+  ["edo", "toro", 15, 13, true],
+  ["dadda", "pau", 13, 15, true],
+  ["jaco", "mesh", 17, 15, true], // ai vantaggi
+  ["bernu", "edo", 15, 9, true],
+  ["toro", "dadda", 13, 15, false],
+  ["pau", "jaco", 15, 12, false],
+  ["mesh", "edo", 15, 10, false],
+  ["bernu", "pau", 11, 15, false],
+  ["dadda", "jaco", 20, 19, false], // killer point
 ];
 
 export const DEMO_DOUBLES: DemoDouble[] = [
-  [["mesh", "bernu"], ["edo", "toro"], 18, 15, true],
-  [["dadda", "pau"], ["jaco", "mesh"], 16, 18, true],
-  [["bernu", "edo"], ["toro", "dadda"], 18, 11, true],
-  [["pau", "jaco"], ["mesh", "edo"], 18, 16, true],
-  [["toro", "bernu"], ["dadda", "jaco"], 14, 18, true],
-  [["mesh", "toro"], ["edo", "pau"], 18, 13, false],
-  [["bernu", "jaco"], ["dadda", "mesh"], 18, 17, false],
-  [["edo", "dadda"], ["pau", "toro"], 15, 18, false],
-  [["jaco", "bernu"], ["mesh", "pau"], 18, 9, false],
-  [["toro", "edo"], ["dadda", "bernu"], 20, 18, false],
+  [["mesh", "bernu"], ["edo", "toro"], 15, 13, true],
+  [["dadda", "pau"], ["jaco", "mesh"], 16, 18, true], // ai vantaggi
+  [["bernu", "edo"], ["toro", "dadda"], 15, 9, true],
+  [["pau", "jaco"], ["mesh", "edo"], 15, 11, true],
+  [["toro", "bernu"], ["dadda", "jaco"], 13, 15, true],
+  [["mesh", "toro"], ["edo", "pau"], 15, 11, false],
+  [["bernu", "jaco"], ["dadda", "mesh"], 16, 14, false], // ai vantaggi
+  [["edo", "dadda"], ["pau", "toro"], 13, 15, false],
+  [["jaco", "bernu"], ["mesh", "pau"], 15, 7, false],
+  [["toro", "edo"], ["dadda", "bernu"], 20, 18, false], // ai vantaggi
 ];
 
 export const DEMO_TOTAL = DEMO_SINGLES.length + DEMO_DOUBLES.length;

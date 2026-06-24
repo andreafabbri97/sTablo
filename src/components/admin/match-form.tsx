@@ -142,7 +142,7 @@ export function MatchForm({
         </div>
         <div>
           <Label htmlFor="note">Nota (opzionale)</Label>
-          <Input id="note" maxLength={140} value={sel.note ?? ""} onChange={(e) => set("note", e.target.value)} placeholder="es. vittoria 18-16 ai vantaggi" />
+          <Input id="note" maxLength={140} value={sel.note ?? ""} onChange={(e) => set("note", e.target.value)} placeholder="es. vittoria 16-14 ai vantaggi" />
         </div>
       </div>
 

@@ -101,6 +101,14 @@ export const GUIDES: Record<string, Guide> = {
         ],
       },
       {
+        heading: "Punteggio del tavolino",
+        points: [
+          "Si vince arrivando a 15 punti.",
+          "Sul 14-14 si va ai vantaggi: serve uno scarto di 2 punti (es. 16-14, 17-15).",
+          "A 19-19 scatta il killer point: il 20° punto è decisivo (20-19).",
+        ],
+      },
+      {
         heading: "Buono a sapersi",
         points: [
           "Nel doppio scegli i singoli giocatori: niente team da preimpostare.",
