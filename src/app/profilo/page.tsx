@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { UserCog, ExternalLink, Mail } from "lucide-react";
+import { UserCog, ExternalLink, Mail, TrendingUp } from "lucide-react";
 import { PageHeader } from "@/components/ui/page";
-import { Card, CardTitle } from "@/components/ui/card";
+import { Card, CardTitle, CardLabel } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FifaCard } from "@/components/player/fifa-card";
 import { ProfileForm } from "@/components/player/profile-form";
 import { ChangePasswordForm } from "@/components/player/change-password-form";
 import { BadgeShelf } from "@/components/player/badge-shelf";
+import { EloChart } from "@/components/player/elo-chart";
 import { PushToggle } from "@/components/push-toggle";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { getPlayerWithStats } from "@/lib/stats";
+import { getEloSeries } from "@/lib/queries";
 import { computeBadges } from "@/lib/badges";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +46,8 @@ export default async function ProfiloPage() {
     tournamentsWon: data.tournamentsWon,
     level: data.level.level,
   });
+
+  const eloSeries = await getEloSeries(data.player.id, "player_singles");
 
   return (
     <div>
@@ -101,6 +105,14 @@ export default async function ProfiloPage() {
           <PushToggle />
         </div>
       </div>
+
+      {/* Andamento Elo — lo stesso grafico del profilo pubblico */}
+      <Card className="mt-6">
+        <CardLabel className="mb-1 flex items-center gap-1">
+          <TrendingUp className="h-3.5 w-3.5" /> Andamento Elo (singolo)
+        </CardLabel>
+        <EloChart data={eloSeries} />
+      </Card>
 
       {/* Bacheca trofei — gli stessi badge mostrati sul profilo pubblico */}
       <div className="mt-6">
