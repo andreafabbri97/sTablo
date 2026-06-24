@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { FifaCard } from "@/components/player/fifa-card";
 import { ProfileForm } from "@/components/player/profile-form";
 import { ChangePasswordForm } from "@/components/player/change-password-form";
+import { BadgeShelf } from "@/components/player/badge-shelf";
 import { PushToggle } from "@/components/push-toggle";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { getPlayerWithStats } from "@/lib/stats";
+import { computeBadges } from "@/lib/badges";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Il mio profilo" };
@@ -31,6 +33,17 @@ export default async function ProfiloPage() {
 
   const data = await getPlayerWithStats(user.playerId);
   if (!data) redirect("/");
+
+  const badges = computeBadges({
+    played: data.stats.played,
+    won: data.stats.won,
+    winRate: data.stats.winRate,
+    bestStreak: data.stats.bestStreak,
+    currentStreak: data.stats.currentStreak,
+    peakElo: data.player.peakElo,
+    tournamentsWon: data.tournamentsWon,
+    level: data.level.level,
+  });
 
   return (
     <div>
@@ -87,6 +100,11 @@ export default async function ProfiloPage() {
           </Card>
           <PushToggle />
         </div>
+      </div>
+
+      {/* Bacheca trofei — gli stessi badge mostrati sul profilo pubblico */}
+      <div className="mt-6">
+        <BadgeShelf badges={badges} ownerName={data.player.name} />
       </div>
     </div>
   );

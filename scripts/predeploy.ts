@@ -29,6 +29,10 @@ const url =
  */
 const ENSURE_SCHEMA_SQL = [
   `ALTER TABLE "players" ADD COLUMN IF NOT EXISTS "avatar_url" text;`,
+  // Hot-path index for the most common match reads/filters. Idempotent and
+  // independent of migrate()'s journal bookkeeping, so the DB stays fast even
+  // if migration 0009 is ever skipped.
+  `CREATE INDEX IF NOT EXISTS "matches_status_played_idx" ON "matches" ("status","played_at");`,
 ];
 
 async function main() {

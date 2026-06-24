@@ -15,14 +15,14 @@ export const GUIDES: Record<string, Guide> = {
     title: "La tua Home",
     emoji: "🏠",
     intro:
-      "È il tuo punto di partenza: un colpo d'occhio su come stai andando e cosa fare adesso.",
+      "Il punto di partenza: il podio, le ultime partite e le scorciatoie per giocare.",
     sections: [
       {
         heading: "Cosa trovi qui",
         points: [
-          "Le tue statistiche principali e l'andamento recente.",
-          "Scorciatoie rapide per registrare una partita o aprire un torneo.",
-          "Eventuali risultati in attesa di conferma da parte tua.",
+          "Il podio con i primi tre della classifica generale.",
+          "Le ultime partite giocate da tutta la community.",
+          "I numeri d'insieme: giocatori, partite e tornei.",
         ],
       },
       {
@@ -30,7 +30,7 @@ export const GUIDES: Record<string, Guide> = {
         points: [
           "Tocca «Nuova partita» per registrare un risultato in pochi secondi.",
           "Apri la Classifica per vedere la tua posizione.",
-          "Completa il profilo per sbloccare badge ed esperienza (XP).",
+          "Gioca e vinci per guadagnare XP, salire di livello e sbloccare i trofei.",
         ],
       },
     ],
@@ -165,7 +165,7 @@ export const GUIDES: Record<string, Guide> = {
       {
         heading: "Le scelte principali",
         points: [
-          "Formato: campionato, eliminazione, gironi o svizzero.",
+          "Formato: campionato, girone all'italiana, eliminazione diretta, gironi + eliminazione, svizzero o americano.",
           "Disciplina: Singolo (1v1) o Doppio (2v2). Nel doppio formi le coppie al volo.",
           "Classificato 🏆 muove l'Elo, Amichevole 🤝 dà solo XP.",
         ],
@@ -217,7 +217,7 @@ export const GUIDES: Record<string, Guide> = {
         points: [
           "Usa la barra di ricerca per trovare subito un giocatore per nome o nickname.",
           "Tocca un giocatore per aprire il suo profilo completo.",
-          "Vedi Elo, statistiche, stile di gioco e badge.",
+          "Vedi Elo, statistiche, stile di gioco e i trofei sbloccati.",
           "Dal profilo di un altro giocatore, tocca «Testa a testa» per vedere il vostro storico di sfide dirette.",
           "Aggiungi un giocatore agli amici per seguirlo più da vicino.",
         ],
@@ -238,14 +238,16 @@ export const GUIDES: Record<string, Guide> = {
           "Imposta nickname, motto, piede preferito, stile di gioco e mossa speciale.",
           "Scegli se rendere pubbliche o private le tue statistiche di gioco.",
           "Più completi il profilo, più la tua scheda è ricca.",
+          "In fondo trovi la tua bacheca trofei: si sbloccano giocando e vincendo.",
         ],
       },
       {
         heading: "Account e notifiche",
         points: [
           "Cambia la password dalla sezione Sicurezza.",
-          "Attiva le notifiche push per ricevere avvisi su conferme, amici e inviti — anche con l'app chiusa.",
-          "Su iPhone, installa prima l'app dalla schermata Home, poi attiva le notifiche.",
+          "Le notifiche push si attivano con un tocco quando l'app te lo propone; da qui puoi gestirle o disattivarle in qualsiasi momento.",
+          "Servono per avvisi su conferme, amici e inviti — anche con l'app chiusa.",
+          "Su iPhone, installa prima l'app dalla schermata Home, poi consenti le notifiche.",
         ],
       },
     ],

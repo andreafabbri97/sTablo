@@ -20,14 +20,21 @@ const FORMATS: { key: Format; label: string }[] = [
 export function MatchExplorer({
   matches,
   isAdmin,
+  totalCount,
 }: {
   matches: ShapedMatch[];
   isAdmin: boolean;
+  /** Total completed matches in the DB; when it exceeds the loaded window we
+   *  show a note so the count discrepancy is never confusing. */
+  totalCount?: number;
 }) {
   const [format, setFormat] = useState<Format>("all");
   const [query, setQuery] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+
+  const windowed =
+    typeof totalCount === "number" && totalCount > matches.length;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -131,6 +138,13 @@ export function MatchExplorer({
           )}
         </div>
       </div>
+
+      {windowed && (
+        <p className="px-1 text-xs text-muted">
+          Per velocità sono caricate le {matches.length} partite più recenti su{" "}
+          {totalCount} totali.
+        </p>
+      )}
 
       {filtered.length === 0 ? (
         <EmptyState title="Nessuna partita trovata" description="Prova a cambiare i filtri." />

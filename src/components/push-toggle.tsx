@@ -4,24 +4,12 @@ import { useEffect, useState } from "react";
 import { Bell, BellOff, BellRing, Loader2 } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { removePushSubscription, sendTestPush } from "@/lib/actions/push-actions";
 import {
-  savePushSubscription,
-  removePushSubscription,
-  sendTestPush,
-} from "@/lib/actions/push-actions";
-
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-
-/** Convert a base64url VAPID key to the ArrayBuffer the Push API expects. */
-function urlBase64ToBuffer(base64String: string): ArrayBuffer {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(base64);
-  const buffer = new ArrayBuffer(raw.length);
-  const view = new Uint8Array(buffer);
-  for (let i = 0; i < raw.length; i++) view[i] = raw.charCodeAt(i);
-  return buffer;
-}
+  pushSupported,
+  subscribeToPush,
+  getLocalSubscription,
+} from "@/lib/push-client";
 
 type State = "checking" | "unsupported" | "denied" | "off" | "on";
 
@@ -33,12 +21,7 @@ export function PushToggle() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (
-        typeof window === "undefined" ||
-        !("serviceWorker" in navigator) ||
-        !("PushManager" in window) ||
-        !("Notification" in window)
-      ) {
+      if (!pushSupported()) {
         if (!cancelled) setState("unsupported");
         return;
       }
@@ -47,8 +30,7 @@ export function PushToggle() {
         return;
       }
       try {
-        const reg = await navigator.serviceWorker.getRegistration();
-        const sub = reg ? await reg.pushManager.getSubscription() : null;
+        const sub = await getLocalSubscription();
         if (!cancelled) setState(sub ? "on" : "off");
       } catch {
         if (!cancelled) setState("off");
@@ -63,34 +45,17 @@ export function PushToggle() {
     setBusy(true);
     setMsg(null);
     try {
-      if (!VAPID_PUBLIC_KEY) {
-        setMsg("Notifiche non ancora configurate sul server.");
-        return;
-      }
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        setState(permission === "denied" ? "denied" : "off");
-        return;
-      }
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToBuffer(VAPID_PUBLIC_KEY),
-      });
-      const json = sub.toJSON();
-      if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
-        setMsg("Subscription non valida, riprova.");
-        return;
-      }
-      const res = await savePushSubscription(
-        {
-          endpoint: json.endpoint,
-          keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
-        },
-        navigator.userAgent,
-      );
+      const res = await subscribeToPush({ promptIfNeeded: true });
       if (!res.ok) {
-        setMsg(res.error);
+        if (res.reason === "denied") setState("denied");
+        if (res.reason === "no-key")
+          setMsg("Notifiche non ancora configurate sul server.");
+        else if (res.reason === "needs-prompt") setState("off");
+        else if (res.reason !== "denied")
+          setMsg(
+            res.message ??
+              "Impossibile attivare le notifiche su questo dispositivo.",
+          );
         return;
       }
       setState("on");
@@ -107,8 +72,7 @@ export function PushToggle() {
     setBusy(true);
     setMsg(null);
     try {
-      const reg = await navigator.serviceWorker.getRegistration();
-      const sub = reg ? await reg.pushManager.getSubscription() : null;
+      const sub = await getLocalSubscription();
       if (sub) {
         await removePushSubscription(sub.endpoint);
         await sub.unsubscribe();

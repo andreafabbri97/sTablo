@@ -1,4 +1,4 @@
-import { desc, eq, isNull, and, asc, inArray } from "drizzle-orm";
+import { desc, eq, isNull, and, asc, inArray, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
   matches,
@@ -102,13 +102,27 @@ export const getRecentMatches = cachedQuery(
   ["recent-matches"],
 );
 
+/**
+ * Completed matches, newest first. `limit` bounds the payload so the /partite
+ * page stays light once the table holds thousands of rows — the client filters
+ * within this window. Omit `limit` (e.g. internal callers) to load everything.
+ */
 export const getAllMatches = cachedQuery(
-  async (): Promise<ShapedMatch[]> => {
-    const rows = await loadMatches({ casualOnly: false });
+  async (limit?: number): Promise<ShapedMatch[]> => {
+    const rows = await loadMatches({ limit, casualOnly: false });
     return rows.map(shapeMatch);
   },
   ["all-matches"],
 );
+
+/** Count of completed matches — pairs with the windowed getAllMatches. */
+export const getMatchesCount = cachedQuery(async (): Promise<number> => {
+  const rows = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(matches)
+    .where(eq(matches.status, "completed"));
+  return rows[0]?.c ?? 0;
+}, ["matches-count"]);
 
 export const getPlayersList = cachedQuery(
   async () => db.select().from(players).orderBy(desc(players.eloSingles)),

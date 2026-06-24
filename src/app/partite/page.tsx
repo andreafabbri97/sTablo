@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { MatchCard } from "@/components/match-card";
 import { MatchExplorer } from "@/components/match-explorer";
 import { MatchConfirmActions } from "@/components/match-confirm-actions";
-import { getAllMatches, getPendingMatches } from "@/lib/queries";
+import { getAllMatches, getMatchesCount, getPendingMatches } from "@/lib/queries";
 import { canConfirmMatch } from "@/lib/match-perms";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { safe } from "@/lib/safe";
@@ -14,9 +14,13 @@ import { safe } from "@/lib/safe";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Partite" };
 
+/** Most-recent matches loaded for the explorer; older ones stay in the DB. */
+const MATCHES_WINDOW = 500;
+
 export default async function PartitePage() {
-  const [matches, pending, user] = await Promise.all([
-    safe(() => getAllMatches(), []),
+  const [matches, total, pending, user] = await Promise.all([
+    safe(() => getAllMatches(MATCHES_WINDOW), []),
+    safe(() => getMatchesCount(), 0),
     safe(() => getPendingMatches(), []),
     getCurrentUser(),
   ]);
@@ -28,7 +32,7 @@ export default async function PartitePage() {
       <PageHeader
         icon={<ListChecks className="h-6 w-6" />}
         title="Partite"
-        subtitle={`${matches.length} partite registrate`}
+        subtitle={`${total} partite registrate`}
         action={
           user && (
             <Button asChild size="sm">
@@ -86,7 +90,7 @@ export default async function PartitePage() {
           }
         />
       ) : (
-        <MatchExplorer matches={matches} isAdmin={isAdmin} />
+        <MatchExplorer matches={matches} isAdmin={isAdmin} totalCount={total} />
       )}
     </div>
   );

@@ -93,6 +93,39 @@ describe("tallyHeadToHead", () => {
     expect(r.doubles).toEqual({ total: 1, aWins: 0, bWins: 1 });
   });
 
+  it("counts 2v2 encounters whenever A and B faced off, regardless of partners", () => {
+    const r = tallyHeadToHead(A, B, [
+      // Same opponents, different partners each time — all are direct meetings.
+      match({
+        format: "doubles",
+        sideA: ["a", "c"],
+        sideB: ["b", "d"],
+        scoreA: 15,
+        scoreB: 9,
+      }),
+      match({
+        format: "doubles",
+        sideA: ["a", "e"],
+        sideB: ["b", "f"],
+        scoreA: 11,
+        scoreB: 15,
+      }),
+      // A on the other side, partnered with someone else again — still counts.
+      match({
+        format: "doubles",
+        sideA: ["b", "g"],
+        sideB: ["a", "h"],
+        scoreA: 8,
+        scoreB: 15,
+      }),
+    ]);
+    expect(r.total).toBe(3);
+    expect(r.doubles).toEqual({ total: 3, aWins: 2, bWins: 1 });
+    expect(r.singles).toEqual({ total: 0, aWins: 0, bWins: 0 });
+    expect(r.aWins).toBe(2);
+    expect(r.bWins).toBe(1);
+  });
+
   it("excludes matches where A and B were partners (same side)", () => {
     const r = tallyHeadToHead(A, B, [
       match({

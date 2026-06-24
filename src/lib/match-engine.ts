@@ -10,7 +10,7 @@ import {
   STARTING_ELO,
 } from "./db/schema";
 import { computeElo, sideRating } from "./elo";
-import { replayElo } from "./elo-replay";
+import { replayElo, type ParticipantRating } from "./elo-replay";
 import { sendPushToUsers } from "./push";
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -307,16 +307,14 @@ export async function recomputeAllElo(): Promise<void> {
       startingElo: STARTING_ELO,
     });
 
-    // Persist: participant before/after, then history, then final ratings.
-    for (const pr of result.participantRatings) {
-      await tx
-        .update(matchParticipants)
-        .set({ ratingBefore: pr.ratingBefore, ratingAfter: pr.ratingAfter })
-        .where(eq(matchParticipants.id, pr.participantId));
+    // Persist in batches. A single recompute can touch thousands of rows, so
+    // per-row round-trips would dominate the cost; group the writes instead.
+    await bulkUpdateParticipantRatings(tx, result.participantRatings);
+    for (const group of chunk(result.history, HISTORY_INSERT_CHUNK)) {
+      if (group.length > 0) await tx.insert(eloHistory).values(group);
     }
-    for (const h of result.history) {
-      await tx.insert(eloHistory).values(h);
-    }
+    // Player/team counts are bounded by the roster (tens, not thousands), so
+    // per-row updates here stay cheap.
     for (const [id, r] of result.players) {
       await tx
         .update(playersTable)
@@ -334,4 +332,42 @@ export async function recomputeAllElo(): Promise<void> {
         .where(eq(teamsTable.id, id));
     }
   });
+}
+
+/** Insert N elo_history rows per round-trip (Postgres caps params ~65k). */
+const HISTORY_INSERT_CHUNK = 1000;
+/** Update N participant ratings per round-trip via a single VALUES join. */
+const PARTICIPANT_UPDATE_CHUNK = 500;
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+/**
+ * Apply all participant rating_before/after in batches. A correlated
+ * `UPDATE … FROM (VALUES …)` rewrites up to PARTICIPANT_UPDATE_CHUNK rows in one
+ * statement instead of one round-trip per participant.
+ */
+async function bulkUpdateParticipantRatings(
+  tx: Tx,
+  ratings: ParticipantRating[],
+): Promise<void> {
+  for (const group of chunk(ratings, PARTICIPANT_UPDATE_CHUNK)) {
+    if (group.length === 0) continue;
+    const rows = sql.join(
+      group.map(
+        (r) =>
+          sql`(${r.participantId}::uuid, ${r.ratingBefore}::integer, ${r.ratingAfter}::integer)`,
+      ),
+      sql`, `,
+    );
+    await tx.execute(sql`
+      UPDATE ${matchParticipants} AS mp
+      SET "rating_before" = v.rb, "rating_after" = v.ra
+      FROM (VALUES ${rows}) AS v(id, rb, ra)
+      WHERE mp."id" = v.id
+    `);
+  }
 }

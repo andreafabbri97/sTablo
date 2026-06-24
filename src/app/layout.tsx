@@ -8,6 +8,7 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { RouteProgress } from "@/components/layout/route-progress";
 import { ServiceWorker } from "@/components/service-worker";
 import { InstallBanner } from "@/components/install-banner";
+import { PushPrompt } from "@/components/push-prompt";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const display = Sora({
@@ -64,6 +65,7 @@ export default function RootLayout({
           </main>
           <BottomNav />
           <InstallBanner />
+          <PushPrompt />
           <ServiceWorker />
         </Providers>
       </body>

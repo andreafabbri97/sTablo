@@ -217,6 +217,10 @@ export const matches = pgTable(
   (t) => [
     index("matches_tournament_idx").on(t.tournamentId),
     index("matches_played_idx").on(t.playedAt),
+    // Hot path: nearly every read filters status='completed' (often ordered by
+    // playedAt) and auto-confirm filters status='pending'. The composite keeps
+    // these fast once the table fills up with thousands of matches.
+    index("matches_status_played_idx").on(t.status, t.playedAt),
   ],
 );
 
