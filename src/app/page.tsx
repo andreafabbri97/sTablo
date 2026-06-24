@@ -5,7 +5,6 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { MatchCard } from "@/components/match-card";
 import { EmptyState } from "@/components/ui/page";
-import { HelpButton } from "@/components/help/help-button";
 import { getRanking } from "@/lib/stats";
 import { getRecentMatches } from "@/lib/queries";
 import { db } from "@/lib/db";
@@ -108,9 +107,6 @@ function Hero({ loggedIn }: { loggedIn: boolean }) {
         style={{ background: "radial-gradient(circle, var(--brand), transparent 70%)" }}
       />
       <div className="pointer-events-none absolute right-8 top-8 text-5xl animate-float">⚽</div>
-      <div className="absolute right-4 top-4 z-10">
-        <HelpButton topic="home" />
-      </div>
       <div className="relative max-w-lg">
         <Badge tone="ball" className="mb-3">🏖️ Rimini Beach Sport</Badge>
         <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
