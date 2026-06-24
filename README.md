@@ -97,5 +97,5 @@ Rating tipo scacchi con moltiplicatore **margine di vittoria** (un 15-2 pesa pi√
 ## üèì Il gioco
 
 Disciplina nata a Rimini, parente di footvolley/teqball: palla colpita con qualsiasi
-parte del corpo tranne mani/braccia, servizio di testa con rimbalzo sul tavolo, set a 15
-punti, vittoria con 2 di scarto e *killer point* sul 17-17.
+parte del corpo tranne mani/braccia, servizio di testa con rimbalzo sul tavolo. **Si
+vince arrivando a 18 punti** (con scarto, ai vantaggi).

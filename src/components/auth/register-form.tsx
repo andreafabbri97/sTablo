@@ -21,7 +21,7 @@ export function RegisterForm() {
     const form = new FormData(e.currentTarget);
     const payload = {
       name: String(form.get("name")),
-      email: String(form.get("email")),
+      username: String(form.get("username")).trim().toLowerCase(),
       password: String(form.get("password")),
       confirm: String(form.get("confirm")),
     };
@@ -34,7 +34,7 @@ export function RegisterForm() {
     }
 
     await signIn("credentials", {
-      email: payload.email,
+      username: payload.username,
       password: payload.password,
       redirect: false,
     });
@@ -50,9 +50,12 @@ export function RegisterForm() {
         <FieldError>{errors.name}</FieldError>
       </div>
       <div>
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" required placeholder="tu@esempio.it" autoComplete="email" />
-        <FieldError>{errors.email}</FieldError>
+        <Label htmlFor="username">Username</Label>
+        <Input id="username" name="username" required placeholder="es. mesh" autoComplete="username" minLength={3} maxLength={20} />
+        <FieldError>{errors.username}</FieldError>
+        <p className="mt-1 text-xs text-muted">
+          3-20 caratteri: lettere minuscole, numeri o underscore. Lo potrai cambiare dal profilo.
+        </p>
       </div>
       <div>
         <Label htmlFor="password">Password</Label>

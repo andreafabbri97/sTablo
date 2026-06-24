@@ -21,13 +21,13 @@ export function LoginForm() {
     setLoading(true);
     const form = new FormData(e.currentTarget);
     const res = await signIn("credentials", {
-      email: String(form.get("email")),
+      username: String(form.get("username")).trim().toLowerCase(),
       password: String(form.get("password")),
       redirect: false,
     });
     setLoading(false);
     if (res?.error) {
-      setError("Email o password non corretti");
+      setError("Username o password non corretti");
       return;
     }
     router.push(callbackUrl);
@@ -37,8 +37,8 @@ export function LoginForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" required placeholder="tu@esempio.it" />
+        <Label htmlFor="username">Username</Label>
+        <Input id="username" name="username" autoComplete="username" required placeholder="es. mesh" />
       </div>
       <div>
         <Label htmlFor="password">Password</Label>

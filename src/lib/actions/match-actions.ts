@@ -1,8 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { DATA_TAG } from "@/lib/cache";
 import { matches, teams } from "@/lib/db/schema";
 import { matchSchema } from "@/lib/validation";
 import { assertAdmin } from "@/lib/auth-helpers";
@@ -92,10 +93,8 @@ export async function recordMatch(input: unknown): Promise<ActionResult> {
       return match.id;
     });
 
+    updateTag(DATA_TAG);
     revalidatePath("/");
-    revalidatePath("/classifica");
-    revalidatePath("/partite");
-    revalidatePath("/giocatori");
     void matchId;
     return { ok: true };
   } catch (error) {
@@ -114,10 +113,8 @@ export async function deleteMatch(matchId: string): Promise<ActionResult> {
     await db.delete(matches).where(eq(matches.id, matchId));
     // Ratings are stateful: rebuild from the remaining history.
     await recomputeAllElo();
+    updateTag(DATA_TAG);
     revalidatePath("/");
-    revalidatePath("/classifica");
-    revalidatePath("/partite");
-    revalidatePath("/giocatori");
     return { ok: true };
   } catch (error) {
     console.error("[deleteMatch]", error);

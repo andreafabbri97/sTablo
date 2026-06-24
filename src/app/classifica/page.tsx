@@ -85,7 +85,7 @@ async function PlayerRanking({ discipline }: { discipline: RankingDiscipline }) 
           <div className="min-w-0 flex-1">
             <p className="truncate font-bold">{row.player.name}</p>
             <p className="text-xs text-muted">
-              {row.won}V · {row.lost}S · {pct(row.won, row.played)}%
+              Lv {row.level} · {row.won}V · {row.lost}S · {pct(row.won, row.played)}%
             </p>
           </div>
           <div className="text-right">

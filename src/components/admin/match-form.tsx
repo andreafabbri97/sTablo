@@ -21,8 +21,8 @@ export function MatchForm({
   const [format, setFormat] = useState<"singles" | "doubles">("singles");
   const [ranked, setRanked] = useState(true);
   const [useTeams, setUseTeams] = useState(false);
-  const [scoreA, setScoreA] = useState(15);
-  const [scoreB, setScoreB] = useState(11);
+  const [scoreA, setScoreA] = useState(18);
+  const [scoreB, setScoreB] = useState(15);
   const [sel, setSel] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -158,7 +158,7 @@ export function MatchForm({
         </div>
         <div>
           <Label htmlFor="note">Nota (opzionale)</Label>
-          <Input id="note" maxLength={140} value={sel.note ?? ""} onChange={(e) => set("note", e.target.value)} placeholder="es. killer point sul 17-17" />
+          <Input id="note" maxLength={140} value={sel.note ?? ""} onChange={(e) => set("note", e.target.value)} placeholder="es. vittoria 18-16 ai vantaggi" />
         </div>
       </div>
 

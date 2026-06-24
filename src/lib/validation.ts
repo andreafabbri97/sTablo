@@ -3,10 +3,27 @@ import { PLAY_STYLES } from "./gamification";
 
 const styleIds = PLAY_STYLES.map((s) => s.id) as [string, ...string[]];
 
+export const usernameSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(
+    /^[a-z0-9_]{3,20}$/,
+    "3-20 caratteri: lettere minuscole, numeri o underscore",
+  );
+
+const optionalEmail = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .email("Email non valida")
+  .optional()
+  .or(z.literal(""));
+
 export const registerSchema = z
   .object({
     name: z.string().trim().min(2, "Nome troppo corto").max(40),
-    email: z.string().trim().toLowerCase().email("Email non valida"),
+    username: usernameSchema,
     password: z.string().min(8, "Minimo 8 caratteri").max(72),
     confirm: z.string(),
   })
@@ -16,11 +33,13 @@ export const registerSchema = z
   });
 
 export const loginSchema = z.object({
-  email: z.string().trim().toLowerCase().email("Email non valida"),
+  username: usernameSchema,
   password: z.string().min(1, "Inserisci la password"),
 });
 
 export const profileSchema = z.object({
+  username: usernameSchema,
+  email: optionalEmail,
   nickname: z.string().trim().max(24).optional().or(z.literal("")),
   motto: z.string().trim().max(80).optional().or(z.literal("")),
   bio: z.string().trim().max(280).optional().or(z.literal("")),

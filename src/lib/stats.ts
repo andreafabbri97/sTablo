@@ -1,5 +1,6 @@
 import { and, eq, or, desc } from "drizzle-orm";
 import { db } from "./db";
+import { cachedQuery } from "./cache";
 import {
   matchParticipants,
   matches,
@@ -147,25 +148,27 @@ export type PlayerWithStats = {
   overall: number;
 };
 
-export async function getPlayerWithStats(
-  playerId: string,
-): Promise<PlayerWithStats | null> {
-  const player = await db.query.players.findFirst({
-    where: eq(players.id, playerId),
-  });
-  if (!player) return null;
-  return buildPlayerWithStats(player);
-}
+export const getPlayerWithStats = cachedQuery(
+  async (playerId: string): Promise<PlayerWithStats | null> => {
+    const player = await db.query.players.findFirst({
+      where: eq(players.id, playerId),
+    });
+    if (!player) return null;
+    return buildPlayerWithStats(player);
+  },
+  ["player-by-id"],
+);
 
-export async function getPlayerWithStatsBySlug(
-  slug: string,
-): Promise<PlayerWithStats | null> {
-  const player = await db.query.players.findFirst({
-    where: eq(players.slug, slug),
-  });
-  if (!player) return null;
-  return buildPlayerWithStats(player);
-}
+export const getPlayerWithStatsBySlug = cachedQuery(
+  async (slug: string): Promise<PlayerWithStats | null> => {
+    const player = await db.query.players.findFirst({
+      where: eq(players.slug, slug),
+    });
+    if (!player) return null;
+    return buildPlayerWithStats(player);
+  },
+  ["player-by-slug"],
+);
 
 async function buildPlayerWithStats(
   player: typeof players.$inferSelect,
@@ -231,30 +234,32 @@ export type RankRow = {
   points: number; // 3 per win
 };
 
-export async function getRanking(
+async function getRankingImpl(
   discipline: RankingDiscipline = "overall",
 ): Promise<RankRow[]> {
   const players_ = await db.select().from(players);
+  // All completed matches: ranked ones feed the competitive record/Elo, every
+  // match (ranked or friendly) feeds XP/level.
   const rows = await db
     .select({
       playerId: matchParticipants.playerId,
       side: matchParticipants.side,
       format: matches.format,
+      ranked: matches.ranked,
       scoreA: matches.scoreA,
       scoreB: matches.scoreB,
       winner: matches.winner,
     })
     .from(matchParticipants)
     .innerJoin(matches, eq(matchParticipants.matchId, matches.id))
-    .where(and(eq(matches.status, "completed"), eq(matches.ranked, true)));
+    .where(eq(matches.status, "completed"));
 
   const acc = new Map<
     string,
-    { played: number; won: number; lost: number; pf: number; pa: number }
+    { played: number; won: number; lost: number; pf: number; pa: number; xp: number }
   >();
 
   for (const r of rows) {
-    if (discipline !== "overall" && r.format !== discipline) continue;
     const isA = r.side === "A";
     const pf = (isA ? r.scoreA : r.scoreB) ?? 0;
     const pa = (isA ? r.scoreB : r.scoreA) ?? 0;
@@ -265,23 +270,46 @@ export async function getRanking(
       lost: 0,
       pf: 0,
       pa: 0,
+      xp: 0,
     };
-    cur.played++;
-    cur.pf += pf;
-    cur.pa += pa;
-    if (won) cur.won++;
-    else cur.lost++;
+    cur.xp += matchXp(won, pf, pa); // every match grants XP
+    if (r.ranked && (discipline === "overall" || r.format === discipline)) {
+      cur.played++;
+      cur.pf += pf;
+      cur.pa += pa;
+      if (won) cur.won++;
+      else cur.lost++;
+    }
     acc.set(r.playerId, cur);
   }
 
+  // Tournament wins (XP bonus + consistency with profile level)
+  const tWinRows = await db
+    .select({
+      playerId: tournamentEntrants.playerId,
+      partnerId: tournamentEntrants.partnerId,
+    })
+    .from(tournaments)
+    .innerJoin(
+      tournamentEntrants,
+      eq(tournaments.winnerEntrantId, tournamentEntrants.id),
+    )
+    .where(eq(tournaments.status, "completed"));
+  const tWins = new Map<string, number>();
+  for (const w of tWinRows) {
+    if (w.playerId) tWins.set(w.playerId, (tWins.get(w.playerId) ?? 0) + 1);
+    if (w.partnerId) tWins.set(w.partnerId, (tWins.get(w.partnerId) ?? 0) + 1);
+  }
+
   const result: RankRow[] = players_.map((p) => {
-    const a = acc.get(p.id) ?? { played: 0, won: 0, lost: 0, pf: 0, pa: 0 };
+    const a = acc.get(p.id) ?? { played: 0, won: 0, lost: 0, pf: 0, pa: 0, xp: 0 };
     const elo =
       discipline === "doubles"
         ? p.eloDoubles
         : discipline === "singles"
           ? p.eloSingles
           : Math.round((p.eloSingles + p.eloDoubles) / 2);
+    const totalXp = a.xp + (tWins.get(p.id) ?? 0) * 250;
     return {
       player: p,
       played: a.played,
@@ -290,7 +318,7 @@ export async function getRanking(
       pointDiff: a.pf - a.pa,
       winRate: a.played > 0 ? a.won / a.played : 0,
       elo,
-      level: 1,
+      level: levelFromXp(totalXp).level,
       points: a.won * 3,
     };
   });
@@ -301,6 +329,9 @@ export async function getRanking(
   return result;
 }
 
-export async function getTeamRanking() {
-  return db.select().from(teams).orderBy(desc(teams.eloDoubles));
-}
+export const getRanking = cachedQuery(getRankingImpl, ["ranking"]);
+
+export const getTeamRanking = cachedQuery(
+  async () => db.select().from(teams).orderBy(desc(teams.eloDoubles)),
+  ["team-ranking"],
+);

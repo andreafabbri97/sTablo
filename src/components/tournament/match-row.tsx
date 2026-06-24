@@ -14,8 +14,8 @@ export function MatchRow({
   isAdmin: boolean;
 }) {
   const [editing, setEditing] = useState(false);
-  const [a, setA] = useState(15);
-  const [b, setB] = useState(11);
+  const [a, setA] = useState(18);
+  const [b, setB] = useState(15);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 

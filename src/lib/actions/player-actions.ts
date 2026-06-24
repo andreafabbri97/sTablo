@@ -1,9 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { revalidatePath, updateTag } from "next/cache";
+import { eq, and, ne } from "drizzle-orm";
+import { DATA_TAG } from "@/lib/cache";
 import { db } from "@/lib/db";
-import { players, teams } from "@/lib/db/schema";
+import { players, teams, users } from "@/lib/db/schema";
 import { profileSchema, playerCreateSchema, teamSchema } from "@/lib/validation";
 import { assertAuth, assertAdmin } from "@/lib/auth-helpers";
 import { slugify, colorFromString } from "@/lib/utils";
@@ -30,6 +31,27 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
   const d = parsed.data;
 
   try {
+    // username must stay unique
+    const clashUser = await db.query.users.findFirst({
+      where: and(eq(users.username, d.username), ne(users.id, user.id)),
+    });
+    if (clashUser) {
+      return { ok: false, error: "Username già in uso", field: "username" };
+    }
+    if (d.email) {
+      const clashEmail = await db.query.users.findFirst({
+        where: and(eq(users.email, d.email), ne(users.id, user.id)),
+      });
+      if (clashEmail) {
+        return { ok: false, error: "Email già in uso", field: "email" };
+      }
+    }
+
+    await db
+      .update(users)
+      .set({ username: d.username, email: orNull(d.email) })
+      .where(eq(users.id, user.id));
+
     await db
       .update(players)
       .set({
@@ -50,6 +72,7 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
     const updated = await db.query.players.findFirst({
       where: eq(players.id, user.playerId),
     });
+    updateTag(DATA_TAG);
     revalidatePath("/profilo");
     if (updated) revalidatePath(`/giocatori/${updated.slug}`);
     return { ok: true };
@@ -83,6 +106,7 @@ export async function createPlayer(input: unknown): Promise<ActionResult> {
       slug,
       avatarColor: colorFromString(name),
     });
+    updateTag(DATA_TAG);
     revalidatePath("/giocatori");
     revalidatePath("/admin");
     return { ok: true };
@@ -122,6 +146,7 @@ export async function createTeam(input: unknown): Promise<ActionResult> {
       player2Id: p2,
       avatarColor: colorFromString(name),
     });
+    updateTag(DATA_TAG);
     revalidatePath("/admin");
     revalidatePath("/classifica");
     return { ok: true };

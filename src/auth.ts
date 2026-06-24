@@ -1,15 +1,10 @@
 import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
-import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-
-const credentialsSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
+import { loginSchema } from "@/lib/validation";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -18,16 +13,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
+        username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(raw) {
-        const parsed = credentialsSchema.safeParse(raw);
+        const parsed = loginSchema.safeParse(raw);
         if (!parsed.success) return null;
-        const { email, password } = parsed.data;
+        const { username, password } = parsed.data;
 
         const user = await db.query.users.findFirst({
-          where: eq(users.email, email.toLowerCase()),
+          where: eq(users.username, username),
         });
         if (!user) return null;
 
@@ -37,6 +32,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return {
           id: user.id,
           name: user.name,
+          username: user.username,
           email: user.email,
           role: user.role,
           playerId: user.playerId,
@@ -49,6 +45,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.role = user.role;
         token.playerId = user.playerId ?? null;
+        token.username = user.username ?? null;
       }
       return token;
     },
@@ -57,6 +54,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.sub as string;
         session.user.role = (token.role as "admin" | "player") ?? "player";
         session.user.playerId = (token.playerId as string | null) ?? null;
+        session.user.username = (token.username as string | null) ?? null;
       }
       return session;
     },
@@ -68,12 +66,14 @@ declare module "next-auth" {
   interface User {
     role: "admin" | "player";
     playerId: string | null;
+    username: string | null;
   }
   interface Session {
     user: {
       id: string;
       role: "admin" | "player";
       playerId: string | null;
+      username: string | null;
     } & DefaultSession["user"];
   }
 }

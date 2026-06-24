@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { UserCog, ExternalLink } from "lucide-react";
+import { UserCog, ExternalLink, Mail } from "lucide-react";
 import { PageHeader } from "@/components/ui/page";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,18 @@ export default async function ProfiloPage() {
         }
       />
 
+      {!user.email && (
+        <div className="mb-5 flex items-center gap-3 rounded-2xl border border-brand bg-brand-soft p-4">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand text-white">
+            <Mail className="h-5 w-5" />
+          </span>
+          <p className="text-sm">
+            <span className="font-bold">Aggiungi la tua email</span> qui sotto: serve
+            per recuperare l&apos;account se dimentichi la password.
+          </p>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[auto_1fr]">
         <div className="space-y-4">
           <FifaCard
@@ -59,7 +71,11 @@ export default async function ProfiloPage() {
         </div>
         <Card>
           <CardTitle className="mb-4">Modifica profilo</CardTitle>
-          <ProfileForm player={data.player} />
+          <ProfileForm
+            player={data.player}
+            username={user.username ?? ""}
+            email={user.email ?? ""}
+          />
         </Card>
       </div>
     </div>

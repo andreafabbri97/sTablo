@@ -53,7 +53,9 @@ export function UserButton() {
         <div className="absolute right-0 top-12 z-50 w-56 animate-scale-in rounded-2xl border border-border bg-card p-1.5 shadow-[var(--shadow-lg)]">
           <div className="px-3 py-2">
             <p className="truncate text-sm font-bold">{name}</p>
-            <p className="truncate text-xs text-muted">{session.user.email}</p>
+            <p className="truncate text-xs text-muted">
+              {session.user.username ? `@${session.user.username}` : session.user.email}
+            </p>
           </div>
           <div className="my-1 h-px bg-border" />
           <MenuLink href="/profilo" icon={<User className="h-4 w-4" />} onClick={() => setOpen(false)}>

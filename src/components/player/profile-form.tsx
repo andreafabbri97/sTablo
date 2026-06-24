@@ -10,7 +10,15 @@ import { updateProfile } from "@/lib/actions/player-actions";
 import type { Player } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
 
-export function ProfileForm({ player }: { player: Player }) {
+export function ProfileForm({
+  player,
+  username,
+  email,
+}: {
+  player: Player;
+  username: string;
+  email: string;
+}) {
   const router = useRouter();
   const [statsPublic, setStatsPublic] = useState(player.statsPublic);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +32,8 @@ export function ProfileForm({ player }: { player: Player }) {
     setLoading(true);
     const form = new FormData(e.currentTarget);
     const res = await updateProfile({
+      username: String(form.get("username") ?? "").trim().toLowerCase(),
+      email: String(form.get("email") ?? "").trim(),
       nickname: String(form.get("nickname") ?? ""),
       motto: String(form.get("motto") ?? ""),
       bio: String(form.get("bio") ?? ""),
@@ -44,6 +54,17 @@ export function ProfileForm({ player }: { player: Player }) {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="username">Username (per il login)</Label>
+          <Input id="username" name="username" defaultValue={username} required minLength={3} maxLength={20} placeholder="es. mesh" autoComplete="username" />
+        </div>
+        <div>
+          <Label htmlFor="email">Email (opzionale)</Label>
+          <Input id="email" name="email" type="email" defaultValue={email} placeholder="tu@esempio.it" autoComplete="email" />
+        </div>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="nickname">Soprannome</Label>

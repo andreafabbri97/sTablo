@@ -4,6 +4,7 @@ export type SessionUser = {
   id: string;
   name?: string | null;
   email?: string | null;
+  username: string | null;
   role: "admin" | "player";
   playerId: string | null;
 };

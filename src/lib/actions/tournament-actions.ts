@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { eq, inArray } from "drizzle-orm";
+import { DATA_TAG } from "@/lib/cache";
 import { db } from "@/lib/db";
 import {
   tournaments,
@@ -141,6 +142,7 @@ export async function createTournament(input: unknown): Promise<CreateResult> {
       });
     });
 
+    updateTag(DATA_TAG);
     revalidatePath("/tornei");
     return { ok: true, slug };
   } catch (error) {
@@ -380,6 +382,7 @@ export async function recordTournamentMatch(
     await maybeGenerateKnockout(tournament.id);
     await maybeCompleteTournament(tournament.id);
 
+    updateTag(DATA_TAG);
     revalidatePath(`/tornei/${tournament.slug}`);
     revalidatePath("/tornei");
     revalidatePath("/classifica");
@@ -632,6 +635,7 @@ export async function generateNextSwissRound(
         .set({ currentRound: maxRound + 1 })
         .where(eq(tournaments.id, tournamentId));
     });
+    updateTag(DATA_TAG);
     revalidatePath(`/tornei/${t.slug}`);
     return { ok: true };
   } catch (error) {
@@ -660,6 +664,7 @@ export async function deleteTournament(
     // Tournament matches affected Elo; rebuild to stay consistent.
     const { recomputeAllElo } = await import("@/lib/match-engine");
     await recomputeAllElo();
+    updateTag(DATA_TAG);
     revalidatePath("/tornei");
     revalidatePath("/classifica");
     if (t) revalidatePath(`/tornei/${t.slug}`);

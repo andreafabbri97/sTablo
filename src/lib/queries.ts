@@ -7,6 +7,7 @@ import {
   matchParticipants,
   teams,
 } from "./db/schema";
+import { cachedQuery } from "./cache";
 
 export type ShapedSide = {
   label: string;
@@ -76,79 +77,94 @@ function loadMatches(opts: { limit?: number; casualOnly?: boolean }) {
   });
 }
 
-export async function getRecentMatches(limit = 8): Promise<ShapedMatch[]> {
-  const rows = await loadMatches({ limit, casualOnly: false });
-  return rows.map(shapeMatch);
-}
+export const getRecentMatches = cachedQuery(
+  async (limit = 8): Promise<ShapedMatch[]> => {
+    const rows = await loadMatches({ limit, casualOnly: false });
+    return rows.map(shapeMatch);
+  },
+  ["recent-matches"],
+);
 
-export async function getAllMatches(): Promise<ShapedMatch[]> {
-  const rows = await loadMatches({ casualOnly: false });
-  return rows.map(shapeMatch);
-}
+export const getAllMatches = cachedQuery(
+  async (): Promise<ShapedMatch[]> => {
+    const rows = await loadMatches({ casualOnly: false });
+    return rows.map(shapeMatch);
+  },
+  ["all-matches"],
+);
 
-export async function getPlayersList() {
-  return db.select().from(players).orderBy(desc(players.eloSingles));
-}
+export const getPlayersList = cachedQuery(
+  async () => db.select().from(players).orderBy(desc(players.eloSingles)),
+  ["players-list"],
+);
 
-export async function getMatchesForPlayer(
-  playerId: string,
-  limit = 10,
-): Promise<ShapedMatch[]> {
-  const ids = await db
-    .select({ matchId: matchParticipants.matchId })
-    .from(matchParticipants)
-    .where(eq(matchParticipants.playerId, playerId));
-  if (ids.length === 0) return [];
+export const getMatchesForPlayer = cachedQuery(
+  async (playerId: string, limit = 10): Promise<ShapedMatch[]> => {
+    const ids = await db
+      .select({ matchId: matchParticipants.matchId })
+      .from(matchParticipants)
+      .where(eq(matchParticipants.playerId, playerId));
+    if (ids.length === 0) return [];
 
-  const rows = await db.query.matches.findMany({
-    where: and(
-      inArray(
-        matches.id,
-        ids.map((r) => r.matchId),
+    const rows = await db.query.matches.findMany({
+      where: and(
+        inArray(
+          matches.id,
+          ids.map((r) => r.matchId),
+        ),
+        eq(matches.status, "completed"),
       ),
-      eq(matches.status, "completed"),
-    ),
-    orderBy: [desc(matches.playedAt)],
-    limit,
-    with: { participants: { with: { player: true, team: true } } },
-  });
-  return rows.map(shapeMatch);
-}
+      orderBy: [desc(matches.playedAt)],
+      limit,
+      with: { participants: { with: { player: true, team: true } } },
+    });
+    return rows.map(shapeMatch);
+  },
+  ["player-matches"],
+);
 
 export type EloPoint = { i: number; elo: number };
 
-export async function getEloSeries(
-  subjectId: string,
-  subject: "player_singles" | "player_doubles" | "team" = "player_singles",
-): Promise<EloPoint[]> {
-  const rows = await db
-    .select({ elo: eloHistory.elo, createdAt: eloHistory.createdAt })
-    .from(eloHistory)
-    .where(
-      and(eq(eloHistory.subjectId, subjectId), eq(eloHistory.subject, subject)),
-    )
-    .orderBy(asc(eloHistory.createdAt));
+export const getEloSeries = cachedQuery(
+  async (
+    subjectId: string,
+    subject: "player_singles" | "player_doubles" | "team" = "player_singles",
+  ): Promise<EloPoint[]> => {
+    const rows = await db
+      .select({ elo: eloHistory.elo, createdAt: eloHistory.createdAt })
+      .from(eloHistory)
+      .where(
+        and(
+          eq(eloHistory.subjectId, subjectId),
+          eq(eloHistory.subject, subject),
+        ),
+      )
+      .orderBy(asc(eloHistory.createdAt));
 
-  return [
-    { i: 0, elo: 1000 },
-    ...rows.map((r, idx) => ({ i: idx + 1, elo: r.elo })),
-  ];
-}
+    return [
+      { i: 0, elo: 1000 },
+      ...rows.map((r, idx) => ({ i: idx + 1, elo: r.elo })),
+    ];
+  },
+  ["elo-series"],
+);
 
-export async function getPlayerOptions() {
-  const rows = await db
-    .select({ id: players.id, name: players.name, slug: players.slug })
-    .from(players)
-    .where(eq(players.active, true))
-    .orderBy(players.name);
-  return rows;
-}
+export const getPlayerOptions = cachedQuery(
+  async () =>
+    db
+      .select({ id: players.id, name: players.name, slug: players.slug })
+      .from(players)
+      .where(eq(players.active, true))
+      .orderBy(players.name),
+  ["player-options"],
+);
 
-export async function getTeamOptions() {
-  const rows = await db
-    .select({ id: teams.id, name: teams.name })
-    .from(teams)
-    .where(eq(teams.active, true))
-    .orderBy(teams.name);
-  return rows;
-}
+export const getTeamOptions = cachedQuery(
+  async () =>
+    db
+      .select({ id: teams.id, name: teams.name })
+      .from(teams)
+      .where(eq(teams.active, true))
+      .orderBy(teams.name),
+  ["team-options"],
+);

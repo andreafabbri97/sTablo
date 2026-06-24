@@ -65,7 +65,10 @@ export const STARTING_ELO = 1000;
 ---------------------------------------------------------------------------- */
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  email: text("email").notNull().unique(),
+  /** primary login handle (lowercase, unique) */
+  username: text("username").unique(),
+  /** optional — collected after first login */
+  email: text("email").unique(),
   name: text("name").notNull(),
   passwordHash: text("password_hash").notNull(),
   role: userRole("role").notNull().default("player"),

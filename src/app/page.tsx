@@ -11,18 +11,19 @@ import { db } from "@/lib/db";
 import { players, matches, tournaments } from "@/lib/db/schema";
 import { sql } from "drizzle-orm";
 import { safe } from "@/lib/safe";
+import { cachedQuery } from "@/lib/cache";
 import { getCurrentUser } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
 
-async function counts() {
+const counts = cachedQuery(async () => {
   const [p, m, t] = await Promise.all([
     db.select({ c: sql<number>`count(*)::int` }).from(players),
     db.select({ c: sql<number>`count(*)::int` }).from(matches),
     db.select({ c: sql<number>`count(*)::int` }).from(tournaments),
   ]);
   return { players: p[0].c, matches: m[0].c, tournaments: t[0].c };
-}
+}, ["home-counts"]);
 
 export default async function HomePage() {
   const [ranking, recent, stats, user] = await Promise.all([

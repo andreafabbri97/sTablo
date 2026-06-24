@@ -33,31 +33,30 @@ export async function registerUser(
     const first = parsed.error.issues[0];
     return { ok: false, error: first.message, field: String(first.path[0]) };
   }
-  const { name, email, password } = parsed.data;
+  const { name, username, password } = parsed.data;
 
   try {
     const existing = await db.query.users.findFirst({
-      where: eq(users.email, email),
+      where: eq(users.username, username),
     });
     if (existing) {
-      return { ok: false, error: "Email già registrata", field: "email" };
+      return { ok: false, error: "Username già in uso", field: "username" };
     }
 
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(users);
-    const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
-    const role =
-      count === 0 || (adminEmail && email === adminEmail) ? "admin" : "player";
+    const role = count === 0 ? "admin" : "player";
 
     const passwordHash = await hash(password, 10);
-    const slug = await uniqueSlug(slugify(name));
+    const slug = await uniqueSlug(slugify(username) || slugify(name));
 
     await db.transaction(async (tx) => {
       const [player] = await tx
         .insert(players)
         .values({
           name,
+          nickname: username,
           slug,
           avatarColor: colorFromString(name),
         })
@@ -65,7 +64,7 @@ export async function registerUser(
 
       await tx.insert(users).values({
         name,
-        email,
+        username,
         passwordHash,
         role,
         playerId: player.id,

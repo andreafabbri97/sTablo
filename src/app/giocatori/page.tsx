@@ -50,8 +50,9 @@ export default async function GiocatoriPage() {
                   ) : (
                     <p className="text-xs text-muted">{row.played} partite</p>
                   )}
-                  <div className="mt-1.5 flex items-center gap-2">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     <Badge tone="brand">{row.elo} Elo</Badge>
+                    <Badge tone="ball">Lv {row.level}</Badge>
                     <span className="text-xs text-muted">{row.won}V·{row.lost}S</span>
                   </div>
                 </div>

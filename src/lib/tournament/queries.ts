@@ -1,6 +1,7 @@
 import { eq, desc, asc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { tournaments, tournamentEntrants, matches } from "@/lib/db/schema";
+import { cachedQuery } from "@/lib/cache";
 import {
   computeStandings,
   type StandingEntrant,
@@ -25,7 +26,7 @@ export const DISCIPLINE_LABEL: Record<string, string> = {
   teams: "Team",
 };
 
-export async function getTournaments() {
+export const getTournaments = cachedQuery(async () => {
   const rows = await db.query.tournaments.findMany({
     orderBy: [desc(tournaments.createdAt)],
     with: { entrants: true },
@@ -34,7 +35,7 @@ export async function getTournaments() {
     ...t,
     entrantCount: t.entrants.length,
   }));
-}
+}, ["tournaments-list"]);
 
 export type TournamentMatchView = {
   id: string;
@@ -63,9 +64,8 @@ export type TournamentDetail = {
   winnerName: string | null;
 };
 
-export async function getTournamentDetail(
-  slug: string,
-): Promise<TournamentDetail | null> {
+export const getTournamentDetail = cachedQuery(
+  async (slug: string): Promise<TournamentDetail | null> => {
   const tournament = await db.query.tournaments.findFirst({
     where: eq(tournaments.slug, slug),
   });
@@ -154,4 +154,6 @@ export async function getTournamentDetail(
     groupStandings,
     winnerName,
   };
-}
+  },
+  ["tournament-detail"],
+);
