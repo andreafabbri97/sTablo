@@ -9,6 +9,7 @@ import {
   STARTING_ELO,
 } from "./db/schema";
 import { computeElo, sideRating } from "./elo";
+import { replayElo } from "./elo-replay";
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -239,24 +240,8 @@ export async function recomputeAllElo(): Promise<void> {
     // ratings can never interleave into an inconsistent state.
     await tx.execute(sql`select pg_advisory_xact_lock(727274)`);
 
-    const playerRatings = new Map<
-      string,
-      { eloSingles: number; eloDoubles: number; peak: number }
-    >();
-    const teamRatings = new Map<string, { eloDoubles: number; peak: number }>();
-
     const allPlayers = await tx.select().from(playersTable);
-    for (const p of allPlayers) {
-      playerRatings.set(p.id, {
-        eloSingles: STARTING_ELO,
-        eloDoubles: STARTING_ELO,
-        peak: STARTING_ELO,
-      });
-    }
     const allTeams = await tx.select().from(teamsTable);
-    for (const t of allTeams) {
-      teamRatings.set(t.id, { eloDoubles: STARTING_ELO, peak: STARTING_ELO });
-    }
 
     await tx.delete(eloHistory);
 
@@ -269,98 +254,36 @@ export async function recomputeAllElo(): Promise<void> {
       with: { participants: true },
     });
 
-    for (const match of completed) {
-      if (match.scoreA == null || match.scoreB == null) continue;
-      const isSingles = match.format === "singles";
-      const field = isSingles ? "eloSingles" : "eloDoubles";
-      const subject = isSingles ? "player_singles" : "player_doubles";
+    // Pure replay: all the rating math lives in elo-replay.ts.
+    const result = replayElo({
+      playerIds: allPlayers.map((p) => p.id),
+      teamIds: allTeams.map((t) => t.id),
+      matches: completed.map((m) => ({
+        id: m.id,
+        format: m.format,
+        scoreA: m.scoreA,
+        scoreB: m.scoreB,
+        participants: m.participants.map((p) => ({
+          id: p.id,
+          side: p.side,
+          playerId: p.playerId,
+          teamId: p.teamId,
+        })),
+      })),
+      startingElo: STARTING_ELO,
+    });
 
-      const sideA = match.participants.filter((p) => p.side === "A");
-      const sideB = match.participants.filter((p) => p.side === "B");
-      if (sideA.length === 0 || sideB.length === 0) continue;
-
-      const ratingA = sideRating(
-        sideA.map((p) => playerRatings.get(p.playerId)![field]),
-      );
-      const ratingB = sideRating(
-        sideB.map((p) => playerRatings.get(p.playerId)![field]),
-      );
-      const { deltaA, deltaB } = computeElo({
-        ratingA,
-        ratingB,
-        scoreA: match.scoreA,
-        scoreB: match.scoreB,
-      });
-
-      for (const [group, delta] of [
-        [sideA, deltaA] as const,
-        [sideB, deltaB] as const,
-      ]) {
-        for (const part of group) {
-          const r = playerRatings.get(part.playerId)!;
-          const before = r[field];
-          const after = before + delta;
-          r[field] = after;
-          r.peak = Math.max(r.peak, after);
-          await tx
-            .update(matchParticipants)
-            .set({ ratingBefore: before, ratingAfter: after })
-            .where(eq(matchParticipants.id, part.id));
-          await tx.insert(eloHistory).values({
-            subject,
-            subjectId: part.playerId,
-            matchId: match.id,
-            elo: after,
-            delta,
-          });
-        }
-      }
-
-      // team elo
-      const teamAId = sideA.find((p) => p.teamId)?.teamId ?? null;
-      const teamBId = sideB.find((p) => p.teamId)?.teamId ?? null;
-      if (!isSingles && (teamAId || teamBId)) {
-        const rA = teamAId
-          ? teamRatings.get(teamAId)!.eloDoubles
-          : ratingA;
-        const rB = teamBId
-          ? teamRatings.get(teamBId)!.eloDoubles
-          : ratingB;
-        const td = computeElo({
-          ratingA: rA,
-          ratingB: rB,
-          scoreA: match.scoreA,
-          scoreB: match.scoreB,
-        });
-        if (teamAId) {
-          const t = teamRatings.get(teamAId)!;
-          t.eloDoubles += td.deltaA;
-          t.peak = Math.max(t.peak, t.eloDoubles);
-          await tx.insert(eloHistory).values({
-            subject: "team",
-            subjectId: teamAId,
-            matchId: match.id,
-            elo: t.eloDoubles,
-            delta: td.deltaA,
-          });
-        }
-        if (teamBId) {
-          const t = teamRatings.get(teamBId)!;
-          t.eloDoubles += td.deltaB;
-          t.peak = Math.max(t.peak, t.eloDoubles);
-          await tx.insert(eloHistory).values({
-            subject: "team",
-            subjectId: teamBId,
-            matchId: match.id,
-            elo: t.eloDoubles,
-            delta: td.deltaB,
-          });
-        }
-      }
+    // Persist: participant before/after, then history, then final ratings.
+    for (const pr of result.participantRatings) {
+      await tx
+        .update(matchParticipants)
+        .set({ ratingBefore: pr.ratingBefore, ratingAfter: pr.ratingAfter })
+        .where(eq(matchParticipants.id, pr.participantId));
     }
-
-    // persist final ratings
-    for (const [id, r] of playerRatings) {
+    for (const h of result.history) {
+      await tx.insert(eloHistory).values(h);
+    }
+    for (const [id, r] of result.players) {
       await tx
         .update(playersTable)
         .set({
@@ -370,7 +293,7 @@ export async function recomputeAllElo(): Promise<void> {
         })
         .where(eq(playersTable.id, id));
     }
-    for (const [id, r] of teamRatings) {
+    for (const [id, r] of result.teams) {
       await tx
         .update(teamsTable)
         .set({ eloDoubles: r.eloDoubles, peakElo: r.peak })
