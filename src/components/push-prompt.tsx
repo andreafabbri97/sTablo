@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { BellRing, X, Loader2 } from "lucide-react";
 import { sendTestPush } from "@/lib/actions/push-actions";
-import { pushSupported, subscribeToPush } from "@/lib/push-client";
+import { pushSupported, pushConfigured, subscribeToPush } from "@/lib/push-client";
 
 const DISMISS_KEY = "stablo-push-prompt-dismissed";
 
@@ -24,7 +24,10 @@ export function PushPrompt() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (status !== "authenticated" || !pushSupported()) return;
+    // Don't nag (or offer a button that can't work) when push isn't supported
+    // or no VAPID key is configured on this deployment.
+    if (status !== "authenticated" || !pushSupported() || !pushConfigured())
+      return;
     let cancelled = false;
 
     (async () => {

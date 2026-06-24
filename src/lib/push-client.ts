@@ -23,6 +23,15 @@ export function pushPermission(): NotificationPermission | "unsupported" {
   return Notification.permission;
 }
 
+/**
+ * True only when a VAPID public key was compiled into the client bundle.
+ * Without it `subscribe()` can't run, so callers should hide any "enable"
+ * affordance rather than offering a button that silently fails.
+ */
+export function pushConfigured(): boolean {
+  return Boolean(VAPID_PUBLIC_KEY);
+}
+
 /** Convert a base64url VAPID key to the ArrayBuffer the Push API expects. */
 function urlBase64ToBuffer(base64String: string): ArrayBuffer {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
