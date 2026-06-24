@@ -25,11 +25,14 @@ export function LoginForm() {
       password: String(form.get("password")),
       redirect: false,
     });
-    setLoading(false);
     if (res?.error) {
+      setLoading(false);
       setError("Username o password non corretti");
       return;
     }
+    // Keep the button in its "Accesso…" state until the destination page
+    // finishes rendering and this component unmounts — otherwise the login
+    // screen looks frozen for the ~1-2s the server takes to render.
     router.push(callbackUrl);
     router.refresh();
   }
