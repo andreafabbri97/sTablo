@@ -15,9 +15,9 @@ function useMounted() {
 }
 
 /**
- * Accessible, theme-aware modal. On mobile it behaves as a bottom sheet
- * (rounded top, anchored to the bottom); on >=sm it's a centered dialog.
- * Closes on Escape, on backdrop tap, and locks body scroll while open.
+ * Accessible, theme-aware modal. Always a centered dialog with fully rounded
+ * corners (on mobile too). Closes on Escape, on backdrop tap, and locks body
+ * scroll while open.
  */
 export function Modal({
   open,
@@ -54,7 +54,7 @@ export function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
     >
@@ -66,12 +66,10 @@ export function Modal({
       />
       <div
         className={cn(
-          "relative z-10 max-h-[88vh] w-full overflow-y-auto rounded-t-3xl border border-border bg-surface p-5 shadow-[var(--shadow-lg)] animate-fade-up sm:max-w-lg sm:rounded-3xl",
+          "relative z-10 max-h-[85vh] w-full overflow-y-auto rounded-3xl border border-border bg-surface p-5 shadow-[var(--shadow-lg)] animate-fade-up sm:max-w-lg",
           className,
         )}
       >
-        {/* mobile grab handle */}
-        <div className="mx-auto mb-3 h-1.5 w-10 shrink-0 rounded-full bg-border sm:hidden" />
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="flex items-center gap-2">
             {icon}
