@@ -35,32 +35,49 @@ const DEMO_MATCHES: [string, string, number, number][] = [
 export async function seed() {
   console.log("🌱 Seeding sTablo…");
 
-  // --- players ---
+  // --- players + their accounts ---
+  const friendPassword = process.env.FRIEND_PASSWORD || "tavolino26";
   const nickToId = new Map<string, string>();
   for (const f of FRIENDS) {
     const slug = slugify(f.nickname);
-    const existing = await db.query.players.findFirst({
+    let player = await db.query.players.findFirst({
       where: eq(players.slug, slug),
     });
-    if (existing) {
-      nickToId.set(f.nickname, existing.id);
-      continue;
+    if (!player) {
+      const [row] = await db
+        .insert(players)
+        .values({
+          name: f.name,
+          nickname: f.nickname,
+          slug,
+          avatarColor: colorFromString(f.name),
+          playStyle: f.playStyle,
+          preferredFoot: f.foot as "left" | "right" | "both",
+          specialMove: f.special,
+          motto: f.motto,
+        })
+        .returning();
+      player = row;
+      console.log(`  + giocatore ${f.name} (${f.nickname})`);
     }
-    const [row] = await db
-      .insert(players)
-      .values({
+    const playerId = player!.id;
+    nickToId.set(f.nickname, playerId);
+
+    // login account linked to the profile
+    const email = `${f.nickname}@stablo.app`;
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.email, email),
+    });
+    if (!existingUser) {
+      await db.insert(users).values({
         name: f.name,
-        nickname: f.nickname,
-        slug,
-        avatarColor: colorFromString(f.name),
-        playStyle: f.playStyle,
-        preferredFoot: f.foot as "left" | "right" | "both",
-        specialMove: f.special,
-        motto: f.motto,
-      })
-      .returning();
-    nickToId.set(f.nickname, row.id);
-    console.log(`  + giocatore ${f.name} (${f.nickname})`);
+        email,
+        passwordHash: await hash(friendPassword, 10),
+        role: "player",
+        playerId,
+      });
+      console.log(`  + account ${email} / ${friendPassword}`);
+    }
   }
 
   // --- super admin ---
