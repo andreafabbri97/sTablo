@@ -6,6 +6,7 @@ import {
   eloHistory,
   matchParticipants,
   teams,
+  users,
 } from "./db/schema";
 import { cachedQuery } from "./cache";
 
@@ -168,3 +169,19 @@ export const getTeamOptions = cachedQuery(
       .orderBy(teams.name),
   ["team-options"],
 );
+
+/** All accounts with role + linked profile — for the admin account manager. */
+export async function getAllAccounts() {
+  return db
+    .select({
+      userId: users.id,
+      name: users.name,
+      username: users.username,
+      role: users.role,
+      slug: players.slug,
+      avatarColor: players.avatarColor,
+    })
+    .from(users)
+    .leftJoin(players, eq(users.playerId, players.id))
+    .orderBy(asc(users.role), users.name);
+}
