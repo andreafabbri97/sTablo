@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { friendships } from "@/lib/db/schema";
 import { assertAuth } from "@/lib/auth-helpers";
 import { getIncomingRequests, type FriendProfile } from "@/lib/friends";
+import { sendPushToUser } from "@/lib/push";
 import type { ActionResult } from "./auth-actions";
 
 /** Incoming pending requests for the current user (for the notification bell). */
@@ -72,6 +73,7 @@ export async function sendFriendRequest(
         })
         .where(eq(friendships.id, existing.id));
       revalidatePath("/amici");
+      await notifyFriendRequest(targetUserId, user.name);
       return { ok: true };
     }
 
@@ -81,6 +83,7 @@ export async function sendFriendRequest(
       status: "pending",
     });
     revalidatePath("/amici");
+    await notifyFriendRequest(targetUserId, user.name);
     return { ok: true };
   } catch (error) {
     console.error("[sendFriendRequest]", error);
@@ -118,6 +121,19 @@ export async function respondFriendRequest(
     console.error("[respondFriendRequest]", error);
     return { ok: false, error: "Errore nella risposta" };
   }
+}
+
+/** Best-effort push to the person who received a friend request. */
+async function notifyFriendRequest(
+  targetUserId: string,
+  fromName?: string | null,
+) {
+  await sendPushToUser(targetUserId, {
+    title: "Nuova richiesta di amicizia 👋",
+    body: `${fromName?.trim() || "Un giocatore"} vuole aggiungerti agli amici`,
+    url: "/amici",
+    tag: "friend-request",
+  });
 }
 
 export async function removeFriend(targetUserId: string): Promise<ActionResult> {

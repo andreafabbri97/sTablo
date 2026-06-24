@@ -349,6 +349,35 @@ export const friendships = pgTable(
 export type Friendship = typeof friendships.$inferSelect;
 
 /* ----------------------------------------------------------------------------
+   Push subscriptions — Web Push endpoints per account (one row per device)
+---------------------------------------------------------------------------- */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** unique push endpoint URL issued by the browser's push service */
+    endpoint: text("endpoint").notNull(),
+    /** client public key (base64url) for payload encryption */
+    p256dh: text("p256dh").notNull(),
+    /** client auth secret (base64url) */
+    auth: text("auth").notNull(),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("push_endpoint_idx").on(t.endpoint),
+    index("push_user_idx").on(t.userId),
+  ],
+);
+
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+
+/* ----------------------------------------------------------------------------
    Relations
 ---------------------------------------------------------------------------- */
 export const usersRelations = relations(users, ({ one }) => ({

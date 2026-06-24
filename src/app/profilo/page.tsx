@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FifaCard } from "@/components/player/fifa-card";
 import { ProfileForm } from "@/components/player/profile-form";
 import { ChangePasswordForm } from "@/components/player/change-password-form";
+import { PushToggle } from "@/components/push-toggle";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { getPlayerWithStats } from "@/lib/stats";
 
@@ -83,6 +84,7 @@ export default async function ProfiloPage() {
             <CardTitle className="mb-4">Sicurezza</CardTitle>
             <ChangePasswordForm />
           </Card>
+          <PushToggle />
         </div>
       </div>
     </div>

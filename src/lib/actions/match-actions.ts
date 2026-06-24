@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { DATA_TAG } from "@/lib/cache";
-import { matches, teams } from "@/lib/db/schema";
+import { matches, teams, users } from "@/lib/db/schema";
 import { matchSchema } from "@/lib/validation";
 import { assertAuth, assertAdmin } from "@/lib/auth-helpers";
 import {
@@ -12,6 +12,7 @@ import {
   recomputeAllElo,
   type SideInput,
 } from "@/lib/match-engine";
+import { sendPushToUsers } from "@/lib/push";
 import type { ActionResult } from "./auth-actions";
 
 const CONFIRM_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -119,11 +120,37 @@ export async function proposeMatch(input: unknown): Promise<ActionResult> {
 
     if (finalize) await recomputeAllElo();
     refresh();
+
+    // Alert the opponent(s) that a result is waiting for their confirmation.
+    if (!finalize && proposerSide) {
+      const opponents = (proposerSide === "A" ? sideB! : sideA!).playerIds;
+      await notifyConfirmNeeded(opponents, user.name);
+    }
     return { ok: true };
   } catch (error) {
     console.error("[proposeMatch]", error);
     return { ok: false, error: "Errore nel salvataggio della partita" };
   }
+}
+
+/** Best-effort push to the opponents who need to confirm a proposed result. */
+async function notifyConfirmNeeded(
+  opponentPlayerIds: string[],
+  fromName?: string | null,
+) {
+  if (!opponentPlayerIds.length) return;
+  const rows = await db
+    .select({ userId: users.id })
+    .from(users)
+    .where(inArray(users.playerId, opponentPlayerIds));
+  const userIds = rows.map((r) => r.userId);
+  if (!userIds.length) return;
+  await sendPushToUsers(userIds, {
+    title: "Risultato da confermare ✅",
+    body: `${fromName?.trim() || "Un avversario"} ha inserito un risultato: confermalo o rifiutalo`,
+    url: "/partite",
+    tag: "match-confirm",
+  });
 }
 
 /** Confirm a pending result. Opponent (1 of 2 in doubles) or admin. Race-safe. */
