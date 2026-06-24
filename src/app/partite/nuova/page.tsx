@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/page";
 import { Card } from "@/components/ui/card";
 import { MatchForm } from "@/components/admin/match-form";
 import { getCurrentUser } from "@/lib/auth-helpers";
-import { getPlayerOptions } from "@/lib/queries";
+import { getPlayerMatchOptions } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Nuova partita" };
@@ -15,7 +15,7 @@ export default async function NuovaPartitaPage() {
   if (!user) redirect("/login?callbackUrl=/partite/nuova");
 
   const isAdmin = user.role === "admin";
-  const players = await getPlayerOptions();
+  const players = await getPlayerMatchOptions();
 
   return (
     <div className="mx-auto max-w-2xl">

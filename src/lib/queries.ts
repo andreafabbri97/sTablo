@@ -209,6 +209,26 @@ export const getPlayerOptions = cachedQuery(
   ["player-options"],
 );
 
+/**
+ * Players plus their current ratings, used by the match form to preview the
+ * live Elo swing before a result is saved. Kept separate from
+ * getPlayerOptions so the tournament/admin selects keep their lean shape.
+ */
+export const getPlayerMatchOptions = cachedQuery(
+  async () =>
+    db
+      .select({
+        id: players.id,
+        name: players.name,
+        eloSingles: players.eloSingles,
+        eloDoubles: players.eloDoubles,
+      })
+      .from(players)
+      .where(eq(players.active, true))
+      .orderBy(players.name),
+  ["player-match-options"],
+);
+
 /** Slug for a player id — used to build links from a session (which has no slug). */
 export const getPlayerSlugById = cachedQuery(
   async (playerId: string): Promise<string | null> => {

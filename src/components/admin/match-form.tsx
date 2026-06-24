@@ -1,14 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Minus, Plus } from "lucide-react";
+import { Save, Minus, Plus, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label, Select, Input, FieldError } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { proposeMatch } from "@/lib/actions/match-actions";
+import { computeElo, sideRating } from "@/lib/elo";
 
-type Option = { id: string; name: string };
+type Option = {
+  id: string;
+  name: string;
+  eloSingles: number;
+  eloDoubles: number;
+};
 
 export function MatchForm({
   players,
@@ -31,6 +37,39 @@ export function MatchForm({
   const [loading, setLoading] = useState(false);
 
   const set = (k: string, v: string) => setSel((s) => ({ ...s, [k]: v }));
+
+  const byId = useMemo(() => {
+    const m = new Map<string, Option>();
+    for (const p of players) m.set(p.id, p);
+    return m;
+  }, [players]);
+
+  // Live Elo swing for the currently entered result. Only meaningful for a
+  // ranked match with every slot filled and an actual winner.
+  const preview = useMemo(() => {
+    if (!ranked || scoreA === scoreB) return null;
+    const aIds = format === "singles" ? [sel.playerA] : [sel.playerA, sel.playerA2];
+    const bIds = format === "singles" ? [sel.playerB] : [sel.playerB, sel.playerB2];
+    const aPlayers = aIds.map((id) => (id ? byId.get(id) : undefined));
+    const bPlayers = bIds.map((id) => (id ? byId.get(id) : undefined));
+    if (aPlayers.some((p) => !p) || bPlayers.some((p) => !p)) return null;
+    const rate = (p: Option) =>
+      format === "singles" ? p.eloSingles : p.eloDoubles;
+    const ratingA = sideRating((aPlayers as Option[]).map(rate));
+    const ratingB = sideRating((bPlayers as Option[]).map(rate));
+    const { deltaA, deltaB } = computeElo({ ratingA, ratingB, scoreA, scoreB });
+    return { deltaA, deltaB };
+  }, [
+    ranked,
+    format,
+    sel.playerA,
+    sel.playerA2,
+    sel.playerB,
+    sel.playerB2,
+    scoreA,
+    scoreB,
+    byId,
+  ]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -135,6 +174,26 @@ export function MatchForm({
         </SideColumn>
       </div>
 
+      {/* Live Elo preview — shown only for ranked matches. */}
+      {ranked && (
+        <div className="rounded-2xl border border-border bg-surface p-3">
+          {preview ? (
+            <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
+              <span className="flex items-center gap-1.5 font-bold text-muted">
+                <TrendingUp className="h-4 w-4" /> Effetto Elo
+              </span>
+              <DeltaPill tone="brand" label="A" delta={preview.deltaA} />
+              <DeltaPill tone="sea" label="B" delta={preview.deltaB} />
+            </div>
+          ) : (
+            <p className="text-center text-xs text-muted">
+              Seleziona i giocatori e imposta un punteggio con un vincitore per
+              vedere l&apos;effetto sull&apos;Elo.
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="playedAt">Data e ora (opzionale)</Label>
@@ -163,6 +222,36 @@ export function MatchForm({
         </p>
       )}
     </form>
+  );
+}
+
+function DeltaPill({
+  tone,
+  label,
+  delta,
+}: {
+  tone: "brand" | "sea";
+  label: string;
+  delta: number;
+}) {
+  const positive = delta >= 0;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-mono font-bold tabular-nums",
+        positive ? "bg-win/15 text-win" : "bg-loss/15 text-loss",
+      )}
+    >
+      <span
+        className={cn(
+          "text-[10px] font-extrabold uppercase",
+          tone === "brand" ? "text-brand" : "text-sea",
+        )}
+      >
+        {label}
+      </span>
+      {positive ? `+${delta}` : delta}
+    </span>
   );
 }
 
