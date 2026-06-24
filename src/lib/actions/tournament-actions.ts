@@ -44,6 +44,7 @@ import {
   type AmericanoParticipant,
 } from "@/lib/tournament/standings";
 import { pairSwissRound } from "@/lib/tournament/swiss";
+import { knockoutFinalWinner } from "@/lib/tournament/knockout";
 import { validateTavolinoScore } from "@/lib/score-rules";
 import type { ActionResult } from "./auth-actions";
 
@@ -780,15 +781,10 @@ async function maybeCompleteTournament(tournamentId: string) {
     if (all.length === 0 || pending.length > 0) return;
     winnerEntrantId = await americanoWinnerEntrantId(tournamentId);
   } else if (hasKnockout) {
-    // Final = the knockout match with the highest round and no nextMatch
-    const knockout = all.filter((m) => m.stage === "knockout" && m.note !== "Finale 3°/4°");
-    const maxRound = Math.max(...knockout.map((m) => m.round ?? 0));
-    const final = knockout.find((m) => m.round === maxRound && !m.nextMatchId);
-    if (final && final.status === "completed") {
-      winnerEntrantId = final.winner === "A" ? final.entrantAId : final.entrantBId;
-    } else {
-      return;
-    }
+    // Champion = winner of the grand final. (see tournament/knockout.ts)
+    const outcome = knockoutFinalWinner(all);
+    if (!outcome.decided) return;
+    winnerEntrantId = outcome.winnerEntrantId;
   } else {
     if (pending.length > 0) return;
     // league/round_robin/swiss: winner = top of standings
