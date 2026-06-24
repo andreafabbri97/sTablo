@@ -27,7 +27,7 @@ export function MatchCard({ match }: { match: ShapedMatch }) {
         <span className="text-xs text-muted">{timeAgo(match.playedAt)}</span>
       </div>
 
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-4">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 py-4">
         <SideView side={match.sideA} won={aWon} align="start" />
 
         <div className="flex flex-col items-center px-2">
@@ -66,7 +66,7 @@ function SideView({
   return (
     <div
       className={cn(
-        "flex flex-col gap-1.5",
+        "flex min-w-0 flex-col gap-1.5",
         align === "end" ? "items-end" : "items-start",
       )}
     >
