@@ -39,6 +39,7 @@ export default async function TorneiPage() {
             </Button>
           )
         }
+        help="tornei"
       />
 
       {list.length === 0 ? (

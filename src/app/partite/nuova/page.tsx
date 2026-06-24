@@ -27,6 +27,7 @@ export default async function NuovaPartitaPage() {
             ? "Registra il risultato e aggiorna le classifiche"
             : "Inserisci il risultato: l'avversario dovrà confermarlo"
         }
+        help="nuova-partita"
       />
       <Card>
         <MatchForm

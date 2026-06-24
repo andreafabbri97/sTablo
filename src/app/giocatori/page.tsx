@@ -20,6 +20,7 @@ export default async function GiocatoriPage() {
         icon={<Users className="h-6 w-6" />}
         title="Giocatori"
         subtitle={`${rows.length} profili registrati`}
+        help="giocatori"
       />
 
       {rows.length === 0 ? (

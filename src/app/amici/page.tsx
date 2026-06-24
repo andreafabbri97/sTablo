@@ -59,6 +59,7 @@ export default async function AmiciPage() {
         icon={<Users className="h-6 w-6" />}
         title="Amici"
         subtitle="Trova i tuoi amici e sfidali"
+        help="amici"
       />
 
       {/* Share / QR */}

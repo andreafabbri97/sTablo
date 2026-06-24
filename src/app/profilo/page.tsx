@@ -45,6 +45,7 @@ export default async function ProfiloPage() {
             </Link>
           </Button>
         }
+        help="profilo"
       />
 
       {!user.email && (

@@ -25,6 +25,7 @@ export default async function NuovoTorneoPage() {
           icon={<Swords className="h-6 w-6" />}
           title="Nuovo torneo"
           subtitle="Scegli formato, disciplina e partecipanti"
+          help="nuovo-torneo"
         />
         <Card>
           <TournamentForm players={playerOptions} />
@@ -40,6 +41,7 @@ export default async function NuovoTorneoPage() {
         icon={<Swords className="h-6 w-6" />}
         title="Nuovo torneo"
         subtitle="Crea il torneo e invita gli amici col link o QR"
+        help="nuovo-torneo"
       />
       <Card>
         <TournamentOpenForm />

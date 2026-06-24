@@ -1,17 +1,21 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { HelpButton } from "@/components/help/help-button";
 
 export function PageHeader({
   title,
   subtitle,
   icon,
   action,
+  help,
   className,
 }: {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   icon?: React.ReactNode;
   action?: React.ReactNode;
+  /** Topic key into the guide registry; renders a "?" help button. */
+  help?: string;
   className?: string;
 }) {
   return (
@@ -36,7 +40,12 @@ export function PageHeader({
           )}
         </div>
       </div>
-      {action}
+      {(action || help) && (
+        <div className="flex items-center gap-2">
+          {action}
+          {help && <HelpButton topic={help} />}
+        </div>
+      )}
     </div>
   );
 }

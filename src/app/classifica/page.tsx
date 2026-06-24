@@ -22,6 +22,7 @@ export default async function ClassificaPage() {
         icon={<Trophy className="h-6 w-6" />}
         title="Classifica"
         subtitle="Ranking Elo del tavolino"
+        help="classifica"
       />
       <ClassificaView
         overall={overall}

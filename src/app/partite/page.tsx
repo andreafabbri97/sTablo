@@ -38,6 +38,7 @@ export default async function PartitePage() {
             </Button>
           )
         }
+        help="partite"
       />
 
       {pending.length > 0 && (
