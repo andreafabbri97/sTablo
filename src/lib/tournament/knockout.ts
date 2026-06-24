@@ -33,6 +33,21 @@ export type KnockoutOutcome = {
 
 const UNDECIDED: KnockoutOutcome = { decided: false, winnerEntrantId: null };
 
+/**
+ * Decide whether a groups+knockout tournament is ready to spawn its knockout
+ * bracket: every group match must be completed and the bracket must not already
+ * exist. (The caller still bails later if fewer than 2 entrants qualify.)
+ */
+export function shouldGenerateKnockout(
+  matches: Pick<KnockoutMatch, "stage" | "status">[],
+): boolean {
+  const groupMatches = matches.filter((m) => m.stage === "group");
+  const knockoutExists = matches.some((m) => m.stage === "knockout");
+  if (knockoutExists) return false;
+  if (groupMatches.some((m) => m.status !== "completed")) return false;
+  return true;
+}
+
 export function knockoutFinalWinner(matches: KnockoutMatch[]): KnockoutOutcome {
   // The 3rd/4th place play-off shares the final round but is not the final.
   const knockout = matches.filter(

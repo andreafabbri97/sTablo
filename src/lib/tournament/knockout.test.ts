@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   knockoutFinalWinner,
+  shouldGenerateKnockout,
   THIRD_PLACE_NOTE,
   type KnockoutMatch,
 } from "./knockout";
@@ -134,5 +135,57 @@ describe("knockoutFinalWinner", () => {
       decided: false,
       winnerEntrantId: null,
     });
+  });
+});
+
+describe("shouldGenerateKnockout", () => {
+  it("triggers once every group match is completed and no bracket exists", () => {
+    const matches = [
+      km({ stage: "group", status: "completed" }),
+      km({ stage: "group", status: "completed" }),
+      km({ stage: "group", status: "completed" }),
+    ];
+    expect(shouldGenerateKnockout(matches)).toBe(true);
+  });
+
+  it("does not trigger while any group match is still pending", () => {
+    const matches = [
+      km({ stage: "group", status: "completed" }),
+      km({ stage: "group", status: "scheduled" }),
+    ];
+    expect(shouldGenerateKnockout(matches)).toBe(false);
+  });
+
+  it("does not trigger when a knockout bracket already exists", () => {
+    const matches = [
+      km({ stage: "group", status: "completed" }),
+      km({ stage: "knockout", status: "scheduled" }),
+    ];
+    expect(shouldGenerateKnockout(matches)).toBe(false);
+  });
+
+  it("stays blocked by a pending group match even if a bracket somehow exists", () => {
+    const matches = [
+      km({ stage: "group", status: "scheduled" }),
+      km({ stage: "knockout", status: "scheduled" }),
+    ];
+    expect(shouldGenerateKnockout(matches)).toBe(false);
+  });
+
+  it("ignores non-group, non-knockout stages when judging completion", () => {
+    // A stray match in another stage must not hold the bracket back.
+    const matches = [
+      km({ stage: "group", status: "completed" }),
+      km({ stage: "league", status: "scheduled" }),
+    ];
+    expect(shouldGenerateKnockout(matches)).toBe(true);
+  });
+
+  it("treats a non-completed status (e.g. confirming) as not yet done", () => {
+    const matches = [
+      km({ stage: "group", status: "completed" }),
+      km({ stage: "group", status: "confirming" }),
+    ];
+    expect(shouldGenerateKnockout(matches)).toBe(false);
   });
 });

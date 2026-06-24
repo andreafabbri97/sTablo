@@ -44,7 +44,10 @@ import {
   type AmericanoParticipant,
 } from "@/lib/tournament/standings";
 import { pairSwissRound } from "@/lib/tournament/swiss";
-import { knockoutFinalWinner } from "@/lib/tournament/knockout";
+import {
+  knockoutFinalWinner,
+  shouldGenerateKnockout,
+} from "@/lib/tournament/knockout";
 import { validateTavolinoScore } from "@/lib/score-rules";
 import type { ActionResult } from "./auth-actions";
 
@@ -667,10 +670,9 @@ async function maybeGenerateKnockout(tournamentId: string) {
     .from(matches)
     .where(eq(matches.tournamentId, tournamentId));
 
-  const groupMatches = all.filter((m) => m.stage === "group");
-  const knockoutExists = all.some((m) => m.stage === "knockout");
-  if (knockoutExists) return;
-  if (groupMatches.some((m) => m.status !== "completed")) return;
+  // Only spawn the bracket once every group match is completed and no knockout
+  // exists yet (pure trigger, unit-tested in tournament/knockout.test.ts).
+  if (!shouldGenerateKnockout(all)) return;
 
   const entrants = await db
     .select()
