@@ -43,6 +43,7 @@ import {
   type StandingMatch,
   type AmericanoParticipant,
 } from "@/lib/tournament/standings";
+import { validateTavolinoScore } from "@/lib/score-rules";
 import type { ActionResult } from "./auth-actions";
 
 type CreateResult =
@@ -457,8 +458,10 @@ export async function recordTournamentMatch(
   } catch {
     return { ok: false, error: "Devi accedere" };
   }
-  if (scoreA === scoreB) {
-    return { ok: false, error: "Il punteggio non può finire in parità" };
+  // Tornei "classici": regola tavolino a 15 (vantaggi, killer point a 19-19).
+  const scoreCheck = validateTavolinoScore(scoreA, scoreB);
+  if (!scoreCheck.ok) {
+    return { ok: false, error: scoreCheck.reason };
   }
 
   const match = await db.query.matches.findFirst({
@@ -558,6 +561,8 @@ export async function recordAmericanoMatch(
   } catch {
     return { ok: false, error: "Devi accedere" };
   }
+  // L'Americano usa un punteggio per game configurabile ("Punti per game") ed è
+  // volutamente libero: si vieta solo il pareggio, non la regola tavolino a 15.
   if (scoreA === scoreB) {
     return { ok: false, error: "Il punteggio non può finire in parità" };
   }

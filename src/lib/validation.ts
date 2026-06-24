@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PLAY_STYLES } from "./gamification";
+import { validateTavolinoScore } from "./score-rules";
 
 const styleIds = PLAY_STYLES.map((s) => s.id) as [string, ...string[]];
 
@@ -79,9 +80,16 @@ export const matchSchema = z
     playerA2: z.string().uuid().optional(),
     playerB2: z.string().uuid().optional(),
   })
-  .refine((d) => d.scoreA !== d.scoreB, {
-    message: "Il punteggio non può finire in parità",
-    path: ["scoreB"],
+  .superRefine((d, ctx) => {
+    // Tavolino: si vince a 15 (vantaggi sul 14-14, killer point sul 19-19).
+    const check = validateTavolinoScore(d.scoreA, d.scoreB);
+    if (!check.ok) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: check.reason,
+        path: ["scoreB"],
+      });
+    }
   });
 
 export type MatchInput = z.infer<typeof matchSchema>;
