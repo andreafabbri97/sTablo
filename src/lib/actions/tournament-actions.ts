@@ -219,8 +219,9 @@ async function persistGenMatches(
       .insert(matches)
       .values({
         format: args.matchFormat,
-        status: "scheduled",
-        ranked: args.ranked,
+        // A bye is already resolved as a free win and never affects Elo.
+        status: g.isBye ? "completed" : "scheduled",
+        ranked: g.isBye ? false : args.ranked,
         tournamentId: args.tournamentId,
         stage: g.stage,
         groupName: g.groupName,
@@ -229,6 +230,7 @@ async function persistGenMatches(
         note: g.label,
         entrantAId: g.aEntrant == null ? null : args.entrants[g.aEntrant].id,
         entrantBId: g.bEntrant == null ? null : args.entrants[g.bEntrant].id,
+        ...(g.isBye ? { winner: "A" as const, scoreA: 0, scoreB: 0 } : {}),
       })
       .returning({ id: matches.id });
     localToDb.set(g.localId, row.id);
@@ -685,6 +687,26 @@ export async function generateNextSwissRound(
   }
 
   const queue = standings.map((s) => s.entrant.id);
+
+  // Odd entrants → one player gets a bye (a free win). Prefer the lowest-ranked
+  // who has not already had a bye in this tournament.
+  let byeId: string | null = null;
+  if (queue.length % 2 === 1) {
+    const hadBye = new Set(
+      all
+        .filter((m) => m.stage === "swiss" && !m.entrantBId && m.winner === "A")
+        .map((m) => m.entrantAId),
+    );
+    for (let i = queue.length - 1; i >= 0; i--) {
+      if (!hadBye.has(queue[i])) {
+        byeId = queue[i];
+        break;
+      }
+    }
+    byeId ??= queue[queue.length - 1]; // everyone already had one
+    queue.splice(queue.indexOf(byeId), 1);
+  }
+
   const pairs: [string, string][] = [];
   const used = new Set<string>();
   for (let i = 0; i < queue.length; i++) {
@@ -724,6 +746,25 @@ export async function generateNextSwissRound(
           slot: i,
           entrantAId: pairs[i][0],
           entrantBId: pairs[i][1],
+        });
+      }
+      if (byeId) {
+        // Bye: already resolved as a free win, never ranked (no Elo impact).
+        await tx.insert(matches).values({
+          format: matchFormat,
+          status: "completed",
+          ranked: false,
+          tournamentId,
+          stage: "swiss",
+          round: maxRound + 1,
+          slot: pairs.length,
+          entrantAId: byeId,
+          entrantBId: null,
+          winner: "A",
+          scoreA: 0,
+          scoreB: 0,
+          note: "Riposo",
+          playedAt: new Date(),
         });
       }
       await tx

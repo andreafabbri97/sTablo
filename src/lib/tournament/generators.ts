@@ -21,6 +21,8 @@ export type GenMatch = {
   /** Loser of this match flows here (used for the 3°/4° place final). */
   loserNextLocalId: string | null;
   loserNextSlot: "A" | "B" | null;
+  /** Bye: persisted already completed as a free win for side A (Swiss odd count). */
+  isBye: boolean;
 };
 
 let counter = 0;
@@ -43,6 +45,7 @@ function emptyMatch(partial: Partial<GenMatch>): GenMatch {
     nextSlot: null,
     loserNextLocalId: null,
     loserNextSlot: null,
+    isBye: false,
     ...partial,
   };
 }
@@ -227,7 +230,24 @@ export function generateSwissRound1(n: number): GenMatch[] {
   for (let i = 0; i < half; i++) {
     const a = idx[i];
     const b = idx[i + half];
-    if (a === -1 || b === -1) continue; // bye
+    if (a === -1 || b === -1) {
+      // Odd entrant count → the unpaired player gets a bye (a free win).
+      const solo = a === -1 ? b : a;
+      if (solo !== -1) {
+        matches.push(
+          emptyMatch({
+            stage: "swiss",
+            round: 1,
+            slot: i,
+            aEntrant: solo,
+            bEntrant: null,
+            isBye: true,
+            label: "Riposo",
+          }),
+        );
+      }
+      continue;
+    }
     matches.push(
       emptyMatch({ stage: "swiss", round: 1, slot: i, aEntrant: a, bEntrant: b }),
     );

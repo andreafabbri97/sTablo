@@ -54,6 +54,16 @@ export function computeStandings(
     if (m.status !== "completed" || m.winner == null) continue;
     if (opts.stages && (!m.stage || !opts.stages.includes(m.stage))) continue;
     if (opts.groupName != null && m.groupName !== opts.groupName) continue;
+    // Bye / "Riposo": a completed match with only side A counts as a free win.
+    if (m.entrantAId && !m.entrantBId && m.winner === "A") {
+      const solo = rows.get(m.entrantAId);
+      if (solo) {
+        solo.played++;
+        solo.won++;
+        solo.points += POINTS_WIN;
+      }
+      continue;
+    }
     if (!m.entrantAId || !m.entrantBId) continue;
     const a = rows.get(m.entrantAId);
     const b = rows.get(m.entrantBId);

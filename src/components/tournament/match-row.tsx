@@ -25,6 +25,16 @@ export function MatchRow({
   const aWon = match.winner === "A";
   const bWon = match.winner === "B";
 
+  // Bye / "Riposo": odd-count player sitting out this round with a free win.
+  if (match.label === "Riposo") {
+    return (
+      <div className="flex items-center justify-between rounded-xl border border-dashed border-border bg-surface px-3 py-2.5">
+        <span className="truncate text-sm font-semibold">{match.aName}</span>
+        <span className="shrink-0 text-xs font-medium text-muted">🛌 Riposo</span>
+      </div>
+    );
+  }
+
   function save() {
     setError(null);
     startTransition(async () => {
