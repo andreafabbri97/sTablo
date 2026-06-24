@@ -267,6 +267,10 @@ export const tournaments = pgTable("tournaments", {
   config: jsonb("config").$type<TournamentConfig>().notNull().default({}),
   currentRound: integer("current_round").notNull().default(0),
   winnerEntrantId: uuid("winner_entrant_id"),
+  /** when set, anyone with this token can join as an entrant */
+  inviteToken: text("invite_token").unique(),
+  /** if true the tournament is joinable by anyone via inviteToken link */
+  openInvite: boolean("open_invite").notNull().default(false),
   createdById: uuid("created_by_id").references(() => users.id, {
     onDelete: "set null",
   }),

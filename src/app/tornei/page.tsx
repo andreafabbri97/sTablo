@@ -11,10 +11,10 @@ import { safe } from "@/lib/safe";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Tornei" };
 
-const STATUS: Record<string, { label: string; tone: "win" | "brand" | "muted" }> = {
+const STATUS: Record<string, { label: string; tone: "win" | "brand" | "muted" | "ball" }> = {
   active: { label: "In corso", tone: "win" },
   completed: { label: "Concluso", tone: "muted" },
-  draft: { label: "Bozza", tone: "brand" },
+  draft: { label: "⏳ In attesa", tone: "ball" },
 };
 
 export default async function TorneiPage() {
@@ -31,7 +31,7 @@ export default async function TorneiPage() {
         title="Tornei"
         subtitle="Campionati, gironi e tabelloni"
         action={
-          isAdmin && (
+          user && (
             <Button asChild size="sm">
               <Link href="/tornei/nuovo">
                 <Plus className="h-4 w-4" /> Crea torneo

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import { DATA_TAG } from "@/lib/cache";
 import { db } from "@/lib/db";
 import {
@@ -13,7 +13,7 @@ import {
   type TournamentConfig,
 } from "@/lib/db/schema";
 import { tournamentSchema } from "@/lib/validation";
-import { assertAdmin } from "@/lib/auth-helpers";
+import { assertAdmin, assertAuth } from "@/lib/auth-helpers";
 import { slugify } from "@/lib/utils";
 import { applyMatchResult, type SideInput } from "@/lib/match-engine";
 import {
@@ -646,6 +646,192 @@ export async function generateNextSwissRound(
 
 function pairKey(a: string, b: string): string {
   return [a, b].sort().join(":");
+}
+
+/* ----------------------------------------------------------------------------
+   Open tournaments: create (any user) → invite → join → start
+---------------------------------------------------------------------------- */
+
+type OpenTournamentInput = {
+  name: string;
+  format: string;
+  discipline: string;
+  ranked: boolean;
+  description?: string;
+  groups?: number;
+  advancePerGroup?: number;
+  swissRounds?: number;
+  thirdPlace?: boolean;
+  doubleRound?: boolean;
+};
+
+/** Any logged-in user can create an open tournament. Generates an invite token. */
+export async function createOpenTournament(
+  input: OpenTournamentInput,
+): Promise<CreateResult> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere per creare un torneo" };
+  }
+
+  if (!input.name?.trim()) return { ok: false, error: "Inserisci un nome" };
+  const token = crypto.randomUUID();
+  const slug = await uniqueTournamentSlug(input.name);
+  const config: TournamentConfig = {
+    ranked: input.ranked,
+    doubleRound: input.doubleRound,
+    groups: input.groups,
+    advancePerGroup: input.advancePerGroup,
+    swissRounds: input.swissRounds,
+    thirdPlace: input.thirdPlace,
+  };
+
+  try {
+    await db.insert(tournaments).values({
+      name: input.name.trim(),
+      slug,
+      format: input.format as typeof tournaments.$inferInsert["format"],
+      discipline: input.discipline as typeof tournaments.$inferInsert["discipline"],
+      status: "draft",
+      description: input.description || null,
+      config,
+      currentRound: 0,
+      inviteToken: token,
+      openInvite: true,
+      createdById: user.id,
+    });
+    updateTag(DATA_TAG);
+    revalidatePath("/tornei");
+    return { ok: true, slug };
+  } catch (error) {
+    console.error("[createOpenTournament]", error);
+    return { ok: false, error: "Errore nella creazione del torneo" };
+  }
+}
+
+/** Join an open tournament via invite token. Adds the player (singles) or skips (doubles need a team). */
+export async function joinTournament(
+  token: string,
+): Promise<ActionResult & { slug?: string }> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere per unirti al torneo" };
+  }
+  if (!user.playerId) {
+    return { ok: false, error: "Il tuo account non ha un profilo giocatore" };
+  }
+
+  const t = await db.query.tournaments.findFirst({
+    where: eq(tournaments.inviteToken, token),
+  });
+  if (!t) return { ok: false, error: "Link di invito non valido" };
+  if (!t.openInvite) return { ok: false, error: "Il torneo non è aperto agli inviti" };
+  if (t.status !== "draft") return { ok: false, error: "Il torneo è già iniziato" };
+  if (t.discipline !== "singles") {
+    return { ok: false, error: "Per i tornei a coppie iscriviti tramite il tuo team" };
+  }
+
+  const already = await db.query.tournamentEntrants.findFirst({
+    where: and(
+      eq(tournamentEntrants.tournamentId, t.id),
+      eq(tournamentEntrants.playerId, user.playerId),
+    ),
+  });
+  if (already) return { ok: true, slug: t.slug };
+
+  const player = await db.query.players.findFirst({
+    where: eq(players.id, user.playerId),
+  });
+  if (!player) return { ok: false, error: "Profilo giocatore non trovato" };
+
+  const existing = await db
+    .select({ id: tournamentEntrants.id })
+    .from(tournamentEntrants)
+    .where(eq(tournamentEntrants.tournamentId, t.id));
+  const seed = existing.length + 1;
+
+  await db.insert(tournamentEntrants).values({
+    tournamentId: t.id,
+    name: player.name,
+    seed,
+    playerId: player.id,
+    teamId: null,
+    groupName: null,
+  });
+
+  updateTag(DATA_TAG);
+  revalidatePath(`/tornei/${t.slug}`);
+  return { ok: true, slug: t.slug };
+}
+
+/** Creator or admin starts a draft tournament, generating the match schedule. */
+export async function startTournament(
+  tournamentId: string,
+): Promise<ActionResult> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere" };
+  }
+
+  const t = await db.query.tournaments.findFirst({
+    where: eq(tournaments.id, tournamentId),
+    with: { entrants: true },
+  });
+  if (!t) return { ok: false, error: "Torneo non trovato" };
+  if (t.status !== "draft") return { ok: false, error: "Il torneo non è in bozza" };
+
+  const isCreator = t.createdById === user.id;
+  if (!isCreator && user.role !== "admin") {
+    return { ok: false, error: "Solo il creatore o un admin può avviare il torneo" };
+  }
+
+  const entrantIds = t.entrants.map((e) => e.id);
+  if (entrantIds.length < 2) {
+    return { ok: false, error: "Servono almeno 2 partecipanti per avviare" };
+  }
+
+  const isSingles = t.discipline === "singles";
+  const matchFormat = isSingles ? "singles" : "doubles";
+  const config = t.config;
+
+  const groupOf = new Map<number, string>();
+  if (t.format === "groups_knockout") {
+    const numGroups = Math.max(2, Math.min(config.groups ?? 2, GROUP_LABELS.length));
+    const buckets = splitIntoGroups(entrantIds.length, numGroups);
+    buckets.forEach((indices, g) => {
+      for (const idx of indices) groupOf.set(idx, GROUP_LABELS[g]);
+    });
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      const gen = generateInitialSchedule(t.format, entrantIds.length, config, groupOf);
+      await persistGenMatches(tx, {
+        tournamentId: t.id,
+        matchFormat,
+        ranked: config.ranked !== false,
+        gen,
+        entrants: t.entrants,
+      });
+      await tx
+        .update(tournaments)
+        .set({ status: "active", currentRound: 1, startedAt: new Date() })
+        .where(eq(tournaments.id, tournamentId));
+    });
+    updateTag(DATA_TAG);
+    revalidatePath(`/tornei/${t.slug}`);
+    revalidatePath("/tornei");
+    return { ok: true };
+  } catch (error) {
+    console.error("[startTournament]", error);
+    return { ok: false, error: "Errore nell'avvio del torneo" };
+  }
 }
 
 export async function deleteTournament(

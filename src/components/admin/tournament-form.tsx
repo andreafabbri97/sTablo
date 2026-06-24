@@ -30,8 +30,8 @@ export function TournamentForm({
   const router = useRouter();
   const [name, setName] = useState("");
   const [format, setFormat] = useState<Format>("league");
-  const [discipline, setDiscipline] = useState<Discipline>("singles");
-  const [ranked, setRanked] = useState(true);
+  const [discipline, setDiscipline] = useState<Discipline>("doubles");
+  const [ranked, setRanked] = useState(false);
   const [doubleRound, setDoubleRound] = useState(false);
   const [thirdPlace, setThirdPlace] = useState(false);
   const [groups, setGroups] = useState(2);

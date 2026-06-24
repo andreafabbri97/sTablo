@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Swords, Trophy } from "lucide-react";
+import { headers } from "next/headers";
+import { Swords, Trophy, QrCode, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardTitle } from "@/components/ui/card";
 import { StandingsTable } from "@/components/tournament/standings-table";
 import { Bracket } from "@/components/tournament/bracket";
 import { MatchRow } from "@/components/tournament/match-row";
 import { SwissControls } from "@/components/tournament/swiss-controls";
 import { DeleteTournamentButton } from "@/components/admin/delete-tournament-button";
+import { ProfileQr } from "@/components/friends/profile-qr";
+import { ShareButton } from "@/components/share-button";
+import { StartTournamentButton } from "@/components/tournament/start-tournament-button";
 import {
   getTournamentDetail,
   FORMAT_META,
@@ -50,8 +55,16 @@ export default async function TournamentPage({
   const { tournament, matchesByStage, groups, standings, groupStandings, winnerName } = detail;
   const user = await getCurrentUser();
   const isAdmin = user?.role === "admin";
+  const isCreator = !!user && tournament.createdById === user.id;
   const meta = FORMAT_META[tournament.format];
   const ranked = tournament.config.ranked !== false;
+
+  const h = await headers();
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  const host = h.get("host") ?? "localhost:3000";
+  const inviteUrl = tournament.inviteToken
+    ? `${proto}://${host}/tornei/invito/${tournament.inviteToken}`
+    : null;
 
   return (
     <div className="space-y-6">
@@ -59,8 +72,8 @@ export default async function TournamentPage({
       <div className="card-surface p-6">
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <span className="text-3xl">{meta?.emoji}</span>
-          <Badge tone={tournament.status === "completed" ? "muted" : "win"}>
-            {tournament.status === "completed" ? "Concluso" : "In corso"}
+          <Badge tone={tournament.status === "draft" ? "ball" : tournament.status === "completed" ? "muted" : "win"}>
+            {tournament.status === "draft" ? "⏳ In attesa" : tournament.status === "completed" ? "Concluso" : "In corso"}
           </Badge>
           <Badge tone={ranked ? "brand" : "muted"}>
             {ranked ? "🏆 Classificato" : "🤝 Amichevole"}
@@ -85,8 +98,48 @@ export default async function TournamentPage({
         )}
       </div>
 
+      {/* Draft: invite panel */}
+      {tournament.status === "draft" && inviteUrl && (
+        <Card className="space-y-4">
+          <CardTitle className="flex items-center gap-2">
+            <QrCode className="h-5 w-5 text-brand" /> Invita i partecipanti
+          </CardTitle>
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+            <div className="shrink-0">
+              <ProfileQr url={inviteUrl} />
+            </div>
+            <div className="space-y-3 text-center sm:text-left">
+              <p className="text-sm text-muted">
+                Fai scansionare il QR o condividi il link. Ogni giocatore si
+                iscrive direttamente.
+              </p>
+              <ShareButton
+                url={inviteUrl}
+                title={`Unisciti a ${tournament.name} su sTablo`}
+                text={`Sei stato invitato al torneo ${tournament.name} su sTablo! Clicca per iscriverti 👇`}
+                label="Condividi invito"
+              />
+              <div className="flex items-center gap-2 text-sm">
+                <Users className="h-4 w-4 text-muted" />
+                <span className="text-muted">
+                  {detail.entrants.length} iscritti
+                </span>
+              </div>
+            </div>
+          </div>
+          {(isAdmin || isCreator) && detail.entrants.length >= 2 && (
+            <StartTournamentButton tournamentId={tournament.id} />
+          )}
+          {(isAdmin || isCreator) && detail.entrants.length < 2 && (
+            <p className="text-center text-sm text-muted">
+              Servono almeno 2 partecipanti per avviare il torneo.
+            </p>
+          )}
+        </Card>
+      )}
+
       {/* Body by format */}
-      {(tournament.format === "league" || tournament.format === "round_robin") && (
+      {tournament.status !== "draft" && (tournament.format === "league" || tournament.format === "round_robin") && (
         <>
           <Section title="Classifica">
             <StandingsTable rows={standings} highlight={1} />
@@ -110,7 +163,7 @@ export default async function TournamentPage({
         </>
       )}
 
-      {tournament.format === "swiss" && (
+      {tournament.status !== "draft" && tournament.format === "swiss" && (
         <>
           <Section title="Classifica">
             <StandingsTable rows={standings} />
@@ -140,13 +193,13 @@ export default async function TournamentPage({
         </>
       )}
 
-      {tournament.format === "single_elim" && (
+      {tournament.status !== "draft" && tournament.format === "single_elim" && (
         <Section title="Tabellone">
           <Bracket matches={matchesByStage.knockout ?? []} isAdmin={isAdmin} />
         </Section>
       )}
 
-      {tournament.format === "groups_knockout" && (
+      {tournament.status !== "draft" && tournament.format === "groups_knockout" && (
         <>
           <Section title="Fase a gironi">
             <div className="grid gap-5 md:grid-cols-2">

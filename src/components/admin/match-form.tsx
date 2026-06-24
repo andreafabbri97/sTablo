@@ -22,8 +22,8 @@ export function MatchForm({
   currentPlayerId?: string;
 }) {
   const router = useRouter();
-  const [format, setFormat] = useState<"singles" | "doubles">("singles");
-  const [ranked, setRanked] = useState(true);
+  const [format, setFormat] = useState<"singles" | "doubles">("doubles");
+  const [ranked, setRanked] = useState(false);
   const [useTeams, setUseTeams] = useState(false);
   const [scoreA, setScoreA] = useState(18);
   const [scoreB, setScoreB] = useState(15);
