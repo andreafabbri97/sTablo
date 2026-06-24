@@ -5,6 +5,7 @@ import { Providers } from "@/components/providers";
 import { SiteHeader } from "@/components/layout/site-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { ServiceWorker } from "@/components/service-worker";
+import { InstallBanner } from "@/components/install-banner";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const display = Sora({
@@ -57,6 +58,7 @@ export default function RootLayout({
             {children}
           </main>
           <BottomNav />
+          <InstallBanner />
           <ServiceWorker />
         </Providers>
       </body>

@@ -4,7 +4,7 @@ export type StandingMatch = {
   scoreA: number | null;
   scoreB: number | null;
   winner: "A" | "B" | null;
-  status: "scheduled" | "completed";
+  status: "scheduled" | "pending" | "completed";
   stage: string | null;
   groupName: string | null;
 };

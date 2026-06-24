@@ -1,14 +1,20 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { DATA_TAG } from "@/lib/cache";
 import { matches, teams } from "@/lib/db/schema";
 import { matchSchema } from "@/lib/validation";
-import { assertAdmin } from "@/lib/auth-helpers";
-import { applyMatchResult, recomputeAllElo, type SideInput } from "@/lib/match-engine";
+import { assertAuth, assertAdmin } from "@/lib/auth-helpers";
+import {
+  insertParticipants,
+  recomputeAllElo,
+  type SideInput,
+} from "@/lib/match-engine";
 import type { ActionResult } from "./auth-actions";
+
+const CONFIRM_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 async function resolveDoublesSide(
   teamId: string | undefined,
@@ -24,12 +30,23 @@ async function resolveDoublesSide(
   return null;
 }
 
-export async function recordMatch(input: unknown): Promise<ActionResult> {
+function refresh() {
+  updateTag(DATA_TAG);
+  revalidatePath("/");
+  revalidatePath("/partite");
+}
+
+/**
+ * Propose (or, as admin, directly record) a match result.
+ * - any participant can propose → status 'pending' until the opponent confirms
+ * - the admin records directly → status 'completed' (override)
+ */
+export async function proposeMatch(input: unknown): Promise<ActionResult> {
   let user;
   try {
-    user = await assertAdmin();
+    user = await assertAuth();
   } catch {
-    return { ok: false, error: "Azione riservata all'amministratore" };
+    return { ok: false, error: "Devi accedere per inserire una partita" };
   }
 
   const parsed = matchSchema.safeParse(input);
@@ -41,7 +58,6 @@ export async function recordMatch(input: unknown): Promise<ActionResult> {
 
   let sideA: SideInput | null;
   let sideB: SideInput | null;
-
   if (d.format === "singles") {
     if (!d.playerA || !d.playerB) {
       return { ok: false, error: "Seleziona entrambi i giocatori" };
@@ -61,16 +77,28 @@ export async function recordMatch(input: unknown): Promise<ActionResult> {
     return { ok: false, error: "Un giocatore non può stare in entrambe le squadre" };
   }
 
+  const isAdmin = user.role === "admin";
+  let proposerSide: "A" | "B" | null = null;
+  if (user.playerId) {
+    if (sideA.playerIds.includes(user.playerId)) proposerSide = "A";
+    else if (sideB.playerIds.includes(user.playerId)) proposerSide = "B";
+  }
+  if (!isAdmin && !proposerSide) {
+    return { ok: false, error: "Puoi inserire solo partite in cui giochi tu" };
+  }
+
   const winner: "A" | "B" = d.scoreA > d.scoreB ? "A" : "B";
   const playedAt = d.playedAt ? new Date(d.playedAt) : new Date();
+  const finalize = isAdmin; // admin overrides confirmation
+  const status = finalize ? "completed" : "pending";
 
   try {
-    const matchId = await db.transaction(async (tx) => {
+    await db.transaction(async (tx) => {
       const [match] = await tx
         .insert(matches)
         .values({
           format: d.format,
-          status: "completed",
+          status,
           ranked: d.ranked,
           scoreA: d.scoreA,
           scoreB: d.scoreB,
@@ -78,28 +106,113 @@ export async function recordMatch(input: unknown): Promise<ActionResult> {
           playedAt,
           note: d.note || null,
           createdById: user.id,
+          proposedById: user.id,
+          proposedSide: proposerSide,
+          confirmDeadline: finalize
+            ? null
+            : new Date(Date.now() + CONFIRM_WINDOW_MS),
         })
         .returning({ id: matches.id });
 
-      await applyMatchResult(tx, {
-        matchId: match.id,
-        format: d.format,
-        sideA: sideA!,
-        sideB: sideB!,
-        scoreA: d.scoreA,
-        scoreB: d.scoreB,
-        ranked: d.ranked,
-      });
-      return match.id;
+      await insertParticipants(tx, match.id, sideA!, sideB!);
     });
 
-    updateTag(DATA_TAG);
-    revalidatePath("/");
-    void matchId;
+    if (finalize) await recomputeAllElo();
+    refresh();
     return { ok: true };
   } catch (error) {
-    console.error("[recordMatch]", error);
+    console.error("[proposeMatch]", error);
     return { ok: false, error: "Errore nel salvataggio della partita" };
+  }
+}
+
+/** Confirm a pending result. Opponent (1 of 2 in doubles) or admin. Race-safe. */
+export async function confirmMatch(matchId: string): Promise<ActionResult> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere" };
+  }
+
+  const match = await db.query.matches.findFirst({
+    where: eq(matches.id, matchId),
+    with: { participants: true },
+  });
+  if (!match) return { ok: false, error: "Partita non trovata" };
+  if (match.status !== "pending") return { ok: true }; // already confirmed/handled
+
+  const isAdmin = user.role === "admin";
+  if (!isAdmin) {
+    const opposite = match.proposedSide === "A" ? "B" : "A";
+    const canConfirm =
+      !!user.playerId &&
+      match.participants.some(
+        (p) => p.side === opposite && p.playerId === user.playerId,
+      );
+    if (!canConfirm) {
+      return { ok: false, error: "Solo l'avversario può confermare il risultato" };
+    }
+  }
+
+  try {
+    // Conditional update: only ONE confirmation (or auto-confirm) can win.
+    const updated = await db
+      .update(matches)
+      .set({ status: "completed", confirmedById: user.id, autoConfirmed: false })
+      .where(and(eq(matches.id, matchId), eq(matches.status, "pending")))
+      .returning({ id: matches.id });
+
+    if (updated.length === 0) return { ok: true }; // someone confirmed first
+
+    await recomputeAllElo();
+    refresh();
+    return { ok: true };
+  } catch (error) {
+    console.error("[confirmMatch]", error);
+    return { ok: false, error: "Errore nella conferma" };
+  }
+}
+
+/** Reject/cancel a pending proposal. Opponent, the proposer, or admin. */
+export async function rejectMatch(matchId: string): Promise<ActionResult> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere" };
+  }
+
+  const match = await db.query.matches.findFirst({
+    where: eq(matches.id, matchId),
+    with: { participants: true },
+  });
+  if (!match) return { ok: true };
+  if (match.status !== "pending") {
+    return { ok: false, error: "Partita già confermata, non annullabile" };
+  }
+
+  const isAdmin = user.role === "admin";
+  const opposite = match.proposedSide === "A" ? "B" : "A";
+  const isOpponent =
+    !!user.playerId &&
+    match.participants.some(
+      (p) => p.side === opposite && p.playerId === user.playerId,
+    );
+  const isProposer = match.proposedById === user.id;
+  if (!isAdmin && !isOpponent && !isProposer) {
+    return { ok: false, error: "Non puoi rifiutare questa partita" };
+  }
+
+  try {
+    await db
+      .delete(matches)
+      .where(and(eq(matches.id, matchId), eq(matches.status, "pending")));
+    refresh();
+    return { ok: true };
+  } catch (error) {
+    console.error("[rejectMatch]", error);
+    return { ok: false, error: "Errore nel rifiuto" };
   }
 }
 
@@ -111,10 +224,8 @@ export async function deleteMatch(matchId: string): Promise<ActionResult> {
   }
   try {
     await db.delete(matches).where(eq(matches.id, matchId));
-    // Ratings are stateful: rebuild from the remaining history.
     await recomputeAllElo();
-    updateTag(DATA_TAG);
-    revalidatePath("/");
+    refresh();
     return { ok: true };
   } catch (error) {
     console.error("[deleteMatch]", error);

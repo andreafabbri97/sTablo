@@ -17,7 +17,11 @@ import { relations } from "drizzle-orm";
 ---------------------------------------------------------------------------- */
 export const userRole = pgEnum("user_role", ["admin", "player"]);
 export const matchFormat = pgEnum("match_format", ["singles", "doubles"]);
-export const matchStatus = pgEnum("match_status", ["scheduled", "completed"]);
+export const matchStatus = pgEnum("match_status", [
+  "scheduled",
+  "pending",
+  "completed",
+]);
 export const matchSide = pgEnum("match_side", ["A", "B"]);
 export const tournamentFormat = pgEnum("tournament_format", [
   "league",
@@ -159,6 +163,20 @@ export const matches = pgTable(
       .notNull()
       .defaultNow(),
     note: text("note"),
+
+    // Result proposal / confirmation flow (casual matches)
+    /** the user who proposed the result (null = admin-recorded / seed) */
+    proposedById: uuid("proposed_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    /** which side the proposer is on — the OTHER side must confirm */
+    proposedSide: matchSide("proposed_side"),
+    /** auto-confirms after this instant (proposal + 24h) */
+    confirmDeadline: timestamp("confirm_deadline", { withTimezone: true }),
+    confirmedById: uuid("confirmed_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    autoConfirmed: boolean("auto_confirmed").notNull().default(false),
 
     // Tournament wiring (all nullable for casual matches)
     tournamentId: uuid("tournament_id").references(() => tournaments.id, {

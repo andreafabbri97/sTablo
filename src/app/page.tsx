@@ -118,7 +118,7 @@ function Hero({ isAdmin, loggedIn }: { isAdmin: boolean; loggedIn: boolean }) {
           tornei. Il nostro gioco, come si sfida sulla spiaggia di Rimini.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          {isAdmin && (
+          {loggedIn && (
             <Button asChild>
               <Link href="/partite/nuova">
                 <Plus className="h-4 w-4" /> Nuova partita

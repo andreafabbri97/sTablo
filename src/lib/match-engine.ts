@@ -1,4 +1,4 @@
-import { inArray, eq, asc, and } from "drizzle-orm";
+import { inArray, eq, asc, and, lte, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
   players as playersTable,
@@ -16,6 +16,34 @@ export type SideInput = {
   playerIds: string[];
   teamId?: string | null;
 };
+
+/**
+ * Insert participant rows for a match WITHOUT touching Elo. Used when a result
+ * is only proposed (status 'pending'); the Elo is applied later by
+ * recomputeAllElo() once the match is confirmed/completed.
+ */
+export async function insertParticipants(
+  tx: Tx,
+  matchId: string,
+  sideA: SideInput,
+  sideB: SideInput,
+): Promise<void> {
+  for (const [side, s] of [
+    ["A", sideA] as const,
+    ["B", sideB] as const,
+  ]) {
+    for (const playerId of s.playerIds) {
+      await tx.insert(matchParticipants).values({
+        matchId,
+        side,
+        playerId,
+        teamId: s.teamId ?? null,
+        ratingBefore: null,
+        ratingAfter: null,
+      });
+    }
+  }
+}
 
 export type ApplyResultParams = {
   matchId: string;
@@ -182,11 +210,35 @@ async function applyTeamElo(
 }
 
 /**
+ * Auto-confirm pending results past their 24h deadline. Race-safe: the
+ * conditional UPDATE only flips rows still 'pending', so a manual confirm
+ * happening at the same instant can't double-apply. Returns how many flipped.
+ */
+export async function autoConfirmExpired(): Promise<number> {
+  const flipped = await db
+    .update(matchesTable)
+    .set({ status: "completed", autoConfirmed: true })
+    .where(
+      and(
+        eq(matchesTable.status, "pending"),
+        lte(matchesTable.confirmDeadline, sql`now()`),
+      ),
+    )
+    .returning({ id: matchesTable.id });
+  if (flipped.length > 0) await recomputeAllElo();
+  return flipped.length;
+}
+
+/**
  * Rebuild every rating from scratch by replaying all completed matches in
  * chronological order. Idempotent; run after a match is edited or deleted.
  */
 export async function recomputeAllElo(): Promise<void> {
   await db.transaction(async (tx) => {
+    // Serialize concurrent recomputes (e.g. two results confirmed at once) so
+    // ratings can never interleave into an inconsistent state.
+    await tx.execute(sql`select pg_advisory_xact_lock(727274)`);
+
     const playerRatings = new Map<
       string,
       { eloSingles: number; eloDoubles: number; peak: number }

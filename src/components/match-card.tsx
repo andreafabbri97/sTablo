@@ -11,7 +11,7 @@ export function MatchCard({ match }: { match: ShapedMatch }) {
   return (
     <div className="card-surface overflow-hidden p-0">
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <Badge tone={match.format === "singles" ? "sea" : "brand"}>
             {match.format === "singles" ? "1 vs 1" : "2 vs 2"}
           </Badge>
@@ -19,6 +19,9 @@ export function MatchCard({ match }: { match: ShapedMatch }) {
             <Badge tone="gold">🏆 Classificata</Badge>
           ) : (
             <Badge tone="muted">🤝 Amichevole</Badge>
+          )}
+          {match.status === "pending" && (
+            <Badge tone="ball">⏳ Da confermare</Badge>
           )}
         </div>
         <span className="text-xs text-muted">{timeAgo(match.playedAt)}</span>

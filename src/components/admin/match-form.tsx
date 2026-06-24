@@ -6,16 +6,20 @@ import { Save, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label, Select, Input, FieldError } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
-import { recordMatch } from "@/lib/actions/match-actions";
+import { proposeMatch } from "@/lib/actions/match-actions";
 
 type Option = { id: string; name: string };
 
 export function MatchForm({
   players,
   teams,
+  isAdmin = false,
+  currentPlayerId,
 }: {
   players: Option[];
   teams: Option[];
+  isAdmin?: boolean;
+  currentPlayerId?: string;
 }) {
   const router = useRouter();
   const [format, setFormat] = useState<"singles" | "doubles">("singles");
@@ -23,7 +27,9 @@ export function MatchForm({
   const [useTeams, setUseTeams] = useState(false);
   const [scoreA, setScoreA] = useState(18);
   const [scoreB, setScoreB] = useState(15);
-  const [sel, setSel] = useState<Record<string, string>>({});
+  const [sel, setSel] = useState<Record<string, string>>(
+    currentPlayerId ? { playerA: currentPlayerId } : {},
+  );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -56,7 +62,7 @@ export function MatchForm({
       payload.playerB2 = sel.playerB2;
     }
 
-    const res = await recordMatch(payload);
+    const res = await proposeMatch(payload);
     setLoading(false);
     if (!res.ok) {
       setError(res.error);
@@ -166,8 +172,18 @@ export function MatchForm({
 
       <Button type="submit" size="lg" className="w-full" disabled={loading}>
         <Save className="h-4 w-4" />
-        {loading ? "Salvataggio…" : "Registra risultato"}
+        {loading
+          ? "Salvataggio…"
+          : isAdmin
+            ? "Registra risultato"
+            : "Proponi risultato"}
       </Button>
+      {!isAdmin && (
+        <p className="text-center text-xs text-muted">
+          Il risultato verrà inviato all&apos;avversario per la conferma. Se non
+          conferma entro 24h, si conferma da solo.
+        </p>
+      )}
     </form>
   );
 }

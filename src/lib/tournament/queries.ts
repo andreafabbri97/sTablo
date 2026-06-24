@@ -44,7 +44,7 @@ export type TournamentMatchView = {
   round: number | null;
   slot: number | null;
   label: string | null;
-  status: "scheduled" | "completed";
+  status: "scheduled" | "pending" | "completed";
   scoreA: number | null;
   scoreB: number | null;
   winner: "A" | "B" | null;

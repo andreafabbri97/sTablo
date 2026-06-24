@@ -13,19 +13,23 @@ import { cachedQuery } from "./cache";
 export type ShapedSide = {
   label: string;
   teamName: string | null;
-  players: { name: string; slug: string; colorIndex: number }[];
+  players: { id: string; name: string; slug: string; colorIndex: number }[];
 };
 
 export type ShapedMatch = {
   id: string;
   format: "singles" | "doubles";
   ranked: boolean;
+  status: "scheduled" | "pending" | "completed";
   scoreA: number | null;
   scoreB: number | null;
   winner: "A" | "B" | null;
   playedAt: Date;
   note: string | null;
   tournamentId: string | null;
+  proposedById: string | null;
+  proposedSide: "A" | "B" | null;
+  confirmDeadline: Date | null;
   sideA: ShapedSide;
   sideB: ShapedSide;
 };
@@ -38,6 +42,7 @@ function shapeSide(parts: MatchRow["participants"], side: "A" | "B"): ShapedSide
   const ps = rows
     .filter((r) => r.player)
     .map((r) => ({
+      id: r.player!.id,
       name: r.player!.name,
       slug: r.player!.slug,
       colorIndex: r.player!.avatarColor,
@@ -54,12 +59,16 @@ export function shapeMatch(row: MatchRow): ShapedMatch {
     id: row.id,
     format: row.format,
     ranked: row.ranked,
+    status: row.status,
     scoreA: row.scoreA,
     scoreB: row.scoreB,
     winner: row.winner,
     playedAt: row.playedAt,
     note: row.note,
     tournamentId: row.tournamentId,
+    proposedById: row.proposedById,
+    proposedSide: row.proposedSide,
+    confirmDeadline: row.confirmDeadline,
     sideA: shapeSide(row.participants, "A"),
     sideB: shapeSide(row.participants, "B"),
   };
@@ -98,6 +107,25 @@ export const getPlayersList = cachedQuery(
   async () => db.select().from(players).orderBy(desc(players.eloSingles)),
   ["players-list"],
 );
+
+/** All results awaiting confirmation. */
+export const getPendingMatches = cachedQuery(async (): Promise<ShapedMatch[]> => {
+  const rows = await db.query.matches.findMany({
+    where: eq(matches.status, "pending"),
+    orderBy: [desc(matches.createdAt)],
+    with: { participants: { with: { player: true, team: true } } },
+  });
+  return rows.map(shapeMatch);
+}, ["pending-matches"]);
+
+/** Single match (uncached — used on the confirmation page). */
+export async function getMatchById(id: string): Promise<ShapedMatch | null> {
+  const row = await db.query.matches.findFirst({
+    where: eq(matches.id, id),
+    with: { participants: { with: { player: true, team: true } } },
+  });
+  return row ? shapeMatch(row) : null;
+}
 
 export const getMatchesForPlayer = cachedQuery(
   async (playerId: string, limit = 10): Promise<ShapedMatch[]> => {

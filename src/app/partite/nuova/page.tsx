@@ -13,8 +13,8 @@ export const metadata: Metadata = { title: "Nuova partita" };
 export default async function NuovaPartitaPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?callbackUrl=/partite/nuova");
-  if (user.role !== "admin") redirect("/partite");
 
+  const isAdmin = user.role === "admin";
   const [players, teams] = await Promise.all([
     getPlayerOptions(),
     getTeamOptions(),
@@ -25,10 +25,19 @@ export default async function NuovaPartitaPage() {
       <PageHeader
         icon={<Plus className="h-6 w-6" />}
         title="Nuova partita"
-        subtitle="Registra il risultato e aggiorna le classifiche"
+        subtitle={
+          isAdmin
+            ? "Registra il risultato e aggiorna le classifiche"
+            : "Inserisci il risultato: l'avversario dovrà confermarlo"
+        }
       />
       <Card>
-        <MatchForm players={players} teams={teams} />
+        <MatchForm
+          players={players}
+          teams={teams}
+          isAdmin={isAdmin}
+          currentPlayerId={user.playerId ?? undefined}
+        />
       </Card>
     </div>
   );

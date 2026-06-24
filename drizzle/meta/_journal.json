@@ -15,6 +15,13 @@
       "when": 1782303475155,
       "tag": "0001_brown_mindworm",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782307183865,
+      "tag": "0002_steep_magma",
+      "breakpoints": true
     }
   ]
 }
