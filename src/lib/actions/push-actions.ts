@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { assertAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { pushSubscriptions } from "@/lib/db/schema";
@@ -55,15 +55,24 @@ export async function savePushSubscription(
 
 /** Remove a subscription (e.g. when the user disables notifications). */
 export async function removePushSubscription(endpoint: string): Promise<Result> {
+  let user;
   try {
-    await assertAuth();
+    user = await assertAuth();
   } catch {
     return { ok: false, error: "Devi accedere" };
   }
   try {
+    // Scope the delete to the caller's own subscriptions: an endpoint belongs to
+    // exactly one account, so without the userId filter any authenticated user
+    // could silence another user's notifications (IDOR).
     await db
       .delete(pushSubscriptions)
-      .where(eq(pushSubscriptions.endpoint, endpoint));
+      .where(
+        and(
+          eq(pushSubscriptions.endpoint, endpoint),
+          eq(pushSubscriptions.userId, user.id),
+        ),
+      );
     return { ok: true };
   } catch (error) {
     console.error("[removePushSubscription]", error);
