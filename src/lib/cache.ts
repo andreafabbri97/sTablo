@@ -11,7 +11,9 @@ export const DATA_TAG = "stablo-data";
 export function cachedQuery<T extends (...args: never[]) => Promise<unknown>>(
   fn: T,
   keyParts: string[],
-  revalidate: number | false = 300,
+  // Reads stay cached until a mutation calls updateTag(DATA_TAG); a long
+  // safety window means a sleeping (free-tier) DB is woken very rarely.
+  revalidate: number | false = 3600,
 ): T {
   return unstable_cache(
     fn as unknown as (...args: unknown[]) => Promise<unknown>,

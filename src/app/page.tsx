@@ -115,7 +115,7 @@ function Hero({ isAdmin, loggedIn }: { isAdmin: boolean; loggedIn: boolean }) {
         </h1>
         <p className="mt-3 text-sm text-muted sm:text-base">
           Segna le partite, scala la classifica Elo, sblocca livelli e organizza
-          tornei. Calcio + ping pong, come si gioca sulla spiaggia.
+          tornei. Il nostro gioco, come si sfida sulla spiaggia di Rimini.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           {isAdmin && (

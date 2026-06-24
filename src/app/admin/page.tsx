@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Shield, Plus, Swords, UserPlus, Users } from "lucide-react";
+import { Shield, Plus, Swords, UserPlus, Users, FlaskConical } from "lucide-react";
 import { PageHeader } from "@/components/ui/page";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { CreatePlayerForm } from "@/components/admin/create-player-form";
 import { CreateTeamForm } from "@/components/admin/create-team-form";
+import { DemoControls } from "@/components/admin/demo-controls";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { getPlayerOptions, getPlayersList } from "@/lib/queries";
 import { getTeamRanking } from "@/lib/stats";
+import { countDemoMatches } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Admin" };
@@ -20,10 +22,11 @@ export default async function AdminPage() {
   if (!user) redirect("/login?callbackUrl=/admin");
   if (user.role !== "admin") redirect("/");
 
-  const [players, playerOpts, teams] = await Promise.all([
+  const [players, playerOpts, teams, demoCount] = await Promise.all([
     getPlayersList(),
     getPlayerOptions(),
     getTeamRanking(),
+    countDemoMatches(),
   ]);
 
   return (
@@ -46,6 +49,13 @@ export default async function AdminPage() {
           </Link>
         </Button>
       </div>
+
+      <Card>
+        <CardTitle className="mb-3 flex items-center gap-2">
+          <FlaskConical className="h-5 w-5 text-brand" /> Partite demo
+        </CardTitle>
+        <DemoControls count={demoCount} />
+      </Card>
 
       <Card>
         <CardTitle className="mb-3 flex items-center gap-2">

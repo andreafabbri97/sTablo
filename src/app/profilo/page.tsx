@@ -7,6 +7,7 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FifaCard } from "@/components/player/fifa-card";
 import { ProfileForm } from "@/components/player/profile-form";
+import { ChangePasswordForm } from "@/components/player/change-password-form";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { getPlayerWithStats } from "@/lib/stats";
 
@@ -69,14 +70,20 @@ export default async function ProfiloPage() {
             Anteprima della tua card
           </p>
         </div>
-        <Card>
-          <CardTitle className="mb-4">Modifica profilo</CardTitle>
-          <ProfileForm
-            player={data.player}
-            username={user.username ?? ""}
-            email={user.email ?? ""}
-          />
-        </Card>
+        <div className="space-y-6">
+          <Card>
+            <CardTitle className="mb-4">Modifica profilo</CardTitle>
+            <ProfileForm
+              player={data.player}
+              username={user.username ?? ""}
+              email={user.email ?? ""}
+            />
+          </Card>
+          <Card>
+            <CardTitle className="mb-4">Sicurezza</CardTitle>
+            <ChangePasswordForm />
+          </Card>
+        </div>
       </div>
     </div>
   );

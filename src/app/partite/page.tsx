@@ -3,8 +3,7 @@ import Link from "next/link";
 import { ListChecks, Plus } from "lucide-react";
 import { PageHeader, EmptyState } from "@/components/ui/page";
 import { Button } from "@/components/ui/button";
-import { MatchCard } from "@/components/match-card";
-import { DeleteMatchButton } from "@/components/admin/delete-match-button";
+import { MatchExplorer } from "@/components/match-explorer";
 import { getAllMatches } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { safe } from "@/lib/safe";
@@ -56,18 +55,7 @@ export default async function PartitePage() {
           }
         />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {matches.map((m) => (
-            <div key={m.id} className="space-y-1">
-              <MatchCard match={m} />
-              {isAdmin && (
-                <div className="flex justify-end px-1">
-                  <DeleteMatchButton matchId={m.id} />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        <MatchExplorer matches={matches} isAdmin={isAdmin} />
       )}
     </div>
   );

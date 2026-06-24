@@ -15,7 +15,11 @@ export function MatchCard({ match }: { match: ShapedMatch }) {
           <Badge tone={match.format === "singles" ? "sea" : "brand"}>
             {match.format === "singles" ? "1 vs 1" : "2 vs 2"}
           </Badge>
-          {!match.ranked && <Badge tone="muted">Amichevole</Badge>}
+          {match.ranked ? (
+            <Badge tone="gold">🏆 Classificata</Badge>
+          ) : (
+            <Badge tone="muted">🤝 Amichevole</Badge>
+          )}
         </div>
         <span className="text-xs text-muted">{timeAgo(match.playedAt)}</span>
       </div>

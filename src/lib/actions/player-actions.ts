@@ -2,10 +2,16 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { eq, and, ne } from "drizzle-orm";
+import { compare, hash } from "bcryptjs";
 import { DATA_TAG } from "@/lib/cache";
 import { db } from "@/lib/db";
 import { players, teams, users } from "@/lib/db/schema";
-import { profileSchema, playerCreateSchema, teamSchema } from "@/lib/validation";
+import {
+  profileSchema,
+  playerCreateSchema,
+  teamSchema,
+  changePasswordSchema,
+} from "@/lib/validation";
 import { assertAuth, assertAdmin } from "@/lib/auth-helpers";
 import { slugify, colorFromString } from "@/lib/utils";
 import type { ActionResult } from "./auth-actions";
@@ -79,6 +85,45 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
   } catch (error) {
     console.error("[updateProfile]", error);
     return { ok: false, error: "Errore nel salvataggio del profilo" };
+  }
+}
+
+export async function changePassword(input: unknown): Promise<ActionResult> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere" };
+  }
+
+  const parsed = changePasswordSchema.safeParse(input);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    return { ok: false, error: first.message, field: String(first.path[0]) };
+  }
+  const { currentPassword, newPassword } = parsed.data;
+
+  try {
+    const row = await db.query.users.findFirst({ where: eq(users.id, user.id) });
+    if (!row) return { ok: false, error: "Utente non trovato" };
+
+    const ok = await compare(currentPassword, row.passwordHash);
+    if (!ok) {
+      return {
+        ok: false,
+        error: "Password attuale errata",
+        field: "currentPassword",
+      };
+    }
+
+    await db
+      .update(users)
+      .set({ passwordHash: await hash(newPassword, 10) })
+      .where(eq(users.id, user.id));
+    return { ok: true };
+  } catch (error) {
+    console.error("[changePassword]", error);
+    return { ok: false, error: "Errore nel cambio password" };
   }
 }
 

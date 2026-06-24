@@ -37,6 +37,17 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Inserisci la password"),
 });
 
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Inserisci la password attuale"),
+    newPassword: z.string().min(8, "Minimo 8 caratteri").max(72),
+    confirm: z.string(),
+  })
+  .refine((d) => d.newPassword === d.confirm, {
+    message: "Le password non coincidono",
+    path: ["confirm"],
+  });
+
 export const profileSchema = z.object({
   username: usernameSchema,
   email: optionalEmail,
