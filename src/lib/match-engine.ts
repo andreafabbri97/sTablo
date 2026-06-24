@@ -6,10 +6,12 @@ import {
   matchParticipants,
   eloHistory,
   matches as matchesTable,
+  users as usersTable,
   STARTING_ELO,
 } from "./db/schema";
 import { computeElo, sideRating } from "./elo";
 import { replayElo } from "./elo-replay";
+import { sendPushToUsers } from "./push";
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -226,8 +228,40 @@ export async function autoConfirmExpired(): Promise<number> {
       ),
     )
     .returning({ id: matchesTable.id });
-  if (flipped.length > 0) await recomputeAllElo();
+  if (flipped.length > 0) {
+    await recomputeAllElo();
+    // Tell the players: their result settled on its own and now counts. Each
+    // match flips exactly once (it becomes 'completed'), so this never spams.
+    await notifyAutoConfirmed(flipped.map((f) => f.id)).catch((error) =>
+      console.error("[autoConfirmExpired] notify", error),
+    );
+  }
   return flipped.length;
+}
+
+/** Best-effort push to everyone who played in the just auto-confirmed matches. */
+async function notifyAutoConfirmed(matchIds: string[]): Promise<void> {
+  if (matchIds.length === 0) return;
+  const partRows = await db
+    .select({ playerId: matchParticipants.playerId })
+    .from(matchParticipants)
+    .where(inArray(matchParticipants.matchId, matchIds));
+  const playerIds = [...new Set(partRows.map((r) => r.playerId))];
+  if (playerIds.length === 0) return;
+
+  const userRows = await db
+    .select({ userId: usersTable.id })
+    .from(usersTable)
+    .where(inArray(usersTable.playerId, playerIds));
+  const userIds = userRows.map((r) => r.userId);
+  if (userIds.length === 0) return;
+
+  await sendPushToUsers(userIds, {
+    title: "Risultato confermato ✅",
+    body: "Un risultato in attesa è stato confermato automaticamente dopo 24h e ora conta in classifica.",
+    url: "/partite",
+    tag: "match-autoconfirm",
+  });
 }
 
 /**

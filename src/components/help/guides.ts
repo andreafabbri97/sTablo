@@ -73,7 +73,7 @@ export const GUIDES: Record<string, Guide> = {
         points: [
           "Tocca «Nuova partita» per inserire un risultato (1v1 o 2v2).",
           "Quando proponi un risultato, l'avversario riceve una notifica e deve confermarlo.",
-          "Se non conferma entro 24 ore, il risultato viene confermato automaticamente.",
+          "Se non conferma entro 24 ore, il risultato viene confermato automaticamente e ricevi una notifica.",
         ],
       },
       {
