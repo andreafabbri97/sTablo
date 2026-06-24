@@ -35,11 +35,10 @@ export default async function HomePage() {
   ]);
 
   const podium = ranking.slice(0, 3);
-  const isAdmin = user?.role === "admin";
 
   return (
     <div className="space-y-10">
-      <Hero isAdmin={isAdmin} loggedIn={!!user} />
+      <Hero loggedIn={!!user} />
 
       <section className="grid grid-cols-3 gap-3">
         <StatChip icon={<Users className="h-4 w-4" />} value={stats.players} label="Giocatori" />
@@ -101,7 +100,7 @@ export default async function HomePage() {
   );
 }
 
-function Hero({ isAdmin, loggedIn }: { isAdmin: boolean; loggedIn: boolean }) {
+function Hero({ loggedIn }: { loggedIn: boolean }) {
   return (
     <section className="relative overflow-hidden rounded-[var(--radius-2xl)] border border-border bg-gradient-to-br from-surface to-surface-2 p-6 sm:p-10">
       <div

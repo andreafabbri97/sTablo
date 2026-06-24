@@ -13,7 +13,13 @@ const DISMISS_KEY = "stablo-install-dismissed";
 
 export function InstallBanner() {
   const [deferred, setDeferred] = useState<BIPEvent | null>(null);
-  const [isIOS, setIsIOS] = useState(false);
+  // Derived once from the user agent — stable, and the banner stays hidden
+  // (show=false) during hydration, so there's no SSR/client mismatch.
+  const [isIOS] = useState(
+    () =>
+      typeof navigator !== "undefined" &&
+      /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase()),
+  );
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -27,10 +33,6 @@ export function InstallBanner() {
 
     if (localStorage.getItem(DISMISS_KEY)) return;
 
-    const ua = window.navigator.userAgent.toLowerCase();
-    const ios = /iphone|ipad|ipod/.test(ua);
-    setIsIOS(ios);
-
     const onBIP = (e: Event) => {
       e.preventDefault();
       setDeferred(e as BIPEvent);
@@ -38,11 +40,15 @@ export function InstallBanner() {
     };
     window.addEventListener("beforeinstallprompt", onBIP);
 
-    // iOS doesn't fire beforeinstallprompt — show instructions banner
-    if (ios) setShow(true);
+    // iOS doesn't fire beforeinstallprompt — show instructions banner.
+    // Intentionally client-only after mount: standalone/dismissed/iOS can only
+    // be detected on the client, so the banner must stay hidden during SSR and
+    // hydration to avoid a mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (isIOS) setShow(true);
 
     return () => window.removeEventListener("beforeinstallprompt", onBIP);
-  }, []);
+  }, [isIOS]);
 
   function dismiss() {
     setShow(false);
