@@ -29,6 +29,7 @@ export const tournamentFormat = pgEnum("tournament_format", [
   "single_elim",
   "groups_knockout",
   "swiss",
+  "americano",
 ]);
 export const tournamentDiscipline = pgEnum("tournament_discipline", [
   "singles",
@@ -306,6 +307,10 @@ export type TournamentConfig = {
   ranked?: boolean;
   /** league: play home & away (andata/ritorno) */
   doubleRound?: boolean;
+  /** americano: target score that decides each game (default 15) */
+  targetScore?: number;
+  /** americano: number of rotation rounds to schedule */
+  americanoRounds?: number;
 };
 
 /* ----------------------------------------------------------------------------

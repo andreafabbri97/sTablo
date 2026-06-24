@@ -12,6 +12,7 @@ import { DeleteTournamentButton } from "@/components/admin/delete-tournament-but
 import { ProfileQr } from "@/components/friends/profile-qr";
 import { ShareButton } from "@/components/share-button";
 import { StartTournamentButton } from "@/components/tournament/start-tournament-button";
+import { AmericanoView } from "@/components/tournament/americano-view";
 import { HelpButton } from "@/components/help/help-button";
 import {
   getTournamentDetail,
@@ -193,6 +194,14 @@ export default async function TournamentPage({
       )}
 
       {/* Body by format */}
+      {tournament.status !== "draft" && tournament.format === "americano" && detail.americano && (
+        <AmericanoView
+          data={detail.americano}
+          canManage={canManage}
+          completed={tournament.status === "completed"}
+        />
+      )}
+
       {tournament.status !== "draft" && (tournament.format === "league" || tournament.format === "round_robin") && (
         <>
           <Section title="Classifica">

@@ -133,6 +133,7 @@ export const GUIDES: Record<string, Guide> = {
           "⚔️ Eliminazione diretta: tabellone a eliminazione.",
           "🌍 Gironi + eliminazione: gironi e poi fase finale.",
           "🇨🇭 Svizzero: accoppiamenti per punteggio, turno dopo turno.",
+          "🟡 Americano: coppie a rotazione, classifica individuale a punti (min. 4 giocatori).",
         ],
       },
       {

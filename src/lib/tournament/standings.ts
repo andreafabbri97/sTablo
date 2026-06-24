@@ -100,6 +100,98 @@ export function computeStandings(
   return out;
 }
 
+/* ----------------------------------------------------------------------------
+   Americano — individual standings (one row per player, not per entrant)
+---------------------------------------------------------------------------- */
+export type AmericanoParticipant = {
+  matchId: string;
+  side: "A" | "B";
+  playerId: string;
+};
+
+export type AmericanoMatchScore = {
+  id: string;
+  scoreA: number | null;
+  scoreB: number | null;
+  winner: "A" | "B" | null;
+  status: "scheduled" | "pending" | "completed";
+};
+
+export type AmericanoPlayer = { playerId: string; name: string };
+
+export type AmericanoStandingRow = {
+  playerId: string;
+  name: string;
+  played: number;
+  won: number;
+  lost: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  diff: number;
+};
+
+/**
+ * Individual leaderboard for an Americano: every player accrues the points they
+ * personally scored across every game they played in (with rotating partners).
+ * Ranked by total points scored — the classic Americano metric — then by point
+ * difference and wins.
+ */
+export function computeAmericanoStandings(
+  players: AmericanoPlayer[],
+  matches: AmericanoMatchScore[],
+  participants: AmericanoParticipant[],
+): AmericanoStandingRow[] {
+  const rows = new Map<string, AmericanoStandingRow>();
+  for (const p of players) {
+    rows.set(p.playerId, {
+      playerId: p.playerId,
+      name: p.name,
+      played: 0,
+      won: 0,
+      lost: 0,
+      pointsFor: 0,
+      pointsAgainst: 0,
+      diff: 0,
+    });
+  }
+
+  const byMatch = new Map<string, AmericanoParticipant[]>();
+  for (const part of participants) {
+    const list = byMatch.get(part.matchId);
+    if (list) list.push(part);
+    else byMatch.set(part.matchId, [part]);
+  }
+
+  for (const m of matches) {
+    if (m.status !== "completed" || m.scoreA == null || m.scoreB == null) continue;
+    for (const part of byMatch.get(m.id) ?? []) {
+      const row = rows.get(part.playerId);
+      if (!row) continue;
+      const forPts = part.side === "A" ? m.scoreA : m.scoreB;
+      const againstPts = part.side === "A" ? m.scoreB : m.scoreA;
+      row.played++;
+      row.pointsFor += forPts;
+      row.pointsAgainst += againstPts;
+      const won =
+        (part.side === "A" && m.winner === "A") ||
+        (part.side === "B" && m.winner === "B");
+      if (won) row.won++;
+      else row.lost++;
+    }
+  }
+
+  const out = [...rows.values()];
+  for (const r of out) r.diff = r.pointsFor - r.pointsAgainst;
+  out.sort(
+    (x, y) =>
+      y.pointsFor - x.pointsFor ||
+      y.diff - x.diff ||
+      y.won - x.won ||
+      x.name.localeCompare(y.name),
+  );
+  return out;
+}
+
 /** Top `count` entrant ids from each group, ordered for knockout seeding. */
 export function qualifiersFromGroups(
   entrants: StandingEntrant[],

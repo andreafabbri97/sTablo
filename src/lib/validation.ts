@@ -105,6 +105,7 @@ export const tournamentSchema = z.object({
     "single_elim",
     "groups_knockout",
     "swiss",
+    "americano",
   ]),
   discipline: z.enum(["singles", "doubles", "teams"]),
   description: z.string().trim().max(280).optional().or(z.literal("")),
@@ -114,6 +115,9 @@ export const tournamentSchema = z.object({
   advancePerGroup: z.coerce.number().int().min(1).max(8).optional(),
   swissRounds: z.coerce.number().int().min(1).max(12).optional(),
   thirdPlace: z.boolean().optional(),
+  /** americano: target score per game + number of rotation rounds */
+  targetScore: z.coerce.number().int().min(1).max(99).optional(),
+  americanoRounds: z.coerce.number().int().min(1).max(20).optional(),
   /** singles → player ids; teams → team ids. Empty for ad-hoc doubles. */
   entrantIds: z.array(z.string()).default([]),
   /** ad-hoc doubles couples (two player ids), no registered team needed. */
@@ -126,6 +130,17 @@ export const tournamentSchema = z.object({
     )
     .default([]),
 }).superRefine((d, ctx) => {
+  if (d.format === "americano") {
+    // Americano is always individual (singles) and needs a full court.
+    if (d.entrantIds.length < 4) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "L'Americano richiede almeno 4 giocatori",
+        path: ["entrantIds"],
+      });
+    }
+    return;
+  }
   if (d.discipline === "doubles") {
     if (d.pairs.length < 2) {
       ctx.addIssue({

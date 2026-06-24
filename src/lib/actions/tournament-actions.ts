@@ -9,6 +9,7 @@ import {
   tournamentEntrants,
   tournamentInvites,
   matches,
+  matchParticipants,
   teams,
   players,
   type TournamentConfig,
@@ -16,22 +17,31 @@ import {
 import { tournamentSchema, type TournamentInput } from "@/lib/validation";
 import { assertAdmin, assertAuth } from "@/lib/auth-helpers";
 import { slugify } from "@/lib/utils";
-import { applyMatchResult, type SideInput } from "@/lib/match-engine";
+import {
+  applyMatchResult,
+  insertParticipants,
+  recomputeAllElo,
+  type SideInput,
+} from "@/lib/match-engine";
 import { sendPushToUsers } from "@/lib/push";
 import { getFriends } from "@/lib/friends";
 import {
   generateRoundRobin,
   generateSingleElim,
   generateSwissRound1,
+  generateAmericano,
+  defaultAmericanoRounds,
   splitIntoGroups,
   GROUP_LABELS,
   type GenMatch,
 } from "@/lib/tournament/generators";
 import {
   computeStandings,
+  computeAmericanoStandings,
   qualifiersFromGroups,
   type StandingEntrant,
   type StandingMatch,
+  type AmericanoParticipant,
 } from "@/lib/tournament/standings";
 import type { ActionResult } from "./auth-actions";
 
@@ -86,7 +96,13 @@ export async function createTournament(input: unknown): Promise<CreateResult> {
     advancePerGroup: d.advancePerGroup,
     swissRounds: d.swissRounds,
     thirdPlace: d.thirdPlace,
+    targetScore: d.targetScore,
+    americanoRounds: d.americanoRounds,
   };
+
+  if (d.format === "americano" && n < 4) {
+    return { ok: false, error: "L'Americano richiede almeno 4 giocatori" };
+  }
 
   const slug = await uniqueTournamentSlug(d.name);
 
@@ -135,15 +151,23 @@ export async function createTournament(input: unknown): Promise<CreateResult> {
         .returning();
 
       // Generate the initial schedule
-      const gen = generateInitialSchedule(d.format, n, config, groupOf);
-
-      await persistGenMatches(tx, {
-        tournamentId: t.id,
-        matchFormat,
-        ranked: d.ranked,
-        gen,
-        entrants: entrantRows,
-      });
+      if (d.format === "americano") {
+        await persistAmericano(tx, {
+          tournamentId: t.id,
+          ranked: d.ranked,
+          entrants: entrantRows,
+          rounds: config.americanoRounds ?? defaultAmericanoRounds(n),
+        });
+      } else {
+        const gen = generateInitialSchedule(d.format, n, config, groupOf);
+        await persistGenMatches(tx, {
+          tournamentId: t.id,
+          matchFormat,
+          ranked: d.ranked,
+          gen,
+          entrants: entrantRows,
+        });
+      }
     });
 
     updateTag(DATA_TAG);
@@ -279,6 +303,54 @@ async function persistGenMatches(
         .set({ status: "completed" })
         .where(eq(matches.id, localToDb.get(g.localId)!));
     }
+  }
+}
+
+/**
+ * Persist an Americano schedule: one match per court per round, stored as a
+ * doubles match with all four players written to match_participants up-front
+ * (two per side). entrantA/Bid stay null — there are no entrant-vs-entrant
+ * pairings here; scoring is per individual. Ratings stay empty until a result
+ * is recorded, when recomputeAllElo() fills them in.
+ */
+async function persistAmericano(
+  tx: Tx,
+  args: {
+    tournamentId: string;
+    ranked: boolean;
+    entrants: EntrantRow[];
+    rounds: number;
+  },
+) {
+  const schedule = generateAmericano(args.entrants.length, args.rounds);
+  const playerOf = (idx: number) => args.entrants[idx]?.playerId ?? null;
+
+  for (const am of schedule) {
+    const aIds = am.a.map(playerOf).filter(Boolean) as string[];
+    const bIds = am.b.map(playerOf).filter(Boolean) as string[];
+    // Skip a malformed court (a missing player profile) rather than persist a
+    // lopsided match that would corrupt the individual standings.
+    if (aIds.length !== 2 || bIds.length !== 2) continue;
+
+    const [row] = await tx
+      .insert(matches)
+      .values({
+        format: "doubles",
+        status: "scheduled",
+        ranked: args.ranked,
+        tournamentId: args.tournamentId,
+        stage: "league",
+        round: am.round,
+        slot: am.slot,
+      })
+      .returning({ id: matches.id });
+
+    await insertParticipants(
+      tx,
+      row.id,
+      { playerIds: aIds, teamId: null },
+      { playerIds: bIds, teamId: null },
+    );
   }
 }
 
@@ -472,6 +544,74 @@ export async function recordTournamentMatch(
   }
 }
 
+/* ----------------------------------------------------------------------------
+   Americano: record a single court result (individual scoring)
+---------------------------------------------------------------------------- */
+export async function recordAmericanoMatch(
+  matchId: string,
+  scoreA: number,
+  scoreB: number,
+): Promise<ActionResult> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere" };
+  }
+  if (scoreA === scoreB) {
+    return { ok: false, error: "Il punteggio non può finire in parità" };
+  }
+
+  const match = await db.query.matches.findFirst({
+    where: eq(matches.id, matchId),
+  });
+  if (!match || !match.tournamentId) {
+    return { ok: false, error: "Partita non trovata" };
+  }
+  if (match.status === "completed") {
+    return { ok: false, error: "Risultato già registrato" };
+  }
+
+  const tournament = await db.query.tournaments.findFirst({
+    where: eq(tournaments.id, match.tournamentId),
+  });
+  if (!tournament) return { ok: false, error: "Torneo non trovato" };
+  if (tournament.format !== "americano") {
+    return { ok: false, error: "Partita non valida per questo formato" };
+  }
+  if (user.role !== "admin" && tournament.createdById !== user.id) {
+    return {
+      ok: false,
+      error: "Solo l'organizzatore o un admin può inserire i risultati",
+    };
+  }
+
+  const winner: "A" | "B" = scoreA > scoreB ? "A" : "B";
+
+  try {
+    await db
+      .update(matches)
+      .set({ scoreA, scoreB, winner, status: "completed", playedAt: new Date() })
+      .where(eq(matches.id, matchId));
+
+    // Participants were written at schedule time, so we only set the score and
+    // replay ratings — calling applyMatchResult here would duplicate them.
+    if (tournament.config.ranked !== false) {
+      await recomputeAllElo();
+    }
+    await maybeCompleteTournament(tournament.id);
+
+    updateTag(DATA_TAG);
+    revalidatePath(`/tornei/${tournament.slug}`);
+    revalidatePath("/tornei");
+    revalidatePath("/classifica");
+    return { ok: true };
+  } catch (error) {
+    console.error("[recordAmericanoMatch]", error);
+    return { ok: false, error: "Errore nel salvataggio del risultato" };
+  }
+}
+
 async function entrantToSide(
   entrant: EntrantRow,
   discipline: string,
@@ -564,6 +704,56 @@ async function maybeGenerateKnockout(tournamentId: string) {
 /* ----------------------------------------------------------------------------
    Completion detection
 ---------------------------------------------------------------------------- */
+/**
+ * Winner of an Americano = the top of the individual leaderboard. Maps that
+ * player back to their entrant id so it can be stored in winnerEntrantId and
+ * surfaced like every other format.
+ */
+async function americanoWinnerEntrantId(
+  tournamentId: string,
+): Promise<string | null> {
+  const entrants = await db
+    .select()
+    .from(tournamentEntrants)
+    .where(eq(tournamentEntrants.tournamentId, tournamentId));
+  const entrantByPlayer = new Map(
+    entrants
+      .filter((e) => e.playerId)
+      .map((e) => [e.playerId as string, e.id]),
+  );
+  const namedPlayers = entrants
+    .filter((e) => e.playerId)
+    .map((e) => ({ playerId: e.playerId as string, name: e.name }));
+
+  const matchRows = await db
+    .select()
+    .from(matches)
+    .where(eq(matches.tournamentId, tournamentId));
+  const parts = await db
+    .select({
+      matchId: matchParticipants.matchId,
+      side: matchParticipants.side,
+      playerId: matchParticipants.playerId,
+    })
+    .from(matchParticipants)
+    .innerJoin(matches, eq(matchParticipants.matchId, matches.id))
+    .where(eq(matches.tournamentId, tournamentId));
+
+  const standings = computeAmericanoStandings(
+    namedPlayers,
+    matchRows.map((m) => ({
+      id: m.id,
+      scoreA: m.scoreA,
+      scoreB: m.scoreB,
+      winner: m.winner,
+      status: m.status,
+    })),
+    parts as AmericanoParticipant[],
+  );
+  const topPlayerId = standings[0]?.playerId;
+  return topPlayerId ? (entrantByPlayer.get(topPlayerId) ?? null) : null;
+}
+
 async function maybeCompleteTournament(tournamentId: string) {
   const t = await db.query.tournaments.findFirst({
     where: eq(tournaments.id, tournamentId),
@@ -580,7 +770,10 @@ async function maybeCompleteTournament(tournamentId: string) {
 
   let winnerEntrantId: string | null = null;
 
-  if (hasKnockout) {
+  if (t.format === "americano") {
+    if (all.length === 0 || pending.length > 0) return;
+    winnerEntrantId = await americanoWinnerEntrantId(tournamentId);
+  } else if (hasKnockout) {
     // Final = the knockout match with the highest round and no nextMatch
     const knockout = all.filter((m) => m.stage === "knockout" && m.note !== "Finale 3°/4°");
     const maxRound = Math.max(...knockout.map((m) => m.round ?? 0));
@@ -803,6 +996,10 @@ type OpenTournamentInput = {
   swissRounds?: number;
   thirdPlace?: boolean;
   doubleRound?: boolean;
+  /** americano: target score per game */
+  targetScore?: number;
+  /** americano: number of rotation rounds */
+  americanoRounds?: number;
   /** public = listed for everyone; private = invite-only, hidden from the list */
   visibility?: "public" | "private";
 };
@@ -828,6 +1025,8 @@ export async function createOpenTournament(
     advancePerGroup: input.advancePerGroup,
     swissRounds: input.swissRounds,
     thirdPlace: input.thirdPlace,
+    targetScore: input.targetScore,
+    americanoRounds: input.americanoRounds,
   };
 
   try {
@@ -1028,6 +1227,38 @@ export async function startTournament(
   const entrantIds = t.entrants.map((e) => e.id);
   if (entrantIds.length < 2) {
     return { ok: false, error: "Servono almeno 2 partecipanti per avviare" };
+  }
+
+  // Americano: rotating-partner doubles with an individual leaderboard. It has
+  // its own scheduler (four players per court) and skips the entrant-vs-entrant
+  // generators used by the other formats.
+  if (t.format === "americano") {
+    if (entrantIds.length < 4) {
+      return { ok: false, error: "L'Americano richiede almeno 4 giocatori" };
+    }
+    const rounds =
+      t.config.americanoRounds ?? defaultAmericanoRounds(entrantIds.length);
+    try {
+      await db.transaction(async (tx) => {
+        await persistAmericano(tx, {
+          tournamentId: t.id,
+          ranked: t.config.ranked !== false,
+          entrants: t.entrants,
+          rounds,
+        });
+        await tx
+          .update(tournaments)
+          .set({ status: "active", currentRound: 1, startedAt: new Date() })
+          .where(eq(tournaments.id, tournamentId));
+      });
+      updateTag(DATA_TAG);
+      revalidatePath(`/tornei/${t.slug}`);
+      revalidatePath("/tornei");
+      return { ok: true };
+    } catch (error) {
+      console.error("[startTournament:americano]", error);
+      return { ok: false, error: "Errore nell'avvio del torneo" };
+    }
   }
 
   const isSingles = t.discipline === "singles";

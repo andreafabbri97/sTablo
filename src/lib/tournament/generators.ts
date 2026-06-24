@@ -255,6 +255,75 @@ export function generateSwissRound1(n: number): GenMatch[] {
   return matches;
 }
 
+/* ----------------------------------------------------------------------------
+   Americano — rotating-partner social format (individual scoring)
+
+   Each round players are grouped into courts of four; partnerships rotate so
+   that over the rounds you play *with* and *against* as many different people
+   as possible. There are no entrants-vs-entrants pairings here: a court holds
+   four individual players, two per side, and the schedule references players by
+   index. Players beyond a multiple of four rest that round; a full rotation
+   makes the rest rotate fairly too.
+---------------------------------------------------------------------------- */
+export type AmericanoMatch = {
+  round: number;
+  slot: number;
+  /** player indices on side A (a pair) */
+  a: [number, number];
+  /** player indices on side B (a pair) */
+  b: [number, number];
+};
+
+/** Rotate an array left by `by` positions (immutable). */
+function rotateLeft(arr: number[], by: number): number[] {
+  const k = arr.length;
+  if (k <= 1) return arr.slice();
+  const s = ((by % k) + k) % k;
+  return [...arr.slice(s), ...arr.slice(0, s)];
+}
+
+/**
+ * Build an Americano schedule for `n` players over `rounds` rounds. Returns
+ * abstract matches referencing players by index; the caller maps indices to
+ * entrant/player ids. Needs at least 4 players (returns [] otherwise).
+ */
+export function generateAmericano(n: number, rounds: number): AmericanoMatch[] {
+  if (n < 4) return [];
+  const base = Array.from({ length: n }, (_, i) => i);
+  const courts = Math.floor(n / 4);
+  const out: AmericanoMatch[] = [];
+
+  for (let r = 0; r < rounds; r++) {
+    const pool = rotateLeft(base, r);
+    for (let c = 0; c < courts; c++) {
+      const g = pool.slice(c * 4, c * 4 + 4);
+      // Vary the in-court pairing each round so the four players cycle through
+      // all three possible partnerships across rounds.
+      const pattern = r % 3;
+      let a: [number, number];
+      let b: [number, number];
+      if (pattern === 0) {
+        a = [g[0], g[1]];
+        b = [g[2], g[3]];
+      } else if (pattern === 1) {
+        a = [g[0], g[2]];
+        b = [g[1], g[3]];
+      } else {
+        a = [g[0], g[3]];
+        b = [g[1], g[2]];
+      }
+      out.push({ round: r + 1, slot: c, a, b });
+    }
+  }
+  return out;
+}
+
+/** Sensible default number of rounds for `n` players (≈ one rotation, capped). */
+export function defaultAmericanoRounds(n: number): number {
+  if (n < 4) return 0;
+  return Math.min(Math.max(3, n - 1), 12);
+}
+
 /** Group split: distribute entrants across N groups snake-style by seed. */
 export function splitIntoGroups(n: number, groups: number): number[][] {
   const buckets: number[][] = Array.from({ length: groups }, () => []);

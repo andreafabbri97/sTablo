@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { createTournament } from "@/lib/actions/tournament-actions";
 
 type Option = { id: string; name: string };
-type Format = "league" | "round_robin" | "single_elim" | "groups_knockout" | "swiss";
+type Format = "league" | "round_robin" | "single_elim" | "groups_knockout" | "swiss" | "americano";
 type Discipline = "singles" | "doubles";
 type Pair = { playerId: string; partnerId: string };
 
@@ -19,6 +19,7 @@ const FORMATS: { id: Format; emoji: string; label: string; blurb: string }[] = [
   { id: "single_elim", emoji: "⚔️", label: "Eliminazione diretta", blurb: "Tabellone a eliminazione" },
   { id: "groups_knockout", emoji: "🌍", label: "Gironi + eliminazione", blurb: "Gironi poi tabellone finale" },
   { id: "swiss", emoji: "🇨🇭", label: "Svizzero", blurb: "Accoppiamenti per punteggio" },
+  { id: "americano", emoji: "🟡", label: "Americano", blurb: "Coppie a rotazione, classifica individuale" },
 ];
 
 export function TournamentForm({ players }: { players: Option[] }) {
@@ -34,9 +35,13 @@ export function TournamentForm({ players }: { players: Option[] }) {
   const [groups, setGroups] = useState(2);
   const [advancePerGroup, setAdvancePerGroup] = useState(2);
   const [swissRounds, setSwissRounds] = useState(3);
+  const [targetScore, setTargetScore] = useState(15);
+  const [americanoRounds, setAmericanoRounds] = useState<number | "">("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const isAmericano = format === "americano";
 
   // singles: list of player ids in seed order
   const [selected, setSelected] = useState<string[]>([]);
@@ -50,6 +55,13 @@ export function TournamentForm({ players }: { players: Option[] }) {
     setPairs([]);
     setPending(null);
     setError(null);
+  }
+
+  function selectFormat(f: Format) {
+    setFormat(f);
+    setError(null);
+    // Americano is always individual: force the singles picker.
+    if (f === "americano" && discipline !== "singles") switchDiscipline("singles");
   }
 
   function toggleSingle(id: string) {
@@ -81,11 +93,15 @@ export function TournamentForm({ players }: { players: Option[] }) {
     e.preventDefault();
     setError(null);
 
-    if (discipline === "singles" && selected.length < 2) {
+    if (isAmericano && selected.length < 4) {
+      setError("L'Americano richiede almeno 4 giocatori");
+      return;
+    }
+    if (!isAmericano && discipline === "singles" && selected.length < 2) {
       setError("Seleziona almeno 2 giocatori");
       return;
     }
-    if (discipline === "doubles" && pairs.length < 2) {
+    if (!isAmericano && discipline === "doubles" && pairs.length < 2) {
       setError("Forma almeno 2 coppie");
       return;
     }
@@ -104,6 +120,13 @@ export function TournamentForm({ players }: { players: Option[] }) {
       description,
       entrantIds: discipline === "singles" ? selected : [],
       pairs: discipline === "doubles" ? pairs : [],
+      ...(isAmericano
+        ? {
+            targetScore,
+            americanoRounds:
+              typeof americanoRounds === "number" ? americanoRounds : undefined,
+          }
+        : {}),
     });
     setLoading(false);
     if (!res.ok) {
@@ -129,7 +152,7 @@ export function TournamentForm({ players }: { players: Option[] }) {
             <button
               key={f.id}
               type="button"
-              onClick={() => setFormat(f.id)}
+              onClick={() => selectFormat(f.id)}
               className={cn(
                 "flex items-start gap-3 rounded-xl border p-3 text-left transition",
                 format === f.id ? "border-brand bg-brand-soft" : "border-border hover:bg-surface-2",
@@ -145,31 +168,33 @@ export function TournamentForm({ players }: { players: Option[] }) {
         </div>
       </div>
 
-      {/* Discipline */}
-      <div>
-        <Label>Disciplina</Label>
-        <div className="flex gap-1.5 rounded-2xl border border-border bg-surface p-1.5">
-          {(["singles", "doubles"] as Discipline[]).map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => switchDiscipline(d)}
-              className={cn(
-                "flex-1 rounded-xl py-2 text-sm font-bold transition",
-                discipline === d ? "bg-brand text-white" : "text-muted hover:bg-surface-2",
-              )}
-            >
-              {d === "singles" ? "Singolo" : "Doppio"}
-            </button>
-          ))}
+      {/* Discipline — hidden for Americano (always individual) */}
+      {!isAmericano && (
+        <div>
+          <Label>Disciplina</Label>
+          <div className="flex gap-1.5 rounded-2xl border border-border bg-surface p-1.5">
+            {(["singles", "doubles"] as Discipline[]).map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => switchDiscipline(d)}
+                className={cn(
+                  "flex-1 rounded-xl py-2 text-sm font-bold transition",
+                  discipline === d ? "bg-brand text-white" : "text-muted hover:bg-surface-2",
+                )}
+              >
+                {d === "singles" ? "Singolo" : "Doppio"}
+              </button>
+            ))}
+          </div>
+          {discipline === "doubles" && (
+            <p className="mt-2 text-xs text-muted">
+              Tocca due giocatori per formare una coppia. Niente team da
+              preimpostare.
+            </p>
+          )}
         </div>
-        {discipline === "doubles" && (
-          <p className="mt-2 text-xs text-muted">
-            Tocca due giocatori per formare una coppia. Niente team da
-            preimpostare.
-          </p>
-        )}
-      </div>
+      )}
 
       {/* Ranked */}
       <div className="flex gap-1.5 rounded-2xl border border-border bg-surface p-1.5">
@@ -207,6 +232,38 @@ export function TournamentForm({ players }: { players: Option[] }) {
       )}
       {format === "swiss" && (
         <NumberField label="Numero turni" value={swissRounds} setValue={setSwissRounds} min={2} max={9} />
+      )}
+      {isAmericano && (
+        <div className="space-y-3 rounded-xl border border-border bg-surface p-4">
+          <p className="flex items-center gap-2 text-sm font-bold">🟡 Impostazioni Americano</p>
+          <p className="text-xs text-muted">
+            Coppie a rotazione: a ogni turno cambi compagno e avversari. La
+            classifica è individuale, in base ai punti che segni. Servono almeno
+            4 giocatori.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <NumberField label="Punti per game" value={targetScore} setValue={setTargetScore} min={1} max={99} />
+            <div>
+              <Label htmlFor="amrounds">Turni (vuoto = auto)</Label>
+              <Input
+                id="amrounds"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={20}
+                placeholder="auto"
+                value={americanoRounds}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "") return setAmericanoRounds("");
+                  const n = parseInt(v, 10);
+                  setAmericanoRounds(Number.isNaN(n) ? "" : Math.max(1, Math.min(20, n)));
+                }}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Entrants */}

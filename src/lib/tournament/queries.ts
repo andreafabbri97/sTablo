@@ -1,12 +1,20 @@
 import { eq, desc, asc } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { tournaments, tournamentEntrants, matches } from "@/lib/db/schema";
+import {
+  tournaments,
+  tournamentEntrants,
+  matches,
+  matchParticipants,
+  players,
+} from "@/lib/db/schema";
 import { cachedQuery } from "@/lib/cache";
 import {
   computeStandings,
+  computeAmericanoStandings,
   type StandingEntrant,
   type StandingMatch,
   type StandingRow,
+  type AmericanoStandingRow,
 } from "./standings";
 
 export const FORMAT_META: Record<
@@ -18,6 +26,7 @@ export const FORMAT_META: Record<
   single_elim: { label: "Eliminazione diretta", emoji: "⚔️", blurb: "Tabellone a eliminazione" },
   groups_knockout: { label: "Gironi + eliminazione", emoji: "🌍", blurb: "Fase a gironi poi tabellone" },
   swiss: { label: "Svizzero", emoji: "🇨🇭", blurb: "Accoppiamenti per punteggio" },
+  americano: { label: "Americano", emoji: "🟡", blurb: "Coppie a rotazione, classifica individuale" },
 };
 
 export const DISCIPLINE_LABEL: Record<string, string> = {
@@ -54,6 +63,23 @@ export type TournamentMatchView = {
   bName: string;
 };
 
+export type AmericanoMatchView = {
+  id: string;
+  round: number;
+  slot: number;
+  status: "scheduled" | "pending" | "completed";
+  scoreA: number | null;
+  scoreB: number | null;
+  winner: "A" | "B" | null;
+  aNames: string[];
+  bNames: string[];
+};
+
+export type AmericanoView = {
+  standings: AmericanoStandingRow[];
+  rounds: { round: number; matches: AmericanoMatchView[] }[];
+};
+
 export type TournamentDetail = {
   tournament: typeof tournaments.$inferSelect;
   entrants: (typeof tournamentEntrants.$inferSelect)[];
@@ -62,6 +88,8 @@ export type TournamentDetail = {
   standings: StandingRow[];
   groupStandings: Record<string, StandingRow[]>;
   winnerName: string | null;
+  /** Present only for the Americano format (individual leaderboard + courts). */
+  americano: AmericanoView | null;
 };
 
 export const getTournamentDetail = cachedQuery(
@@ -145,6 +173,75 @@ export const getTournamentDetail = cachedQuery(
     ? (nameById.get(tournament.winnerEntrantId) ?? null)
     : null;
 
+  // Americano: build the individual leaderboard + per-round courts (each match
+  // is a doubles game whose four players live in match_participants).
+  let americano: AmericanoView | null = null;
+  if (tournament.format === "americano") {
+    const partRows = await db
+      .select({
+        matchId: matchParticipants.matchId,
+        side: matchParticipants.side,
+        playerId: matchParticipants.playerId,
+        name: players.name,
+      })
+      .from(matchParticipants)
+      .innerJoin(matches, eq(matchParticipants.matchId, matches.id))
+      .innerJoin(players, eq(matchParticipants.playerId, players.id))
+      .where(eq(matches.tournamentId, tournament.id));
+
+    const aNames = new Map<string, string[]>();
+    const bNames = new Map<string, string[]>();
+    for (const p of partRows) {
+      const bucket = p.side === "A" ? aNames : bNames;
+      const list = bucket.get(p.matchId);
+      if (list) list.push(p.name);
+      else bucket.set(p.matchId, [p.name]);
+    }
+
+    const amViews: AmericanoMatchView[] = matchRows.map((m) => ({
+      id: m.id,
+      round: m.round ?? 1,
+      slot: m.slot ?? 0,
+      status: m.status,
+      scoreA: m.scoreA,
+      scoreB: m.scoreB,
+      winner: m.winner,
+      aNames: aNames.get(m.id) ?? [],
+      bNames: bNames.get(m.id) ?? [],
+    }));
+
+    const roundsMap = new Map<number, AmericanoMatchView[]>();
+    for (const v of amViews) {
+      const list = roundsMap.get(v.round);
+      if (list) list.push(v);
+      else roundsMap.set(v.round, [v]);
+    }
+    const rounds = [...roundsMap.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([round, ms]) => ({ round, matches: ms }));
+
+    const amPlayers = entrants
+      .filter((e) => e.playerId)
+      .map((e) => ({ playerId: e.playerId as string, name: e.name }));
+    const amStandings = computeAmericanoStandings(
+      amPlayers,
+      matchRows.map((m) => ({
+        id: m.id,
+        scoreA: m.scoreA,
+        scoreB: m.scoreB,
+        winner: m.winner,
+        status: m.status,
+      })),
+      partRows.map((p) => ({
+        matchId: p.matchId,
+        side: p.side,
+        playerId: p.playerId,
+      })),
+    );
+
+    americano = { standings: amStandings, rounds };
+  }
+
   return {
     tournament,
     entrants,
@@ -153,6 +250,7 @@ export const getTournamentDetail = cachedQuery(
     standings,
     groupStandings,
     winnerName,
+    americano,
   };
   },
   ["tournament-detail"],

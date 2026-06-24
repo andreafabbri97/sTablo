@@ -8,7 +8,13 @@ import { Label, Input, Textarea, FieldError } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { createOpenTournament } from "@/lib/actions/tournament-actions";
 
-type Format = "league" | "round_robin" | "single_elim" | "groups_knockout" | "swiss";
+type Format =
+  | "league"
+  | "round_robin"
+  | "single_elim"
+  | "groups_knockout"
+  | "swiss"
+  | "americano";
 
 const FORMATS: { id: Format; emoji: string; label: string; blurb: string }[] = [
   { id: "league",          emoji: "🏆", label: "Campionato",         blurb: "Tutti contro tutti a punti" },
@@ -16,6 +22,7 @@ const FORMATS: { id: Format; emoji: string; label: string; blurb: string }[] = [
   { id: "single_elim",     emoji: "⚔️", label: "Eliminazione diretta", blurb: "Tabellone a eliminazione" },
   { id: "groups_knockout", emoji: "🌍", label: "Gironi + eliminazione", blurb: "Gironi poi tabellone finale" },
   { id: "swiss",           emoji: "🇨🇭", label: "Svizzero",           blurb: "Accoppiamenti per punteggio" },
+  { id: "americano",       emoji: "🟡", label: "Americano",          blurb: "Coppie a rotazione, classifica individuale" },
 ];
 
 export function TournamentOpenForm() {
@@ -25,8 +32,12 @@ export function TournamentOpenForm() {
   const [ranked, setRanked] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [description, setDescription] = useState("");
+  const [targetScore, setTargetScore] = useState(15);
+  const [americanoRounds, setAmericanoRounds] = useState<number | "">("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const isAmericano = format === "americano";
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,6 +50,13 @@ export function TournamentOpenForm() {
       ranked,
       description,
       visibility: isPrivate ? "private" : "public",
+      ...(isAmericano
+        ? {
+            targetScore,
+            americanoRounds:
+              typeof americanoRounds === "number" ? americanoRounds : undefined,
+          }
+        : {}),
     });
     setLoading(false);
     if (!res.ok) { setError(res.error); return; }
@@ -82,6 +100,57 @@ export function TournamentOpenForm() {
           ))}
         </div>
       </div>
+
+      {/* Americano settings */}
+      {isAmericano && (
+        <div className="space-y-3 rounded-2xl border border-border bg-surface p-4">
+          <p className="flex items-center gap-2 text-sm font-bold">
+            🟡 Impostazioni Americano
+          </p>
+          <p className="text-xs text-muted">
+            Coppie a rotazione: a ogni turno cambi compagno e avversari. La
+            classifica è individuale, in base ai punti che segni. Servono almeno
+            4 giocatori.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="target">Punti per game</Label>
+              <Input
+                id="target"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={99}
+                value={targetScore}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value, 10);
+                  setTargetScore(Number.isNaN(n) ? 0 : Math.max(1, Math.min(99, n)));
+                }}
+              />
+            </div>
+            <div>
+              <Label htmlFor="rounds">Turni (vuoto = auto)</Label>
+              <Input
+                id="rounds"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={20}
+                placeholder="auto"
+                value={americanoRounds}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "") return setAmericanoRounds("");
+                  const n = parseInt(v, 10);
+                  setAmericanoRounds(Number.isNaN(n) ? "" : Math.max(1, Math.min(20, n)));
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Classificato toggle */}
       <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4">
