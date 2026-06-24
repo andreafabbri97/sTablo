@@ -23,6 +23,15 @@ const EMPTY: Notifications = {
   tournamentInvites: [],
 };
 
+/**
+ * fetchNotifications viene chiamata a ogni cambio rotta e ogni 60s dalla
+ * campanella. Lanciare uno scan DB di auto-conferma a ogni navigazione è
+ * sprecato: lo limitiamo a una volta ogni 30s per istanza serverless (warm).
+ * Il cron resta la garanzia di fondo; questo è solo opportunistico.
+ */
+const AUTO_CONFIRM_THROTTLE_MS = 30_000;
+let lastAutoConfirmAt = 0;
+
 export async function fetchNotifications(): Promise<Notifications> {
   let user;
   try {
@@ -32,9 +41,14 @@ export async function fetchNotifications(): Promise<Notifications> {
   }
 
   try {
-    // Opportunistic auto-confirm of expired results while users are active.
-    const flipped = await autoConfirmExpired().catch(() => 0);
-    if (flipped > 0) bustDataCache();
+    // Opportunistic auto-confirm of expired results while users are active,
+    // throttled so rapid navigations don't each trigger a DB scan.
+    const now = Date.now();
+    if (now - lastAutoConfirmAt > AUTO_CONFIRM_THROTTLE_MS) {
+      lastAutoConfirmAt = now;
+      const flipped = await autoConfirmExpired().catch(() => 0);
+      if (flipped > 0) bustDataCache();
+    }
 
     const [friendRequests, pending, tournamentInvites] = await Promise.all([
       getIncomingRequests(user.id),
