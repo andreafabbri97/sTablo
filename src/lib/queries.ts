@@ -13,7 +13,13 @@ import { cachedQuery } from "./cache";
 export type ShapedSide = {
   label: string;
   teamName: string | null;
-  players: { id: string; name: string; slug: string; colorIndex: number }[];
+  players: {
+    id: string;
+    name: string;
+    slug: string;
+    colorIndex: number;
+    imageUrl: string | null;
+  }[];
 };
 
 export type ShapedMatch = {
@@ -46,6 +52,7 @@ function shapeSide(parts: MatchRow["participants"], side: "A" | "B"): ShapedSide
       name: r.player!.name,
       slug: r.player!.slug,
       colorIndex: r.player!.avatarColor,
+      imageUrl: r.player!.avatarUrl,
     }));
   return {
     label: team ? team.name : ps.map((p) => p.name).join(" & "),
@@ -208,6 +215,7 @@ export async function getAllAccounts() {
       role: users.role,
       slug: players.slug,
       avatarColor: players.avatarColor,
+      avatarUrl: players.avatarUrl,
     })
     .from(users)
     .leftJoin(players, eq(users.playerId, players.id))

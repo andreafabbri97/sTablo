@@ -12,6 +12,7 @@ export type InviteFriend = {
   userId: string;
   name: string;
   avatarColor: number;
+  avatarUrl: string | null;
 };
 
 export function InviteFriendsButton({
@@ -105,6 +106,7 @@ export function InviteFriendsButton({
                           <Avatar
                             name={f.name}
                             colorIndex={f.avatarColor}
+                            imageUrl={f.avatarUrl}
                             size="xs"
                           />
                           <span className="flex-1 truncate text-sm font-semibold">
@@ -145,6 +147,7 @@ export function InviteFriendsButton({
                         <Avatar
                           name={f.name}
                           colorIndex={f.avatarColor}
+                          imageUrl={f.avatarUrl}
                           size="xs"
                         />
                         <span className="flex-1 truncate text-sm font-semibold">

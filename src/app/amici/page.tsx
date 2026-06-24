@@ -135,7 +135,7 @@ export default async function AmiciPage() {
           <div className="grid gap-2 sm:grid-cols-2">
             {addable.map((a) => (
               <div key={a.userId} className="card-surface flex items-center gap-3 p-3">
-                <Avatar name={a.name} colorIndex={a.avatarColor} size="sm" />
+                <Avatar name={a.name} colorIndex={a.avatarColor} imageUrl={a.avatarUrl} size="sm" />
                 <span className="flex-1 truncate text-sm font-semibold">{a.name}</span>
                 <AddFriendButton targetUserId={a.userId} state="none" />
               </div>
@@ -156,7 +156,7 @@ function FriendRow({
 }) {
   const identity = (
     <>
-      <Avatar name={friend.name} colorIndex={friend.avatarColor} size="sm" />
+      <Avatar name={friend.name} colorIndex={friend.avatarColor} imageUrl={friend.avatarUrl} size="sm" />
       <span className="flex-1 truncate text-sm font-semibold">{friend.name}</span>
     </>
   );

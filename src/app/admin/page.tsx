@@ -84,7 +84,7 @@ export default async function AdminPage() {
             {players.map((p) => (
               <li key={p.id}>
                 <Link href={`/giocatori/${p.slug}`} className="flex items-center gap-2 text-sm hover:text-brand">
-                  <Avatar name={p.name} colorIndex={p.avatarColor} size="xs" />
+                  <Avatar name={p.name} colorIndex={p.avatarColor} imageUrl={p.avatarUrl} size="xs" />
                   <span className="flex-1 truncate">{p.name}</span>
                   <span className="font-mono text-xs text-muted">{p.eloSingles}</span>
                 </Link>

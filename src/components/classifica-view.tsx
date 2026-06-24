@@ -95,7 +95,7 @@ export function ClassificaView({
               className="card-surface flex items-center gap-3 p-3 transition hover:-translate-y-0.5"
             >
               <RankBadge rank={i + 1} />
-              <Avatar name={row.player.name} colorIndex={row.player.avatarColor} size="sm" />
+              <Avatar name={row.player.name} colorIndex={row.player.avatarColor} imageUrl={row.player.avatarUrl} size="sm" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-bold">{row.player.name}</p>
                 <p className="text-xs text-muted">

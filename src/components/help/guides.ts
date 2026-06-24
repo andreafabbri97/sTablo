@@ -232,6 +232,7 @@ export const GUIDES: Record<string, Guide> = {
       {
         heading: "Personalizzazione",
         points: [
+          "Carica una foto profilo: sostituisce le iniziali ovunque (viene ritagliata quadrata). Con «Rimuovi» torni alle iniziali.",
           "Imposta nickname, motto, piede preferito, stile di gioco e mossa speciale.",
           "Scegli se rendere pubbliche o private le tue statistiche di gioco.",
           "Più completi il profilo, più la tua scheda è ricca.",

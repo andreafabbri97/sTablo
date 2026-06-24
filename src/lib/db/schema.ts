@@ -105,6 +105,8 @@ export const players = pgTable(
     nickname: text("nickname"),
     slug: text("slug").notNull(),
     avatarColor: integer("avatar_color").notNull().default(0),
+    /** optional uploaded profile picture, stored as a small data-URL */
+    avatarUrl: text("avatar_url"),
     bio: text("bio"),
     motto: text("motto"),
     preferredFoot: preferredFoot("preferred_foot"),

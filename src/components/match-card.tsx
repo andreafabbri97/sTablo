@@ -78,7 +78,7 @@ function SideView({
       >
         <div className={cn("flex -space-x-2", align === "end" && "flex-row-reverse space-x-reverse")}>
           {side.players.map((p) => (
-            <Avatar key={p.slug} name={p.name} colorIndex={p.colorIndex} size="sm" />
+            <Avatar key={p.slug} name={p.name} colorIndex={p.colorIndex} imageUrl={p.imageUrl} size="sm" />
           ))}
         </div>
         {won && <span className="text-base">🏆</span>}

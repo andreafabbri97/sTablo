@@ -49,6 +49,25 @@ export const changePasswordSchema = z
     path: ["confirm"],
   });
 
+/**
+ * Hard ceiling for an uploaded avatar (stored inline as a base64 data-URL).
+ * The client resizes to a small square well below this; the cap is a safety
+ * net against oversized payloads (~225 KB decoded). Stays comfortably inside
+ * the Server Action body limit.
+ */
+export const MAX_AVATAR_DATA_URL = 300_000;
+
+const avatarUrlSchema = z
+  .string()
+  .trim()
+  .max(MAX_AVATAR_DATA_URL, "Immagine troppo grande, riprova con una più piccola")
+  .refine(
+    (v) => v === "" || /^data:image\/(png|jpe?g|webp|gif);base64,/.test(v),
+    "Formato immagine non valido",
+  )
+  .optional()
+  .or(z.literal(""));
+
 export const profileSchema = z.object({
   username: usernameSchema,
   email: optionalEmail,
@@ -58,6 +77,7 @@ export const profileSchema = z.object({
   preferredFoot: z.enum(["left", "right", "both"]).optional().or(z.literal("")),
   playStyle: z.enum(styleIds).optional().or(z.literal("")),
   specialMove: z.string().trim().max(60).optional().or(z.literal("")),
+  avatarUrl: avatarUrlSchema,
   statsPublic: z.boolean().default(true),
 });
 

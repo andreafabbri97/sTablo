@@ -71,6 +71,7 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
           | null,
         playStyle: orNull(d.playStyle),
         specialMove: orNull(d.specialMove),
+        avatarUrl: orNull(d.avatarUrl),
         statsPublic: d.statsPublic,
       })
       .where(eq(players.id, user.playerId));

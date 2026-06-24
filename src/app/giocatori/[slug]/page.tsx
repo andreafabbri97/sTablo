@@ -61,7 +61,7 @@ export default async function PlayerPage({
     <div className="space-y-6">
       {/* Header */}
       <div className="card-surface flex flex-col items-center gap-4 p-6 text-center sm:flex-row sm:text-left">
-        <Avatar name={player.name} colorIndex={player.avatarColor} size="xl" />
+        <Avatar name={player.name} colorIndex={player.avatarColor} imageUrl={player.avatarUrl} size="xl" />
         <div className="min-w-0 flex-1">
           <h1 className="font-display text-2xl font-extrabold tracking-tight">
             {player.name}

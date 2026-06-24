@@ -43,7 +43,7 @@ export function FifaCard({
         </div>
 
         <div className="relative my-3 flex justify-center">
-          <Avatar name={player.name} colorIndex={player.avatarColor} size="xl" className="ring-4 ring-white/30" />
+          <Avatar name={player.name} colorIndex={player.avatarColor} imageUrl={player.avatarUrl} size="xl" className="ring-4 ring-white/30" />
         </div>
 
         <div className="relative text-center">

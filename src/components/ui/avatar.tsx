@@ -14,25 +14,37 @@ export function Avatar({
   size = "md",
   className,
   ring,
+  imageUrl,
 }: {
   name: string;
   colorIndex?: number;
   size?: keyof typeof sizes;
   className?: string;
   ring?: boolean;
+  /** optional uploaded picture; falls back to initials when absent */
+  imageUrl?: string | null;
 }) {
   const gradient = AVATAR_GRADIENTS[colorIndex % AVATAR_GRADIENTS.length];
   return (
     <span
       className={cn(
-        "inline-grid shrink-0 place-items-center rounded-full bg-gradient-to-br font-display font-extrabold text-white",
+        "relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br font-display font-extrabold text-white",
         gradient,
         sizes[size],
         ring && "ring-2 ring-background ring-offset-2 ring-offset-brand",
         className,
       )}
     >
-      {initials(name)}
+      {imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- data-URL avatar, no remote loader needed
+        <img
+          src={imageUrl}
+          alt={name}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        initials(name)
+      )}
     </span>
   );
 }

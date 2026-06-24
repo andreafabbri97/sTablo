@@ -61,7 +61,7 @@ export default async function HomePage() {
                 style={{ animation: `var(--animate-fade-up)`, animationDelay: `${i * 80}ms` }}
               >
                 <span className="font-display text-2xl">{["🥇", "🥈", "🥉"][i]}</span>
-                <Avatar name={row.player.name} colorIndex={row.player.avatarColor} />
+                <Avatar name={row.player.name} colorIndex={row.player.avatarColor} imageUrl={row.player.avatarUrl} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold group-hover:text-brand">
                     {row.player.name}

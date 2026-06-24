@@ -8,6 +8,7 @@ export type FriendProfile = {
   name: string;
   slug: string | null;
   avatarColor: number;
+  avatarUrl: string | null;
 };
 
 export type FriendState =
@@ -18,22 +19,35 @@ export type FriendState =
   | "outgoing"
   | "no-account";
 
+type ResolvedProfile = {
+  name: string;
+  slug: string | null;
+  avatarColor: number;
+  avatarUrl: string | null;
+};
+
 async function profilesForUsers(userIds: string[]) {
-  if (userIds.length === 0) return new Map<string, { name: string; slug: string | null; avatarColor: number }>();
+  if (userIds.length === 0) return new Map<string, ResolvedProfile>();
   const rows = await db
     .select({
       userId: users.id,
       userName: users.name,
       slug: players.slug,
       avatarColor: players.avatarColor,
+      avatarUrl: players.avatarUrl,
     })
     .from(users)
     .leftJoin(players, eq(users.playerId, players.id))
     .where(inArray(users.id, userIds));
-  return new Map(
+  return new Map<string, ResolvedProfile>(
     rows.map((r) => [
       r.userId,
-      { name: r.userName, slug: r.slug, avatarColor: r.avatarColor ?? 0 },
+      {
+        name: r.userName,
+        slug: r.slug,
+        avatarColor: r.avatarColor ?? 0,
+        avatarUrl: r.avatarUrl ?? null,
+      },
     ]),
   );
 }
@@ -64,6 +78,7 @@ export async function getFriends(userId: string): Promise<FriendProfile[]> {
       name: p?.name ?? "Giocatore",
       slug: p?.slug ?? null,
       avatarColor: p?.avatarColor ?? 0,
+      avatarUrl: p?.avatarUrl ?? null,
     };
   });
 }
@@ -89,6 +104,7 @@ export async function getIncomingRequests(
       name: p?.name ?? "Giocatore",
       slug: p?.slug ?? null,
       avatarColor: p?.avatarColor ?? 0,
+      avatarUrl: p?.avatarUrl ?? null,
     };
   });
 }
@@ -114,6 +130,7 @@ export async function getOutgoingRequests(
       name: p?.name ?? "Giocatore",
       slug: p?.slug ?? null,
       avatarColor: p?.avatarColor ?? 0,
+      avatarUrl: p?.avatarUrl ?? null,
     };
   });
 }
@@ -138,6 +155,7 @@ export type AccountUser = {
   name: string;
   slug: string | null;
   avatarColor: number;
+  avatarUrl: string | null;
 };
 
 /** All accounts that have a linked player profile. */
@@ -148,6 +166,7 @@ export async function getAccountUsers(): Promise<AccountUser[]> {
       name: users.name,
       slug: players.slug,
       avatarColor: players.avatarColor,
+      avatarUrl: players.avatarUrl,
     })
     .from(users)
     .innerJoin(players, eq(users.playerId, players.id))
@@ -157,6 +176,7 @@ export async function getAccountUsers(): Promise<AccountUser[]> {
     name: r.name,
     slug: r.slug,
     avatarColor: r.avatarColor ?? 0,
+    avatarUrl: r.avatarUrl ?? null,
   }));
 }
 

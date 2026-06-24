@@ -39,7 +39,7 @@ export default async function GiocatoriPage() {
                 href={`/giocatori/${row.player.slug}`}
                 className="card-surface group flex items-center gap-3 p-4 transition hover:-translate-y-0.5"
               >
-                <Avatar name={row.player.name} colorIndex={row.player.avatarColor} size="lg" />
+                <Avatar name={row.player.name} colorIndex={row.player.avatarColor} imageUrl={row.player.avatarUrl} size="lg" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold group-hover:text-brand">
                     {row.player.name}

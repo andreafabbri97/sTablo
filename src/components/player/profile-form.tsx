@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Check, Eye, EyeOff } from "lucide-react";
+import { Save, Check, Eye, EyeOff, Camera, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
 import { Input, Label, Select, Textarea, FieldError } from "@/components/ui/field";
 import { PLAY_STYLES } from "@/lib/gamification";
 import { updateProfile } from "@/lib/actions/player-actions";
+import { fileToAvatarDataUrl } from "@/lib/avatar-image";
 import type { Player } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
 
@@ -21,9 +23,27 @@ export function ProfileForm({
 }) {
   const router = useRouter();
   const [statsPublic, setStatsPublic] = useState(player.statsPublic);
+  const [avatarUrl, setAvatarUrl] = useState(player.avatarUrl ?? "");
+  const [imgBusy, setImgBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file later
+    if (!file) return;
+    setError(null);
+    setImgBusy(true);
+    try {
+      setAvatarUrl(await fileToAvatarDataUrl(file));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Immagine non valida");
+    } finally {
+      setImgBusy(false);
+    }
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -40,6 +60,7 @@ export function ProfileForm({
       preferredFoot: String(form.get("preferredFoot") ?? ""),
       playStyle: String(form.get("playStyle") ?? ""),
       specialMove: String(form.get("specialMove") ?? ""),
+      avatarUrl,
       statsPublic,
     });
     setLoading(false);
@@ -54,6 +75,53 @@ export function ProfileForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
+      {/* Avatar */}
+      <div className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4">
+        <Avatar
+          name={player.name}
+          colorIndex={player.avatarColor}
+          imageUrl={avatarUrl || null}
+          size="lg"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold">Foto profilo</p>
+          <p className="text-xs text-muted">
+            Sostituisci le iniziali con una tua foto. Viene ritagliata quadrata.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => fileRef.current?.click()}
+              disabled={imgBusy}
+            >
+              <Camera className="h-4 w-4" />
+              {imgBusy ? "Carico…" : avatarUrl ? "Cambia" : "Carica foto"}
+            </Button>
+            {avatarUrl && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setAvatarUrl("")}
+                disabled={imgBusy}
+              >
+                <Trash2 className="h-4 w-4" />
+                Rimuovi
+              </Button>
+            )}
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={onPickFile}
+          />
+        </div>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="username">Username (per il login)</Label>
