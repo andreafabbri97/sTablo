@@ -107,7 +107,7 @@ export function MatchForm({
       </div>
 
       {/* Sides */}
-      <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3">
         <SideColumn tone="brand" label="Squadra A">
           {format === "singles" ? (
             <PlayerSelect players={players} value={sel.playerA} onChange={(v) => set("playerA", v)} />
@@ -176,7 +176,7 @@ function SideColumn({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="min-w-0 space-y-2">
       <p className={cn("text-center text-xs font-bold uppercase tracking-wider", tone === "brand" ? "text-brand" : "text-sea")}>
         {label}
       </p>
