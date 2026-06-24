@@ -12,7 +12,7 @@ import {
   players,
   type TournamentConfig,
 } from "@/lib/db/schema";
-import { tournamentSchema } from "@/lib/validation";
+import { tournamentSchema, type TournamentInput } from "@/lib/validation";
 import { assertAdmin, assertAuth } from "@/lib/auth-helpers";
 import { slugify } from "@/lib/utils";
 import { applyMatchResult, type SideInput } from "@/lib/match-engine";
@@ -62,19 +62,19 @@ export async function createTournament(input: unknown): Promise<CreateResult> {
     return { ok: false, error: parsed.error.issues[0].message };
   }
   const d = parsed.data;
-  const entrantIds = [...new Set(d.entrantIds)];
-  if (entrantIds.length < 2) {
-    return { ok: false, error: "Servono almeno 2 partecipanti distinti" };
-  }
 
   const isSingles = d.discipline === "singles";
   const matchFormat = isSingles ? "singles" : "doubles";
 
-  // Resolve entrant display names
-  const names = await resolveEntrantNames(entrantIds, isSingles);
-  if (!names) {
+  // Resolve the entrants into concrete specs (players, ad-hoc pairs, or teams).
+  const specs = await buildEntrantSpecs(d);
+  if (!specs) {
     return { ok: false, error: "Partecipanti non validi" };
   }
+  if (specs.length < 2) {
+    return { ok: false, error: "Servono almeno 2 partecipanti distinti" };
+  }
+  const n = specs.length;
 
   const config: TournamentConfig = {
     ranked: d.ranked,
@@ -109,7 +109,7 @@ export async function createTournament(input: unknown): Promise<CreateResult> {
       const groupOf = new Map<number, string>();
       if (d.format === "groups_knockout") {
         const groups = Math.max(2, Math.min(d.groups ?? 2, GROUP_LABELS.length));
-        const buckets = splitIntoGroups(entrantIds.length, groups);
+        const buckets = splitIntoGroups(n, groups);
         buckets.forEach((indices, g) => {
           for (const idx of indices) groupOf.set(idx, GROUP_LABELS[g]);
         });
@@ -119,19 +119,20 @@ export async function createTournament(input: unknown): Promise<CreateResult> {
       const entrantRows = await tx
         .insert(tournamentEntrants)
         .values(
-          entrantIds.map((eid, i) => ({
+          specs.map((s, i) => ({
             tournamentId: t.id,
-            name: names[i],
+            name: s.name,
             seed: i + 1,
             groupName: groupOf.get(i) ?? null,
-            playerId: isSingles ? eid : null,
-            teamId: isSingles ? null : eid,
+            playerId: s.playerId,
+            teamId: s.teamId,
+            partnerId: s.partnerId,
           })),
         )
         .returning();
 
       // Generate the initial schedule
-      const gen = generateInitialSchedule(d.format, entrantIds.length, config, groupOf);
+      const gen = generateInitialSchedule(d.format, n, config, groupOf);
 
       await persistGenMatches(tx, {
         tournamentId: t.id,
@@ -282,26 +283,81 @@ async function advanceEntrant(
     .where(eq(matches.id, nextMatchId));
 }
 
-async function resolveEntrantNames(
-  ids: string[],
-  isSingles: boolean,
-): Promise<string[] | null> {
-  if (isSingles) {
+/** One row to insert into tournament_entrants, resolved + named. */
+type EntrantSpec = {
+  name: string;
+  playerId: string | null;
+  teamId: string | null;
+  partnerId: string | null;
+};
+
+/**
+ * Turn the validated form input into entrant rows:
+ * - singles → one player each
+ * - doubles → ad-hoc couples (two player ids, no registered team)
+ * - teams   → registered team entities
+ * Returns null when any referenced player/team is missing or a pair is invalid.
+ */
+async function buildEntrantSpecs(
+  d: TournamentInput,
+): Promise<EntrantSpec[] | null> {
+  if (d.discipline === "singles") {
+    const ids = [...new Set(d.entrantIds)];
     const rows = await db
       .select({ id: players.id, name: players.name })
       .from(players)
       .where(inArray(players.id, ids));
-    const map = new Map(rows.map((r) => [r.id, r.name]));
     if (rows.length !== ids.length) return null;
-    return ids.map((id) => map.get(id)!);
+    const map = new Map(rows.map((r) => [r.id, r.name]));
+    return ids.map((id) => ({
+      name: map.get(id)!,
+      playerId: id,
+      teamId: null,
+      partnerId: null,
+    }));
   }
+
+  if (d.discipline === "teams") {
+    const ids = [...new Set(d.entrantIds)];
+    const rows = await db
+      .select({ id: teams.id, name: teams.name })
+      .from(teams)
+      .where(inArray(teams.id, ids));
+    if (rows.length !== ids.length) return null;
+    const map = new Map(rows.map((r) => [r.id, r.name]));
+    return ids.map((id) => ({
+      name: map.get(id)!,
+      playerId: null,
+      teamId: id,
+      partnerId: null,
+    }));
+  }
+
+  // doubles → ad-hoc couples
+  const pairs = d.pairs;
+  const allIds = [...new Set(pairs.flatMap((p) => [p.playerId, p.partnerId]))];
   const rows = await db
-    .select({ id: teams.id, name: teams.name })
-    .from(teams)
-    .where(inArray(teams.id, ids));
+    .select({ id: players.id, name: players.name })
+    .from(players)
+    .where(inArray(players.id, allIds));
+  if (rows.length !== allIds.length) return null;
   const map = new Map(rows.map((r) => [r.id, r.name]));
-  if (rows.length !== ids.length) return null;
-  return ids.map((id) => map.get(id)!);
+
+  // each player may appear in only one couple, and not partner themselves
+  const seen = new Set<string>();
+  for (const p of pairs) {
+    if (p.playerId === p.partnerId) return null;
+    if (seen.has(p.playerId) || seen.has(p.partnerId)) return null;
+    seen.add(p.playerId);
+    seen.add(p.partnerId);
+  }
+
+  return pairs.map((p) => ({
+    name: `${map.get(p.playerId)!} & ${map.get(p.partnerId)!}`,
+    playerId: p.playerId,
+    teamId: null,
+    partnerId: p.partnerId,
+  }));
 }
 
 /* ----------------------------------------------------------------------------
@@ -401,15 +457,30 @@ async function entrantToSide(
     if (!entrant.playerId) return null;
     return { playerIds: [entrant.playerId], teamId: null };
   }
+
+  if (discipline === "doubles") {
+    // ad-hoc couple (preferred) — two player ids, no registered team
+    if (entrant.playerId && entrant.partnerId) {
+      return { playerIds: [entrant.playerId, entrant.partnerId], teamId: null };
+    }
+    // legacy doubles built from a registered team
+    if (entrant.teamId) {
+      const team = await db.query.teams.findFirst({
+        where: eq(teams.id, entrant.teamId),
+      });
+      if (!team) return null;
+      return { playerIds: [team.player1Id, team.player2Id], teamId: null };
+    }
+    return null;
+  }
+
+  // teams → registered team entity (moves the team Elo)
   if (!entrant.teamId) return null;
   const team = await db.query.teams.findFirst({
     where: eq(teams.id, entrant.teamId),
   });
   if (!team) return null;
-  return {
-    playerIds: [team.player1Id, team.player2Id],
-    teamId: discipline === "teams" ? team.id : null,
-  };
+  return { playerIds: [team.player1Id, team.player2Id], teamId: team.id };
 }
 
 /* ----------------------------------------------------------------------------

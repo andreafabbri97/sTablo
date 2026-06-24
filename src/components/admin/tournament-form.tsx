@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Swords, Check } from "lucide-react";
+import { Swords, Check, X, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label, Input, Textarea, FieldError } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,8 @@ import { createTournament } from "@/lib/actions/tournament-actions";
 
 type Option = { id: string; name: string };
 type Format = "league" | "round_robin" | "single_elim" | "groups_knockout" | "swiss";
-type Discipline = "singles" | "doubles" | "teams";
+type Discipline = "singles" | "doubles";
+type Pair = { playerId: string; partnerId: string };
 
 const FORMATS: { id: Format; emoji: string; label: string; blurb: string }[] = [
   { id: "league", emoji: "🏆", label: "Campionato", blurb: "Tutti contro tutti a punti (Serie A)" },
@@ -20,44 +21,75 @@ const FORMATS: { id: Format; emoji: string; label: string; blurb: string }[] = [
   { id: "swiss", emoji: "🇨🇭", label: "Svizzero", blurb: "Accoppiamenti per punteggio" },
 ];
 
-export function TournamentForm({
-  players,
-  teams,
-}: {
-  players: Option[];
-  teams: Option[];
-}) {
+export function TournamentForm({ players }: { players: Option[] }) {
   const router = useRouter();
+  const nameById = new Map(players.map((p) => [p.id, p.name]));
+
   const [name, setName] = useState("");
   const [format, setFormat] = useState<Format>("league");
-  const [discipline, setDiscipline] = useState<Discipline>("doubles");
+  const [discipline, setDiscipline] = useState<Discipline>("singles");
   const [ranked, setRanked] = useState(false);
   const [doubleRound, setDoubleRound] = useState(false);
   const [thirdPlace, setThirdPlace] = useState(false);
   const [groups, setGroups] = useState(2);
   const [advancePerGroup, setAdvancePerGroup] = useState(2);
   const [swissRounds, setSwissRounds] = useState(3);
-  const [selected, setSelected] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const pool = useMemo(
-    () => (discipline === "singles" ? players : teams),
-    [discipline, players, teams],
-  );
+  // singles: list of player ids in seed order
+  const [selected, setSelected] = useState<string[]>([]);
+  // doubles: ad-hoc couples + the half-formed couple waiting for a partner
+  const [pairs, setPairs] = useState<Pair[]>([]);
+  const [pending, setPending] = useState<string | null>(null);
 
-  function toggle(id: string) {
+  function switchDiscipline(d: Discipline) {
+    setDiscipline(d);
+    setSelected([]);
+    setPairs([]);
+    setPending(null);
+    setError(null);
+  }
+
+  function toggleSingle(id: string) {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  }
+
+  // ids already committed to a couple (or currently pending) are unavailable
+  const usedInPairs = new Set(pairs.flatMap((p) => [p.playerId, p.partnerId]));
+
+  function pickForPair(id: string) {
+    if (usedInPairs.has(id)) return;
+    if (pending === id) {
+      setPending(null);
+      return;
+    }
+    if (pending == null) {
+      setPending(id);
+      return;
+    }
+    setPairs((ps) => [...ps, { playerId: pending, partnerId: id }]);
+    setPending(null);
+  }
+
+  function removePair(idx: number) {
+    setPairs((ps) => ps.filter((_, i) => i !== idx));
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (selected.length < 2) {
-      setError("Seleziona almeno 2 partecipanti");
+
+    if (discipline === "singles" && selected.length < 2) {
+      setError("Seleziona almeno 2 giocatori");
       return;
     }
+    if (discipline === "doubles" && pairs.length < 2) {
+      setError("Forma almeno 2 coppie");
+      return;
+    }
+
     setLoading(true);
     const res = await createTournament({
       name,
@@ -70,7 +102,8 @@ export function TournamentForm({
       advancePerGroup,
       swissRounds,
       description,
-      entrantIds: selected,
+      entrantIds: discipline === "singles" ? selected : [],
+      pairs: discipline === "doubles" ? pairs : [],
     });
     setLoading(false);
     if (!res.ok) {
@@ -116,26 +149,24 @@ export function TournamentForm({
       <div>
         <Label>Disciplina</Label>
         <div className="flex gap-1.5 rounded-2xl border border-border bg-surface p-1.5">
-          {(["singles", "doubles", "teams"] as Discipline[]).map((d) => (
+          {(["singles", "doubles"] as Discipline[]).map((d) => (
             <button
               key={d}
               type="button"
-              onClick={() => {
-                setDiscipline(d);
-                setSelected([]);
-              }}
+              onClick={() => switchDiscipline(d)}
               className={cn(
                 "flex-1 rounded-xl py-2 text-sm font-bold transition",
                 discipline === d ? "bg-brand text-white" : "text-muted hover:bg-surface-2",
               )}
             >
-              {d === "singles" ? "Singolo" : d === "doubles" ? "Doppio" : "Team"}
+              {d === "singles" ? "Singolo" : "Doppio"}
             </button>
           ))}
         </div>
-        {discipline !== "singles" && teams.length === 0 && (
-          <p className="mt-2 text-xs text-loss">
-            Nessun team registrato. Crea prima dei team nel pannello admin.
+        {discipline === "doubles" && (
+          <p className="mt-2 text-xs text-muted">
+            Tocca due giocatori per formare una coppia. Niente team da
+            preimpostare.
           </p>
         )}
       </div>
@@ -179,41 +210,19 @@ export function TournamentForm({
       )}
 
       {/* Entrants */}
-      <div>
-        <Label>Partecipanti ({selected.length} selezionati)</Label>
-        <p className="mb-2 text-xs text-muted">L&apos;ordine di selezione determina le teste di serie.</p>
-        {pool.length === 0 ? (
-          <p className="text-sm text-muted">Nessun partecipante disponibile.</p>
-        ) : (
-          <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-border p-2 sm:grid-cols-3">
-            {pool.map((o) => {
-              const idx = selected.indexOf(o.id);
-              const isSel = idx >= 0;
-              return (
-                <button
-                  key={o.id}
-                  type="button"
-                  onClick={() => toggle(o.id)}
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition",
-                    isSel ? "bg-brand text-white" : "bg-surface-2 text-foreground hover:bg-surface",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-bold",
-                      isSel ? "bg-white/25" : "bg-border",
-                    )}
-                  >
-                    {isSel ? idx + 1 : ""}
-                  </span>
-                  <span className="truncate">{o.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {discipline === "singles" ? (
+        <SinglesPicker players={players} selected={selected} onToggle={toggleSingle} />
+      ) : (
+        <DoublesPicker
+          players={players}
+          pairs={pairs}
+          pending={pending}
+          usedInPairs={usedInPairs}
+          nameById={nameById}
+          onPick={pickForPair}
+          onRemovePair={removePair}
+        />
+      )}
 
       <div>
         <Label htmlFor="desc">Descrizione (opzionale)</Label>
@@ -227,6 +236,146 @@ export function TournamentForm({
         {loading ? "Creazione…" : "Crea torneo"}
       </Button>
     </form>
+  );
+}
+
+function SinglesPicker({
+  players,
+  selected,
+  onToggle,
+}: {
+  players: Option[];
+  selected: string[];
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <div>
+      <Label>Partecipanti ({selected.length} selezionati)</Label>
+      <p className="mb-2 text-xs text-muted">L&apos;ordine di selezione determina le teste di serie.</p>
+      {players.length === 0 ? (
+        <p className="text-sm text-muted">Nessun giocatore disponibile.</p>
+      ) : (
+        <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-border p-2 sm:grid-cols-3">
+          {players.map((o) => {
+            const idx = selected.indexOf(o.id);
+            const isSel = idx >= 0;
+            return (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => onToggle(o.id)}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition",
+                  isSel ? "bg-brand text-white" : "bg-surface-2 text-foreground hover:bg-surface",
+                )}
+              >
+                <span
+                  className={cn(
+                    "grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-bold",
+                    isSel ? "bg-white/25" : "bg-border",
+                  )}
+                >
+                  {isSel ? idx + 1 : ""}
+                </span>
+                <span className="truncate">{o.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DoublesPicker({
+  players,
+  pairs,
+  pending,
+  usedInPairs,
+  nameById,
+  onPick,
+  onRemovePair,
+}: {
+  players: Option[];
+  pairs: Pair[];
+  pending: string | null;
+  usedInPairs: Set<string>;
+  nameById: Map<string, string>;
+  onPick: (id: string) => void;
+  onRemovePair: (idx: number) => void;
+}) {
+  const available = players.filter((p) => !usedInPairs.has(p.id));
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label>Coppie ({pairs.length})</Label>
+        <p className="mb-2 text-xs text-muted">
+          {pending
+            ? `Scegli il compagno di ${nameById.get(pending) ?? "…"}`
+            : "Tocca un giocatore, poi il suo compagno. L'ordine determina le teste di serie."}
+        </p>
+      </div>
+
+      {/* Formed couples */}
+      {pairs.length > 0 && (
+        <div className="space-y-2">
+          {pairs.map((p, i) => (
+            <div
+              key={`${p.playerId}-${p.partnerId}`}
+              className="flex items-center gap-2 rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
+            >
+              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-[10px] font-bold text-white">
+                {i + 1}
+              </span>
+              <Users className="h-4 w-4 shrink-0 text-muted" />
+              <span className="flex-1 truncate font-medium">
+                {nameById.get(p.playerId)} <span className="text-muted">&</span>{" "}
+                {nameById.get(p.partnerId)}
+              </span>
+              <button
+                type="button"
+                onClick={() => onRemovePair(i)}
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted transition hover:bg-loss hover:text-white"
+                aria-label="Rimuovi coppia"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Available players */}
+      {available.length === 0 ? (
+        <p className="text-sm text-muted">
+          {players.length === 0
+            ? "Nessun giocatore disponibile."
+            : "Tutti i giocatori sono in coppia."}
+        </p>
+      ) : (
+        <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-border p-2 sm:grid-cols-3">
+          {available.map((o) => {
+            const isPending = pending === o.id;
+            return (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => onPick(o.id)}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition",
+                  isPending
+                    ? "bg-brand text-white ring-2 ring-brand"
+                    : "bg-surface-2 text-foreground hover:bg-surface",
+                )}
+              >
+                <span className="truncate">{o.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 

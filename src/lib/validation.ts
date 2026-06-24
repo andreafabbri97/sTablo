@@ -114,7 +114,33 @@ export const tournamentSchema = z.object({
   advancePerGroup: z.coerce.number().int().min(1).max(8).optional(),
   swissRounds: z.coerce.number().int().min(1).max(12).optional(),
   thirdPlace: z.boolean().optional(),
-  entrantIds: z.array(z.string()).min(2, "Servono almeno 2 partecipanti"),
+  /** singles → player ids; teams → team ids. Empty for ad-hoc doubles. */
+  entrantIds: z.array(z.string()).default([]),
+  /** ad-hoc doubles couples (two player ids), no registered team needed. */
+  pairs: z
+    .array(
+      z.object({
+        playerId: z.string().min(1),
+        partnerId: z.string().min(1),
+      }),
+    )
+    .default([]),
+}).superRefine((d, ctx) => {
+  if (d.discipline === "doubles") {
+    if (d.pairs.length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Servono almeno 2 coppie",
+        path: ["pairs"],
+      });
+    }
+  } else if (d.entrantIds.length < 2) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Servono almeno 2 partecipanti",
+      path: ["entrantIds"],
+    });
+  }
 });
 
 export type TournamentInput = z.infer<typeof tournamentSchema>;

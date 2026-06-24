@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { TournamentForm } from "@/components/admin/tournament-form";
 import { TournamentOpenForm } from "@/components/tournament-open-form";
 import { getCurrentUser } from "@/lib/auth-helpers";
-import { getPlayerOptions, getTeamOptions } from "@/lib/queries";
+import { getPlayerOptions } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Nuovo torneo" };
@@ -18,10 +18,7 @@ export default async function NuovoTorneoPage() {
   const isAdmin = user.role === "admin";
 
   if (isAdmin) {
-    const [playerOptions, teamOptions] = await Promise.all([
-      getPlayerOptions(),
-      getTeamOptions(),
-    ]);
+    const playerOptions = await getPlayerOptions();
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <PageHeader
@@ -30,7 +27,7 @@ export default async function NuovoTorneoPage() {
           subtitle="Scegli formato, disciplina e partecipanti"
         />
         <Card>
-          <TournamentForm players={playerOptions} teams={teamOptions} />
+          <TournamentForm players={playerOptions} />
         </Card>
       </div>
     );
