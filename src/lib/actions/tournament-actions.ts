@@ -234,17 +234,23 @@ async function persistGenMatches(
     localToDb.set(g.localId, row.id);
   }
 
-  // wire next-match links
+  // wire next-match links (winner advances; loser drops to the 3°/4° final)
   for (const g of args.gen) {
-    if (g.nextLocalId) {
-      await tx
-        .update(matches)
-        .set({
-          nextMatchId: localToDb.get(g.nextLocalId),
-          nextSlot: g.nextSlot,
-        })
-        .where(eq(matches.id, localToDb.get(g.localId)!));
-    }
+    if (!g.nextLocalId && !g.loserNextLocalId) continue;
+    await tx
+      .update(matches)
+      .set({
+        ...(g.nextLocalId
+          ? { nextMatchId: localToDb.get(g.nextLocalId), nextSlot: g.nextSlot }
+          : {}),
+        ...(g.loserNextLocalId
+          ? {
+              loserNextMatchId: localToDb.get(g.loserNextLocalId),
+              loserNextSlot: g.loserNextSlot,
+            }
+          : {}),
+      })
+      .where(eq(matches.id, localToDb.get(g.localId)!));
   }
 
   // auto-advance byes (knockout round 1 with a single entrant)
@@ -438,6 +444,11 @@ export async function recordTournamentMatch(
       if (match.nextMatchId && match.nextSlot) {
         const winnerEntrantId = winner === "A" ? match.entrantAId! : match.entrantBId!;
         await advanceEntrant(tx, match.nextMatchId, match.nextSlot, winnerEntrantId);
+      }
+      // Drop loser into the 3°/4° place final, if wired (semifinals)
+      if (match.loserNextMatchId && match.loserNextSlot) {
+        const loserEntrantId = winner === "A" ? match.entrantBId! : match.entrantAId!;
+        await advanceEntrant(tx, match.loserNextMatchId, match.loserNextSlot, loserEntrantId);
       }
     });
 

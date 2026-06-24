@@ -191,6 +191,9 @@ export const matches = pgTable(
     /** Bracket progression: winner flows into this match/slot. */
     nextMatchId: uuid("next_match_id"),
     nextSlot: matchSide("next_slot"),
+    /** Bracket progression: loser flows into this match/slot (3°/4° final). */
+    loserNextMatchId: uuid("loser_next_match_id"),
+    loserNextSlot: matchSide("loser_next_slot"),
 
     createdById: uuid("created_by_id").references(() => users.id, {
       onDelete: "set null",

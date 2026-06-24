@@ -18,6 +18,9 @@ export type GenMatch = {
   label: string | null;
   nextLocalId: string | null;
   nextSlot: "A" | "B" | null;
+  /** Loser of this match flows here (used for the 3°/4° place final). */
+  loserNextLocalId: string | null;
+  loserNextSlot: "A" | "B" | null;
 };
 
 let counter = 0;
@@ -38,6 +41,8 @@ function emptyMatch(partial: Partial<GenMatch>): GenMatch {
     label: null,
     nextLocalId: null,
     nextSlot: null,
+    loserNextLocalId: null,
+    loserNextSlot: null,
     ...partial,
   };
 }
@@ -170,7 +175,9 @@ export function generateSingleElim(
   matches.push(...current);
 
   // Subsequent rounds
+  let semifinals: GenMatch[] = [];
   while (current.length > 1) {
+    if (current.length === 2) semifinals = current; // the round feeding the final
     round += 1;
     const next: GenMatch[] = [];
     for (let i = 0; i < current.length / 2; i++) {
@@ -190,16 +197,20 @@ export function generateSingleElim(
     current = next;
   }
 
-  // Third place (fed by the two semifinal losers — handled at advance time)
-  if (opts.thirdPlace && size >= 4) {
-    matches.push(
-      emptyMatch({
-        stage: "knockout",
-        round,
-        slot: 1,
-        label: "Finale 3°/4°",
-      }),
-    );
+  // Third place: the two semifinal losers feed it (routed when results land).
+  // Needs ≥4 real entrants so both semifinals have an actual loser (no bye).
+  if (opts.thirdPlace && n >= 4 && size >= 4 && semifinals.length === 2) {
+    const third = emptyMatch({
+      stage: "knockout",
+      round,
+      slot: 1,
+      label: "Finale 3°/4°",
+    });
+    semifinals[0].loserNextLocalId = third.localId;
+    semifinals[0].loserNextSlot = "A";
+    semifinals[1].loserNextLocalId = third.localId;
+    semifinals[1].loserNextSlot = "B";
+    matches.push(third);
   }
 
   return matches;
