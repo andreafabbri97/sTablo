@@ -31,7 +31,7 @@ export const DEMO_SINGLES: DemoSingle[] = [
 
 export const DEMO_DOUBLES: DemoDouble[] = [
   [["mesh", "bernu"], ["edo", "toro"], 15, 13, true],
-  [["dadda", "pau"], ["jaco", "mesh"], 16, 18, true], // ai vantaggi
+  [["dadda", "pau"], ["jaco", "mesh"], 15, 17, true], // ai vantaggi
   [["bernu", "edo"], ["toro", "dadda"], 15, 9, true],
   [["pau", "jaco"], ["mesh", "edo"], 15, 11, true],
   [["toro", "bernu"], ["dadda", "jaco"], 13, 15, true],
@@ -39,7 +39,7 @@ export const DEMO_DOUBLES: DemoDouble[] = [
   [["bernu", "jaco"], ["dadda", "mesh"], 16, 14, false], // ai vantaggi
   [["edo", "dadda"], ["pau", "toro"], 13, 15, false],
   [["jaco", "bernu"], ["mesh", "pau"], 15, 7, false],
-  [["toro", "edo"], ["dadda", "bernu"], 20, 18, false], // ai vantaggi
+  [["toro", "edo"], ["dadda", "bernu"], 20, 19, false], // killer point
 ];
 
 export const DEMO_TOTAL = DEMO_SINGLES.length + DEMO_DOUBLES.length;
