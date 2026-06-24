@@ -5,6 +5,7 @@ import { PageHeader, EmptyState } from "@/components/ui/page";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getTournaments, FORMAT_META, DISCIPLINE_LABEL } from "@/lib/tournament/queries";
+import { getAccessiblePrivateTournamentIds } from "@/lib/tournament/invites";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { safe } from "@/lib/safe";
 
@@ -18,11 +19,21 @@ const STATUS: Record<string, { label: string; tone: "win" | "brand" | "muted" | 
 };
 
 export default async function TorneiPage() {
-  const [list, user] = await Promise.all([
+  const [all, user] = await Promise.all([
     safe(() => getTournaments(), []),
     getCurrentUser(),
   ]);
   const isAdmin = user?.role === "admin";
+
+  // Private tournaments stay hidden unless you created, were invited to, or
+  // already joined them.
+  const accessiblePrivate = await safe(
+    () => getAccessiblePrivateTournamentIds(user),
+    new Set<string>(),
+  );
+  const list = all.filter(
+    (t) => t.visibility !== "private" || isAdmin || accessiblePrivate.has(t.id),
+  );
 
   return (
     <div>
@@ -74,7 +85,12 @@ export default async function TorneiPage() {
               >
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-3xl">{meta?.emoji}</span>
-                  <Badge tone={status.tone}>{status.label}</Badge>
+                  <div className="flex items-center gap-1.5">
+                    {t.visibility === "private" && (
+                      <Badge tone="muted">🔒 Privato</Badge>
+                    )}
+                    <Badge tone={status.tone}>{status.label}</Badge>
+                  </div>
                 </div>
                 <h3 className="font-display text-lg font-extrabold group-hover:text-brand">
                   {t.name}

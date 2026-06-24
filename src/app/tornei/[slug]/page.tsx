@@ -20,6 +20,9 @@ import {
   type TournamentMatchView,
 } from "@/lib/tournament/queries";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { canViewTournament, getInvitedUserIds } from "@/lib/tournament/invites";
+import { getFriends } from "@/lib/friends";
+import { InviteFriendsButton } from "@/components/tournament/invite-friends-button";
 import { safe } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
@@ -58,6 +61,28 @@ export default async function TournamentPage({
   const isAdmin = user?.role === "admin";
   const isCreator = !!user && tournament.createdById === user.id;
   const canManage = isAdmin || isCreator;
+
+  // Private tournaments are only reachable by creator, admin, invited or joined.
+  if (tournament.visibility === "private") {
+    const canView = await safe(
+      () => canViewTournament(user, tournament),
+      false,
+    );
+    if (!canView) {
+      return (
+        <div className="mx-auto max-w-sm pt-20 text-center">
+          <p className="text-2xl">🔒</p>
+          <h1 className="mt-3 font-display text-xl font-extrabold">
+            Torneo privato
+          </h1>
+          <p className="mt-2 text-sm text-muted">
+            Questo torneo è privato. Serve un invito dell&apos;organizzatore per
+            vederlo.
+          </p>
+        </div>
+      );
+    }
+  }
   const meta = FORMAT_META[tournament.format];
   const ranked = tournament.config.ranked !== false;
   const entrantLabel =
@@ -73,6 +98,15 @@ export default async function TournamentPage({
   const inviteUrl = tournament.inviteToken
     ? `${proto}://${host}/tornei/invito/${tournament.inviteToken}`
     : null;
+
+  // Friend-invite picker is only built for the organizer of a draft tournament.
+  const canInvite = canManage && tournament.status === "draft";
+  const friends = canInvite && user
+    ? await safe(() => getFriends(user.id), [])
+    : [];
+  const invitedIds = canInvite
+    ? await safe(() => getInvitedUserIds(tournament.id), [])
+    : [];
 
   return (
     <div className="space-y-6">
@@ -138,6 +172,15 @@ export default async function TournamentPage({
               </div>
             </div>
           </div>
+          {canInvite && (
+            <div className="border-t border-border pt-4">
+              <InviteFriendsButton
+                tournamentId={tournament.id}
+                friends={friends}
+                invitedUserIds={invitedIds}
+              />
+            </div>
+          )}
           {(isAdmin || isCreator) && detail.entrants.length >= 2 && (
             <StartTournamentButton tournamentId={tournament.id} />
           )}

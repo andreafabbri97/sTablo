@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import {
   tournaments,
   tournamentEntrants,
+  tournamentInvites,
   matches,
   teams,
   players,
@@ -16,6 +17,8 @@ import { tournamentSchema, type TournamentInput } from "@/lib/validation";
 import { assertAdmin, assertAuth } from "@/lib/auth-helpers";
 import { slugify } from "@/lib/utils";
 import { applyMatchResult, type SideInput } from "@/lib/match-engine";
+import { sendPushToUsers } from "@/lib/push";
+import { getFriends } from "@/lib/friends";
 import {
   generateRoundRobin,
   generateSingleElim,
@@ -800,6 +803,8 @@ type OpenTournamentInput = {
   swissRounds?: number;
   thirdPlace?: boolean;
   doubleRound?: boolean;
+  /** public = listed for everyone; private = invite-only, hidden from the list */
+  visibility?: "public" | "private";
 };
 
 /** Any logged-in user can create an open tournament. Generates an invite token. */
@@ -837,6 +842,7 @@ export async function createOpenTournament(
       currentRound: 0,
       inviteToken: token,
       openInvite: true,
+      visibility: input.visibility === "private" ? "private" : "public",
       createdById: user.id,
     });
     updateTag(DATA_TAG);
@@ -872,6 +878,22 @@ export async function joinTournament(
     return { ok: false, error: "Per i tornei a coppie iscriviti tramite il tuo team" };
   }
 
+  // Private tournaments are invite-only: a link alone is not enough.
+  if (t.visibility === "private" && t.createdById !== user.id) {
+    const invite = await db.query.tournamentInvites.findFirst({
+      where: and(
+        eq(tournamentInvites.tournamentId, t.id),
+        eq(tournamentInvites.invitedUserId, user.id),
+      ),
+    });
+    if (!invite) {
+      return {
+        ok: false,
+        error: "Questo torneo è privato: serve un invito per partecipare",
+      };
+    }
+  }
+
   const already = await db.query.tournamentEntrants.findFirst({
     where: and(
       eq(tournamentEntrants.tournamentId, t.id),
@@ -900,9 +922,84 @@ export async function joinTournament(
     groupName: null,
   });
 
+  // Joining settles any pending invite for this user.
+  await db
+    .update(tournamentInvites)
+    .set({ status: "accepted" })
+    .where(
+      and(
+        eq(tournamentInvites.tournamentId, t.id),
+        eq(tournamentInvites.invitedUserId, user.id),
+      ),
+    );
+
   updateTag(DATA_TAG);
   revalidatePath(`/tornei/${t.slug}`);
+  revalidatePath("/tornei");
   return { ok: true, slug: t.slug };
+}
+
+/**
+ * Invite specific accounts (friends) to a tournament. Only the creator or an
+ * admin may invite. Inserts invite rows (idempotent) and fires a push to each
+ * newly-invited user. Returns the number of new invites created.
+ */
+export async function inviteFriendsToTournament(
+  tournamentId: string,
+  userIds: string[],
+): Promise<ActionResult & { invited?: number }> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere" };
+  }
+
+  const t = await db.query.tournaments.findFirst({
+    where: eq(tournaments.id, tournamentId),
+  });
+  if (!t) return { ok: false, error: "Torneo non trovato" };
+  if (user.role !== "admin" && t.createdById !== user.id) {
+    return { ok: false, error: "Solo l'organizzatore può invitare" };
+  }
+
+  // Only invite people who are actually the caller's friends (or anyone if admin).
+  const friendIds = new Set((await getFriends(user.id)).map((f) => f.userId));
+  const targets = [...new Set(userIds.filter(Boolean))].filter(
+    (id) => id !== user.id && (user.role === "admin" || friendIds.has(id)),
+  );
+  if (targets.length === 0) {
+    return { ok: false, error: "Seleziona almeno un amico da invitare" };
+  }
+
+  // Skip users already invited so we only push to the genuinely new ones.
+  const existing = await db
+    .select({ id: tournamentInvites.invitedUserId })
+    .from(tournamentInvites)
+    .where(eq(tournamentInvites.tournamentId, tournamentId));
+  const alreadyInvited = new Set(existing.map((r) => r.id));
+  const fresh = targets.filter((id) => !alreadyInvited.has(id));
+
+  if (fresh.length > 0) {
+    await db.insert(tournamentInvites).values(
+      fresh.map((id) => ({
+        tournamentId,
+        invitedUserId: id,
+        invitedById: user.id,
+      })),
+    );
+
+    await sendPushToUsers(fresh, {
+      title: "Invito a un torneo 🎾",
+      body: `${user.name} ti ha invitato a "${t.name}"`,
+      url: `/tornei/${t.slug}`,
+      tag: `tournament-invite-${t.id}`,
+    });
+  }
+
+  updateTag(DATA_TAG);
+  revalidatePath(`/tornei/${t.slug}`);
+  return { ok: true, invited: fresh.length };
 }
 
 /** Creator or admin starts a draft tournament, generating the match schedule. */

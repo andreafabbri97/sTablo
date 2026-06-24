@@ -61,6 +61,15 @@ export const friendshipStatus = pgEnum("friendship_status", [
   "accepted",
   "declined",
 ]);
+export const tournamentVisibility = pgEnum("tournament_visibility", [
+  "public",
+  "private",
+]);
+export const tournamentInviteStatus = pgEnum("tournament_invite_status", [
+  "pending",
+  "accepted",
+  "declined",
+]);
 
 export const STARTING_ELO = 1000;
 
@@ -274,6 +283,8 @@ export const tournaments = pgTable("tournaments", {
   inviteToken: text("invite_token").unique(),
   /** if true the tournament is joinable by anyone via inviteToken link */
   openInvite: boolean("open_invite").notNull().default(false),
+  /** public = listed for everyone; private = only creator + invited users */
+  visibility: tournamentVisibility("visibility").notNull().default("public"),
   createdById: uuid("created_by_id").references(() => users.id, {
     onDelete: "set null",
   }),
@@ -381,6 +392,35 @@ export const pushSubscriptions = pgTable(
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 
 /* ----------------------------------------------------------------------------
+   Tournament invites — a private tournament invitation to a specific account
+---------------------------------------------------------------------------- */
+export const tournamentInvites = pgTable(
+  "tournament_invites",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tournamentId: uuid("tournament_id")
+      .notNull()
+      .references(() => tournaments.id, { onDelete: "cascade" }),
+    invitedUserId: uuid("invited_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    invitedById: uuid("invited_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    status: tournamentInviteStatus("status").notNull().default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("tournament_invite_pair_idx").on(t.tournamentId, t.invitedUserId),
+    index("tournament_invite_user_idx").on(t.invitedUserId),
+  ],
+);
+
+export type TournamentInvite = typeof tournamentInvites.$inferSelect;
+
+/* ----------------------------------------------------------------------------
    Relations
 ---------------------------------------------------------------------------- */
 export const usersRelations = relations(users, ({ one }) => ({
@@ -436,7 +476,22 @@ export const matchParticipantsRelations = relations(
 export const tournamentsRelations = relations(tournaments, ({ many }) => ({
   entrants: many(tournamentEntrants),
   matches: many(matches),
+  invites: many(tournamentInvites),
 }));
+
+export const tournamentInvitesRelations = relations(
+  tournamentInvites,
+  ({ one }) => ({
+    tournament: one(tournaments, {
+      fields: [tournamentInvites.tournamentId],
+      references: [tournaments.id],
+    }),
+    invitedUser: one(users, {
+      fields: [tournamentInvites.invitedUserId],
+      references: [users.id],
+    }),
+  }),
+);
 
 export const tournamentEntrantsRelations = relations(
   tournamentEntrants,
@@ -468,3 +523,4 @@ export type NewMatch = typeof matches.$inferInsert;
 export type MatchParticipant = typeof matchParticipants.$inferSelect;
 export type Tournament = typeof tournaments.$inferSelect;
 export type TournamentEntrant = typeof tournamentEntrants.$inferSelect;
+export type NewTournamentInvite = typeof tournamentInvites.$inferInsert;

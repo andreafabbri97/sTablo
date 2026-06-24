@@ -23,6 +23,7 @@ export function TournamentOpenForm() {
   const [name, setName] = useState("");
   const [format, setFormat] = useState<Format>("single_elim");
   const [ranked, setRanked] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,7 +32,14 @@ export function TournamentOpenForm() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const res = await createOpenTournament({ name, format, discipline: "singles", ranked, description });
+    const res = await createOpenTournament({
+      name,
+      format,
+      discipline: "singles",
+      ranked,
+      description,
+      visibility: isPrivate ? "private" : "public",
+    });
     setLoading(false);
     if (!res.ok) { setError(res.error); return; }
     router.push(`/tornei/${res.slug}`);
@@ -92,6 +100,30 @@ export function TournamentOpenForm() {
         <div>
           <p className="font-semibold">{ranked ? "🏆 Classificato" : "🤝 Amichevole"}</p>
           <p className="text-xs text-muted">{ranked ? "Incide sull'Elo" : "Solo XP, nessun effetto sull'Elo"}</p>
+        </div>
+      </div>
+
+      {/* Visibilità toggle */}
+      <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={isPrivate}
+          onClick={() => setIsPrivate((v) => !v)}
+          className={cn(
+            "relative h-6 w-11 rounded-full transition",
+            isPrivate ? "bg-brand" : "bg-border",
+          )}
+        >
+          <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all", isPrivate ? "left-5" : "left-0.5")} />
+        </button>
+        <div>
+          <p className="font-semibold">{isPrivate ? "🔒 Privato" : "🌍 Pubblico"}</p>
+          <p className="text-xs text-muted">
+            {isPrivate
+              ? "Nascosto dalla lista: solo gli invitati possono vederlo e partecipare"
+              : "Visibile a tutti nella lista tornei"}
+          </p>
         </div>
       </div>
 

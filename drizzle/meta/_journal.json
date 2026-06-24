@@ -43,6 +43,13 @@
       "when": 1782600000000,
       "tag": "0005_third_place_routing",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782700000000,
+      "tag": "0006_private_tournaments",
+      "breakpoints": true
     }
   ]
 }

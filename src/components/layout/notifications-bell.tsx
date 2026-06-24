@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useTransition, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Bell, Check, X, Clock } from "lucide-react";
+import { Bell, Check, X, Clock, Swords } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { respondFriendRequest } from "@/lib/actions/friend-actions";
 import {
@@ -19,6 +19,7 @@ export function NotificationsBell() {
   const [data, setData] = useState<Notifications>({
     friendRequests: [],
     pendingMatches: [],
+    tournamentInvites: [],
   });
   const [, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
@@ -65,7 +66,10 @@ export function NotificationsBell() {
 
   if (status !== "authenticated") return null;
 
-  const count = data.friendRequests.length + data.pendingMatches.length;
+  const count =
+    data.friendRequests.length +
+    data.pendingMatches.length +
+    data.tournamentInvites.length;
 
   function respond(id: string, accept: boolean) {
     startTransition(async () => {
@@ -138,6 +142,31 @@ export function NotificationsBell() {
                     <button onClick={() => respond(it.friendshipId, false)} className="grid h-7 w-7 place-items-center rounded-lg bg-surface-2 text-muted" aria-label="Rifiuta">
                       <X className="h-4 w-4" />
                     </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {data.tournamentInvites.length > 0 && (
+            <>
+              <p className="px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-muted">
+                Inviti ai tornei
+              </p>
+              <ul className="space-y-1">
+                {data.tournamentInvites.map((t) => (
+                  <li key={t.id}>
+                    <Link
+                      href={t.token ? `/tornei/invito/${t.token}` : `/tornei/${t.slug}`}
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm hover:bg-surface-2"
+                    >
+                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand">
+                        <Swords className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate font-medium">{t.name}</span>
+                      <span className="text-xs font-semibold text-brand">Unisciti</span>
+                    </Link>
                   </li>
                 ))}
               </ul>
