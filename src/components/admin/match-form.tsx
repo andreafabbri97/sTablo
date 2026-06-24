@@ -12,21 +12,18 @@ type Option = { id: string; name: string };
 
 export function MatchForm({
   players,
-  teams,
   isAdmin = false,
   currentPlayerId,
 }: {
   players: Option[];
-  teams: Option[];
   isAdmin?: boolean;
   currentPlayerId?: string;
 }) {
   const router = useRouter();
   const [format, setFormat] = useState<"singles" | "doubles">("doubles");
   const [ranked, setRanked] = useState(false);
-  const [useTeams, setUseTeams] = useState(false);
-  const [scoreA, setScoreA] = useState(18);
-  const [scoreB, setScoreB] = useState(15);
+  const [scoreA, setScoreA] = useState(0);
+  const [scoreB, setScoreB] = useState(0);
   const [sel, setSel] = useState<Record<string, string>>(
     currentPlayerId ? { playerA: currentPlayerId } : {},
   );
@@ -52,9 +49,6 @@ export function MatchForm({
     if (format === "singles") {
       payload.playerA = sel.playerA;
       payload.playerB = sel.playerB;
-    } else if (useTeams) {
-      payload.teamA = sel.teamA;
-      payload.teamB = sel.teamB;
     } else {
       payload.playerA = sel.playerA;
       payload.playerA2 = sel.playerA2;
@@ -112,25 +106,11 @@ export function MatchForm({
         ))}
       </div>
 
-      {format === "doubles" && (
-        <label className="flex items-center justify-center gap-2 text-sm font-medium text-muted">
-          <input
-            type="checkbox"
-            checked={useTeams}
-            onChange={(e) => setUseTeams(e.target.checked)}
-            className="h-4 w-4 accent-[var(--brand)]"
-          />
-          Usa team registrati ({teams.length})
-        </label>
-      )}
-
       {/* Sides */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
         <SideColumn tone="brand" label="Squadra A">
           {format === "singles" ? (
             <PlayerSelect players={players} value={sel.playerA} onChange={(v) => set("playerA", v)} />
-          ) : useTeams ? (
-            <TeamSelect teams={teams} value={sel.teamA} onChange={(v) => set("teamA", v)} />
           ) : (
             <>
               <PlayerSelect players={players} value={sel.playerA} onChange={(v) => set("playerA", v)} />
@@ -145,8 +125,6 @@ export function MatchForm({
         <SideColumn tone="sea" label="Squadra B">
           {format === "singles" ? (
             <PlayerSelect players={players} value={sel.playerB} onChange={(v) => set("playerB", v)} />
-          ) : useTeams ? (
-            <TeamSelect teams={teams} value={sel.teamB} onChange={(v) => set("teamB", v)} />
           ) : (
             <>
               <PlayerSelect players={players} value={sel.playerB} onChange={(v) => set("playerB", v)} />
@@ -228,27 +206,6 @@ function PlayerSelect({
   );
 }
 
-function TeamSelect({
-  teams,
-  value,
-  onChange,
-}: {
-  teams: Option[];
-  value?: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <Select value={value ?? ""} onChange={(e) => onChange(e.target.value)}>
-      <option value="">Team…</option>
-      {teams.map((t) => (
-        <option key={t.id} value={t.id}>
-          {t.name}
-        </option>
-      ))}
-    </Select>
-  );
-}
-
 function Stepper({
   value,
   onChange,
@@ -262,16 +219,29 @@ function Stepper({
         type="button"
         onClick={() => onChange(Math.max(0, value - 1))}
         className="grid h-9 w-9 place-items-center rounded-lg bg-surface-2 text-muted transition hover:text-foreground active:scale-90"
+        aria-label="Diminuisci punteggio"
       >
         <Minus className="h-4 w-4" />
       </button>
-      <span className="w-12 text-center font-mono text-3xl font-extrabold tabular-nums">
-        {value}
-      </span>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={0}
+        max={99}
+        value={value}
+        onFocus={(e) => e.target.select()}
+        onChange={(e) => {
+          const n = parseInt(e.target.value, 10);
+          onChange(Number.isNaN(n) ? 0 : Math.max(0, Math.min(99, n)));
+        }}
+        className="w-14 bg-transparent text-center font-mono text-3xl font-extrabold tabular-nums outline-none [appearance:textfield] focus:text-brand [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        aria-label="Punteggio"
+      />
       <button
         type="button"
         onClick={() => onChange(Math.min(99, value + 1))}
         className="grid h-9 w-9 place-items-center rounded-lg bg-brand text-white transition hover:brightness-105 active:scale-90"
+        aria-label="Aumenta punteggio"
       >
         <Plus className="h-4 w-4" />
       </button>
