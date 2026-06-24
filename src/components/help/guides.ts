@@ -215,6 +215,7 @@ export const GUIDES: Record<string, Guide> = {
       {
         heading: "Cosa puoi fare",
         points: [
+          "Usa la barra di ricerca per trovare subito un giocatore per nome o nickname.",
           "Tocca un giocatore per aprire il suo profilo completo.",
           "Vedi Elo, statistiche, stile di gioco e badge.",
           "Aggiungi un giocatore agli amici per seguirlo più da vicino.",
