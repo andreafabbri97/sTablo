@@ -51,9 +51,10 @@ export const GUIDES: Record<string, Guide> = {
         ],
       },
       {
-        heading: "Singolo, Doppio e Team",
+        heading: "Generale, Singolo, Doppio e Team",
         points: [
-          "Esistono classifiche separate per il Singolo (1v1) e il Doppio (2v2).",
+          "Quattro schede: «Generale» unisce tutto, poi Singolo (1v1), Doppio (2v2) e Team.",
+          "La scheda «Team» mostra l'Elo delle coppie registrate.",
           "Solo le partite «Classificate» 🏆 muovono l'Elo: le «Amichevoli» 🤝 danno solo XP.",
           "Il picco (peak) è l'Elo più alto che hai mai raggiunto.",
         ],
@@ -81,6 +82,15 @@ export const GUIDES: Record<string, Guide> = {
           "⏳ In attesa: proposta inserita, manca la conferma.",
           "✓ Confermata: conteggiata in classifica (se «Classificata»).",
           "Puoi rifiutare una proposta sbagliata prima che venga confermata.",
+        ],
+      },
+      {
+        heading: "Cercare e filtrare",
+        points: [
+          "Filtra per tipo: Tutte, 1 vs 1 o 2 vs 2.",
+          "Cerca per nome di un giocatore o di un team.",
+          "Restringi per data con i campi «Dal» e «Al».",
+          "Tocca «Azzera filtri» per tornare all'elenco completo.",
         ],
       },
     ],
