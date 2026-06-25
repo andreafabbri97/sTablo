@@ -519,6 +519,21 @@ export async function rejectMatch(matchId: string): Promise<ActionResult> {
       .delete(matches)
       .where(and(eq(matches.id, matchId), eq(matches.status, "pending")));
     refresh();
+
+    // Rete minima anti-"sparizione silenziosa": se a rifiutare è l'avversario
+    // (non il proponente che annulla la propria proposta), avvisa chi aveva
+    // proposto il risultato — altrimenti resterebbe all'oscuro del rifiuto.
+    if (match.proposedById && match.proposedById !== user.id) {
+      await notify({
+        userIds: [match.proposedById],
+        kind: "result_disputed",
+        title: "Risultato rifiutato ✋",
+        body: `${user.name?.trim() || "L'avversario"} ha rifiutato il risultato che avevi proposto. Se non siete d'accordo, riproponilo o chiedi a un admin.`,
+        url: "/partite",
+        tag: "match-rejected",
+      });
+    }
+
     return { ok: true };
   } catch (error) {
     console.error("[rejectMatch]", error);
