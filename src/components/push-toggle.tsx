@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Bell, BellOff, BellRing, Loader2 } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { removePushSubscription, sendTestPush } from "@/lib/actions/push-actions";
 import {
   pushSupported,
@@ -14,6 +15,7 @@ import {
 type State = "checking" | "unsupported" | "denied" | "off" | "on";
 
 export function PushToggle() {
+  const toast = useToast();
   const [state, setState] = useState<State>("checking");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export function PushToggle() {
         return;
       }
       setState("on");
-      setMsg("Notifiche attivate! Ti ho mandato una notifica di prova 🎉");
+      toast.success("Notifiche attivate! Ti ho mandato una prova 🎉");
       await sendTestPush();
     } catch {
       setMsg("Impossibile attivare le notifiche su questo dispositivo.");

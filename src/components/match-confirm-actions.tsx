@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, X } from "lucide-react";
 import { confirmMatch, rejectMatch } from "@/lib/actions/match-actions";
+import { useToast } from "@/components/ui/toast";
 
 export function MatchConfirmActions({
   matchId,
@@ -13,6 +14,7 @@ export function MatchConfirmActions({
   canReject?: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -21,8 +23,13 @@ export function MatchConfirmActions({
     startTransition(async () => {
       setError(null);
       const res = await confirmMatch(matchId);
-      if (!res.ok) setError(res.error);
-      else router.refresh();
+      if (!res.ok) {
+        setError(res.error);
+        toast.error(res.error);
+      } else {
+        toast.success("Risultato confermato ✅");
+        router.refresh();
+      }
     });
   }
 
@@ -30,8 +37,13 @@ export function MatchConfirmActions({
     startTransition(async () => {
       setError(null);
       const res = await rejectMatch(matchId);
-      if (!res.ok) setError(res.error);
-      else router.refresh();
+      if (!res.ok) {
+        setError(res.error);
+        toast.error(res.error);
+      } else {
+        toast.info("Proposta rifiutata");
+        router.refresh();
+      }
     });
   }
 

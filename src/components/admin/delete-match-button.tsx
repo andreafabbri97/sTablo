@@ -3,8 +3,10 @@
 import { useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { deleteMatch } from "@/lib/actions/match-actions";
+import { useToast } from "@/components/ui/toast";
 
 export function DeleteMatchButton({ matchId }: { matchId: string }) {
+  const toast = useToast();
   const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -15,7 +17,9 @@ export function DeleteMatchButton({ matchId }: { matchId: string }) {
         <button
           onClick={() =>
             startTransition(async () => {
-              await deleteMatch(matchId);
+              const res = await deleteMatch(matchId);
+              if (res.ok) toast.success("Partita eliminata");
+              else toast.error(res.error);
             })
           }
           disabled={pending}

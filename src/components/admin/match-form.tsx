@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label, Select, Input, FieldError } from "@/components/ui/field";
+import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { proposeMatch, undoMatch } from "@/lib/actions/match-actions";
 import { computeElo, sideRating } from "@/lib/elo";
@@ -34,6 +35,7 @@ export function MatchForm({
   currentPlayerId?: string;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [format, setFormat] = useState<"singles" | "doubles">("doubles");
   const [ranked, setRanked] = useState(false);
   const [scoreA, setScoreA] = useState(0);
@@ -138,6 +140,7 @@ export function MatchForm({
       setUndoError(res.error);
       return;
     }
+    toast.info("Inserimento annullato");
     resetForm(); // back to a clean form to re-enter the corrected result
   }
 
