@@ -440,9 +440,17 @@ export const GUIDES: Record<string, Guide> = {
         heading: "Come funziona",
         points: [
           "Tocca l'icona 💬 in alto per aprire i tuoi messaggi: trovi tutte le conversazioni, le più recenti in cima.",
-          "Per scrivere a qualcuno, vai sul suo profilo e tocca «Messaggio».",
+          "Su computer la chat è a due colonne: la lista a sinistra e la conversazione aperta a destra. Su telefono apri una conversazione alla volta.",
           "I messaggi arrivano in tempo reale mentre la conversazione è aperta; con le notifiche push attive ti avvisa anche con l'app chiusa.",
           "Il pallino rosso sull'icona 💬 conta le conversazioni con messaggi non letti.",
+        ],
+      },
+      {
+        heading: "Iniziare una conversazione",
+        points: [
+          "Tocca «Nuova» in alto nella lista e scegli il giocatore: si apre subito la chat con lui.",
+          "In alternativa, dal profilo di un giocatore tocca «Messaggio».",
+          "Usa la barra «Cerca» per filtrare al volo le conversazioni (o i giocatori) per nome.",
         ],
       },
       {
@@ -450,6 +458,7 @@ export const GUIDES: Record<string, Guide> = {
         points: [
           "Scrivi nel campo in basso e tocca invia (o premi Invio). Per andare a capo usa Maiusc+Invio.",
           "I messaggi che invii tu appaiono a destra, quelli dell'altra persona a sinistra.",
+          "In cima alla conversazione vedi il nome, il livello e — se è un amministratore — il distintivo Admin.",
           "Sotto ogni messaggio vedi l'orario; le date dividono i giorni.",
         ],
       },

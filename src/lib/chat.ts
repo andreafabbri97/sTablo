@@ -27,6 +27,10 @@ import {
   type InboxItem,
   type ThreadData,
 } from "./chat-core";
+import { cachedQuery } from "./cache";
+import { safe } from "./safe";
+import { getPlayerWithStatsBySlug } from "./stats";
+import { getAdminPlayerIds } from "./roles";
 
 /** Newest messages loaded into a thread on first render / full refresh. */
 const THREAD_WINDOW = 500;
@@ -35,13 +39,7 @@ const THREAD_WINDOW = 500;
    Profile resolution
 ---------------------------------------------------------------------------- */
 
-/**
- * Resolve the chat partner for a player slug. Goes slug → player → linked
- * account; returns null when the slug is unknown OR the player has no account
- * to message (an inner join on `users.playerId`). Display name comes from the
- * player so it matches the rest of the app.
- */
-export async function partnerBySlug(slug: string): Promise<ChatPartner | null> {
+async function partnerBySlugImpl(slug: string): Promise<ChatPartner | null> {
   const rows = await db
     .select({
       userId: users.id,
@@ -62,6 +60,40 @@ export async function partnerBySlug(slug: string): Promise<ChatPartner | null> {
     slug: r.slug,
     avatarColor: r.avatarColor ?? 0,
     avatarUrl: r.avatarUrl ?? null,
+  };
+}
+
+/**
+ * Resolve the chat partner for a player slug. Goes slug → player → linked
+ * account; returns null when the slug is unknown OR the player has no account
+ * to message (an inner join on `users.playerId`). Display name comes from the
+ * player so it matches the rest of the app.
+ *
+ * Cached: the slug → account mapping is effectively static, yet it's hit on
+ * every thread render, `generateMetadata`, poll and send. Caching it collapses
+ * those repeated lookups (and the metadata/thread duplicate) to a single query,
+ * busted on any data mutation. This is a big part of "open a chat fast".
+ */
+export const partnerBySlug = cachedQuery(partnerBySlugImpl, [
+  "chat-partner-by-slug",
+]);
+
+/**
+ * Extra partner details for the thread header: admin flag + current level, so
+ * the viewer can see at a glance whether they're talking to an admin. Both come
+ * from already-cached reads and are fetched together; each failure degrades
+ * gracefully (no badge / no level) so it can never break opening the thread.
+ */
+async function partnerMeta(
+  slug: string,
+): Promise<{ isAdmin: boolean; level: number | null }> {
+  const [stats, adminIds] = await Promise.all([
+    safe(() => getPlayerWithStatsBySlug(slug), null),
+    safe(() => getAdminPlayerIds(), new Set<string>()),
+  ]);
+  return {
+    isAdmin: stats ? adminIds.has(stats.player.id) : false,
+    level: stats?.level.level ?? null,
   };
 }
 
@@ -169,7 +201,15 @@ export async function getThread(
   const partner = await partnerBySlug(otherSlug);
   if (!partner || partner.userId === viewerId) return null;
 
-  const convo = await findConversation(viewerId, partner.userId);
+  // Independent reads in parallel (previously these were sequential awaits).
+  // The conversation lookup, block state and the header extras don't depend on
+  // one another; only the message window needs the resolved conversation id.
+  const [convo, block, meta] = await Promise.all([
+    findConversation(viewerId, partner.userId),
+    getBlockState(viewerId, partner.userId),
+    partnerMeta(otherSlug),
+  ]);
+
   let messages: ChatMessageView[] = [];
   if (convo) {
     // Fetch the newest window (desc + limit), then flip to chronological for
@@ -188,9 +228,8 @@ export async function getThread(
     messages = rows.reverse();
   }
 
-  const block = await getBlockState(viewerId, partner.userId);
   return {
-    partner,
+    partner: { ...partner, isAdmin: meta.isAdmin, level: meta.level },
     conversationId: convo?.id ?? null,
     messages,
     block,

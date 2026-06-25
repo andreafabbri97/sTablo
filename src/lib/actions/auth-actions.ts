@@ -18,13 +18,22 @@ export type ActionResult =
   | { ok: true }
   | { ok: false; error: string; field?: string };
 
+/**
+ * Player slugs double as URL segments under `/giocatori/[slug]` and
+ * `/chat/[slug]`. A slug equal to a static sibling route would be shadowed by
+ * that route (Next.js resolves static segments before dynamic ones), making the
+ * player's page unreachable — so those segments are never handed out.
+ */
+const RESERVED_SLUGS = new Set(["nuova"]);
+
 async function uniqueSlug(base: string): Promise<string> {
   const root = base || "giocatore";
   let candidate = root;
   let i = 1;
   // Small friend group: a short loop is fine.
   while (
-    await db.query.players.findFirst({ where: eq(players.slug, candidate) })
+    RESERVED_SLUGS.has(candidate) ||
+    (await db.query.players.findFirst({ where: eq(players.slug, candidate) }))
   ) {
     i += 1;
     candidate = `${root}-${i}`;

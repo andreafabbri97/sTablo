@@ -8,12 +8,18 @@ import { assertAuth } from "@/lib/auth-helpers";
 import { rateLimit, retryAfterSeconds, RATE_LIMITS } from "@/lib/rate-limit";
 import { sendPushToUser } from "@/lib/push";
 import { getPlayerSlugById } from "@/lib/queries";
-import { canonicalPair, type ChatMessageView, type BlockState } from "@/lib/chat-core";
+import {
+  canonicalPair,
+  type ChatMessageView,
+  type BlockState,
+  type InboxItem,
+} from "@/lib/chat-core";
 import {
   partnerBySlug,
   getBlockState,
   findConversation,
   unreadMessageCount,
+  getInbox,
 } from "@/lib/chat";
 import type { ActionResult } from "./auth-actions";
 
@@ -314,4 +320,24 @@ export async function fetchUnreadMessageCount(): Promise<number> {
     return 0;
   }
   return unreadMessageCount(user.id);
+}
+
+/**
+ * The viewer's inbox, for the chat shell's conversation list to refresh itself
+ * (read markers, new previews, ordering) without a full navigation. Returns an
+ * empty list when signed out or on error — the list must never throw.
+ */
+export async function fetchInbox(): Promise<InboxItem[]> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return [];
+  }
+  try {
+    return await getInbox(user.id);
+  } catch (err) {
+    console.error("[fetchInbox] errore:", err);
+    return [];
+  }
 }

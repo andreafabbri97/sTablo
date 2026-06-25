@@ -8,6 +8,11 @@ import { cn } from "@/lib/utils";
 export function BottomNav() {
   const pathname = usePathname();
 
+  // Hide on an open conversation / new-chat picker so the thread can go
+  // full-screen and the composer sits flush above the keyboard. The bare
+  // `/chat` inbox keeps the nav (it's a top-level destination).
+  if (pathname.startsWith("/chat/")) return null;
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border glass pb-[env(safe-area-inset-bottom)] md:hidden">
       <div className="mx-auto flex max-w-md items-stretch justify-around px-2">

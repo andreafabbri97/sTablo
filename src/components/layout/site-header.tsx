@@ -45,8 +45,8 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <MessagesButton />
           <NotificationsBell />
+          <MessagesButton />
           <ThemeToggle />
           <UserButton />
         </div>

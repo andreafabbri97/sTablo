@@ -34,7 +34,7 @@ export default async function ChatThreadPage({
 
   if (!thread) {
     return (
-      <div className="space-y-6">
+      <div className="flex flex-1 items-center justify-center p-6">
         <EmptyState
           icon={<MessageCircle className="h-6 w-6" />}
           title="Conversazione non disponibile"

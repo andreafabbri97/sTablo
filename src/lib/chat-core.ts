@@ -30,6 +30,14 @@ export type ChatPartner = {
   slug: string | null;
   avatarColor: number;
   avatarUrl: string | null;
+  /**
+   * Whether the partner's account is an admin. Populated only where the thread
+   * header needs it (so the viewer knows they're talking to an admin); left
+   * undefined in lighter contexts (inbox previews, message pushes).
+   */
+  isAdmin?: boolean;
+  /** The partner's current level, when resolved for the thread header. */
+  level?: number | null;
 };
 
 /** A single message as shown in a thread. `senderId` lets the client mark "mine". */

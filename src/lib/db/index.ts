@@ -30,6 +30,11 @@ const client =
     // connections per warm instance is safe; prepare:false is required for it.
     max: 5,
     idle_timeout: 20,
+    // Cap how long we wait to open a socket. Neon's serverless compute can be
+    // asleep (scale-to-zero): without a ceiling, the first request after idle
+    // could hang on the default 30s. 10s is enough for a cold wake-up while
+    // still failing fast (and surfacing `safe()` fallbacks) if the DB is down.
+    connect_timeout: 10,
     ssl: connectionString.includes("sslmode=require") ? "require" : undefined,
     prepare: false,
   });
