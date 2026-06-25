@@ -95,6 +95,15 @@ export const GUIDES: Record<string, Guide> = {
         ],
       },
       {
+        heading: "Reazioni e commenti",
+        points: [
+          "Apri una partita e tocca un'emoji (🔥 👏 😂 💪 🎯 😱) per reagire: ritocca per togliere la reazione.",
+          "Scrivi un commento per festeggiare, sfottere l'avversario o ricordare quel punto ai vantaggi.",
+          "Chi gioca la partita riceve una notifica quando arriva un nuovo commento.",
+          "Puoi cancellare i tuoi commenti; l'admin può rimuoverne qualsiasi.",
+        ],
+      },
+      {
         heading: "Cercare e filtrare",
         points: [
           "Filtra per tipo: Tutte, 1 vs 1 o 2 vs 2.",

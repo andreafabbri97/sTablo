@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { ArrowLeft, QrCode, Clock, CalendarClock } from "lucide-react";
+import { ArrowLeft, QrCode, Clock, CalendarClock, MessageCircle } from "lucide-react";
 import { MatchCard } from "@/components/match-card";
 import { MatchConfirmActions } from "@/components/match-confirm-actions";
 import { ScheduledMatchPanel } from "@/components/scheduled-match-panel";
+import { MatchSocial } from "@/components/match-social";
 import { ProfileQr } from "@/components/friends/profile-qr";
 import { ShareButton } from "@/components/share-button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { getMatchById } from "@/lib/queries";
+import { getMatchSocial } from "@/lib/social";
 import {
   canConfirmMatch,
   canRecordScheduled,
@@ -64,6 +66,11 @@ export default async function MatchPage({
   const isProposer = !!user && match.proposedById === user.id;
   const canRecord = canRecordScheduled(match, viewer);
   const canCancel = canCancelScheduled(match, viewerFull);
+
+  const social = await safe(() => getMatchSocial(match.id, user?.id), {
+    reactions: [],
+    comments: [],
+  });
 
   const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "https";
@@ -148,6 +155,19 @@ export default async function MatchPage({
           )}
         </Card>
       )}
+
+      <Card className="space-y-4">
+        <CardTitle className="flex items-center gap-2">
+          <MessageCircle className="h-5 w-5 text-brand" /> Reazioni e commenti
+        </CardTitle>
+        <MatchSocial
+          matchId={match.id}
+          reactions={social.reactions}
+          comments={social.comments}
+          viewerUserId={user?.id ?? null}
+          isAdmin={user?.role === "admin"}
+        />
+      </Card>
     </div>
   );
 }

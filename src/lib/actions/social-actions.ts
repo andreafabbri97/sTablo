@@ -1,0 +1,203 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { and, eq, inArray, ne } from "drizzle-orm";
+import { db } from "@/lib/db";
+import {
+  matches,
+  matchParticipants,
+  matchReactions,
+  matchComments,
+  users,
+} from "@/lib/db/schema";
+import { isValidReaction } from "@/lib/reactions";
+import { commentSchema } from "@/lib/validation";
+import { assertAuth } from "@/lib/auth-helpers";
+import { sendPushToUsers } from "@/lib/push";
+import { rateLimit, retryAfterSeconds, RATE_LIMITS } from "@/lib/rate-limit";
+import type { ActionResult } from "./auth-actions";
+
+/**
+ * Social actions for a match — reactions and comments.
+ *
+ * These deliberately do NOT call bustDataCache: the social reads are uncached
+ * (see lib/social.ts), so a targeted revalidatePath of the detail route is all
+ * that's needed and the whole feed cache stays warm.
+ */
+
+function refreshMatch(matchId: string) {
+  revalidatePath(`/partite/${matchId}`);
+}
+
+/** All user ids tied to a match's participants, excluding one user (the actor). */
+async function matchParticipantUserIds(
+  matchId: string,
+  exceptUserId: string,
+): Promise<string[]> {
+  const parts = await db
+    .select({ playerId: matchParticipants.playerId })
+    .from(matchParticipants)
+    .where(eq(matchParticipants.matchId, matchId));
+  const playerIds = parts.map((p) => p.playerId).filter(Boolean) as string[];
+  if (!playerIds.length) return [];
+  const rows = await db
+    .select({ userId: users.id })
+    .from(users)
+    .where(and(inArray(users.playerId, playerIds), ne(users.id, exceptUserId)));
+  return rows.map((r) => r.userId);
+}
+
+/**
+ * Slack-style toggle: add the emoji if the user hasn't reacted with it, remove
+ * it otherwise. Idempotent under races thanks to the unique index + onConflict.
+ */
+export async function toggleReaction(
+  matchId: string,
+  emoji: string,
+): Promise<ActionResult> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere per reagire" };
+  }
+
+  if (!isValidReaction(emoji)) {
+    return { ok: false, error: "Reazione non valida" };
+  }
+
+  // Guard the FK up front so a stale client can't spam invalid match ids.
+  const match = await db
+    .select({ id: matches.id })
+    .from(matches)
+    .where(eq(matches.id, matchId))
+    .limit(1);
+  if (!match.length) return { ok: false, error: "Partita non trovata" };
+
+  try {
+    const existing = await db
+      .select({ id: matchReactions.id })
+      .from(matchReactions)
+      .where(
+        and(
+          eq(matchReactions.matchId, matchId),
+          eq(matchReactions.userId, user.id),
+          eq(matchReactions.emoji, emoji),
+        ),
+      )
+      .limit(1);
+
+    if (existing.length) {
+      await db
+        .delete(matchReactions)
+        .where(eq(matchReactions.id, existing[0].id));
+    } else {
+      await db
+        .insert(matchReactions)
+        .values({ matchId, userId: user.id, emoji })
+        .onConflictDoNothing();
+    }
+  } catch (err) {
+    console.error("[toggleReaction] errore:", err);
+    return { ok: false, error: "Non è stato possibile salvare la reazione" };
+  }
+
+  refreshMatch(matchId);
+  return { ok: true };
+}
+
+/** Post a short comment under a match and notify the other participants. */
+export async function addComment(
+  matchId: string,
+  input: unknown,
+): Promise<ActionResult> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere per commentare" };
+  }
+
+  const limit = await rateLimit(`comment:${user.id}`, RATE_LIMITS.comment);
+  if (!limit.ok) {
+    return {
+      ok: false,
+      error: `Stai commentando troppo in fretta. Aspetta ${retryAfterSeconds(
+        limit.retryAfterMs,
+      )} secondi.`,
+    };
+  }
+
+  const parsed = commentSchema.safeParse(input);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { ok: false, error: issue?.message ?? "Commento non valido", field: "body" };
+  }
+
+  const match = await db
+    .select({ id: matches.id })
+    .from(matches)
+    .where(eq(matches.id, matchId))
+    .limit(1);
+  if (!match.length) return { ok: false, error: "Partita non trovata" };
+
+  try {
+    await db
+      .insert(matchComments)
+      .values({ matchId, userId: user.id, body: parsed.data.body });
+  } catch (err) {
+    console.error("[addComment] errore:", err);
+    return { ok: false, error: "Non è stato possibile salvare il commento" };
+  }
+
+  refreshMatch(matchId);
+
+  // Best-effort: ping the other players on the match.
+  try {
+    const userIds = await matchParticipantUserIds(matchId, user.id);
+    if (userIds.length) {
+      await sendPushToUsers(userIds, {
+        title: "💬 Nuovo commento",
+        body: `${user.name?.trim() || "Qualcuno"} ha commentato la partita`,
+        url: `/partite/${matchId}`,
+        tag: "match-comment",
+      });
+    }
+  } catch (err) {
+    console.error("[addComment] notifica saltata:", err);
+  }
+
+  return { ok: true };
+}
+
+/** Delete a comment — only the author or an admin may do so. */
+export async function deleteComment(commentId: string): Promise<ActionResult> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere per continuare" };
+  }
+
+  const rows = await db
+    .select({ id: matchComments.id, userId: matchComments.userId, matchId: matchComments.matchId })
+    .from(matchComments)
+    .where(eq(matchComments.id, commentId))
+    .limit(1);
+  const comment = rows[0];
+  if (!comment) return { ok: false, error: "Commento non trovato" };
+
+  if (user.role !== "admin" && comment.userId !== user.id) {
+    return { ok: false, error: "Non puoi eliminare questo commento" };
+  }
+
+  try {
+    await db.delete(matchComments).where(eq(matchComments.id, commentId));
+  } catch (err) {
+    console.error("[deleteComment] errore:", err);
+    return { ok: false, error: "Non è stato possibile eliminare il commento" };
+  }
+
+  refreshMatch(comment.matchId);
+  return { ok: true };
+}

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PLAY_STYLES } from "./gamification";
 import { validateTavolinoScore } from "./score-rules";
+import { MAX_COMMENT_LENGTH } from "./reactions";
 
 const styleIds = PLAY_STYLES.map((s) => s.id) as [string, ...string[]];
 
@@ -173,6 +174,17 @@ export const scheduledResultSchema = z
   });
 
 export type ScheduledResultInput = z.infer<typeof scheduledResultSchema>;
+
+/** A short comment left on a match. */
+export const commentSchema = z.object({
+  body: z
+    .string()
+    .trim()
+    .min(1, "Scrivi qualcosa")
+    .max(MAX_COMMENT_LENGTH, `Massimo ${MAX_COMMENT_LENGTH} caratteri`),
+});
+
+export type CommentInput = z.infer<typeof commentSchema>;
 
 export const teamSchema = z.object({
   name: z.string().trim().min(2).max(32),

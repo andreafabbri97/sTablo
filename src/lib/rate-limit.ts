@@ -159,6 +159,8 @@ export const RATE_LIMITS = {
   register: { limit: 5, windowMs: 10 * 60_000 },
   /** Match proposals per user. Guards against a stuck client / spam. */
   proposeMatch: { limit: 40, windowMs: 60_000 },
+  /** Match comments per user. Keeps the feed civil without blocking banter. */
+  comment: { limit: 20, windowMs: 60_000 },
   /** Admin password resets per admin. A sane ceiling on a powerful action. */
   adminReset: { limit: 20, windowMs: 60_000 },
 } as const;

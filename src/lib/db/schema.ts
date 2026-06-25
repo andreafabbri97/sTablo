@@ -413,6 +413,57 @@ export const pushSubscriptions = pgTable(
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 
 /* ----------------------------------------------------------------------------
+   Match reactions — one row per (match, user, emoji). Slack-style toggle: a
+   user may add several distinct emojis to a match, each on/off independently.
+---------------------------------------------------------------------------- */
+export const matchReactions = pgTable(
+  "match_reactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    matchId: uuid("match_id")
+      .notNull()
+      .references(() => matches.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** The emoji char; validated against the fixed palette in lib/reactions. */
+    emoji: text("emoji").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("match_reaction_unique_idx").on(t.matchId, t.userId, t.emoji),
+    index("match_reaction_match_idx").on(t.matchId),
+  ],
+);
+
+export type MatchReaction = typeof matchReactions.$inferSelect;
+
+/* ----------------------------------------------------------------------------
+   Match comments — short text notes under a match, oldest-first in the thread.
+---------------------------------------------------------------------------- */
+export const matchComments = pgTable(
+  "match_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    matchId: uuid("match_id")
+      .notNull()
+      .references(() => matches.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("match_comment_match_idx").on(t.matchId)],
+);
+
+export type MatchComment = typeof matchComments.$inferSelect;
+
+/* ----------------------------------------------------------------------------
    Rate limits — one row per (actor, action) fixed window. Shared across all
    serverless instances so the limit is GLOBAL, not per-instance. Written via an
    atomic upsert (see lib/rate-limit.ts); rows are short-lived and pruned on
