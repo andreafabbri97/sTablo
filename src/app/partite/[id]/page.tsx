@@ -15,7 +15,29 @@ import { safe } from "@/lib/safe";
 import { timeAgo } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Partita" };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const match = await safe(() => getMatchById(id), null);
+  if (!match) return { title: "Partita" };
+  const a = match.sideA.label || "Squadra A";
+  const b = match.sideB.label || "Squadra B";
+  const hasScore = match.scoreA !== null && match.scoreB !== null;
+  const title = hasScore
+    ? `${a} ${match.scoreA}–${match.scoreB} ${b}`
+    : `${a} vs ${b}`;
+  const desc = "Partita di tavolino su sTablo.";
+  return {
+    title,
+    description: desc,
+    openGraph: { title: `${title} · sTablo`, description: desc },
+    twitter: { title: `${title} · sTablo`, description: desc },
+  };
+}
 
 export default async function MatchPage({
   params,

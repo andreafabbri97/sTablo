@@ -9,6 +9,7 @@ import { RouteProgress } from "@/components/layout/route-progress";
 import { ServiceWorker } from "@/components/service-worker";
 import { InstallBanner } from "@/components/install-banner";
 import { PushPrompt } from "@/components/push-prompt";
+import { getBaseUrl } from "@/lib/base-url";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const display = Sora({
@@ -23,6 +24,7 @@ const APP_DESC =
   "Il campo digitale del tavolino di Rimini: segna le partite, scala la classifica Elo, organizza tornei.";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getBaseUrl()),
   applicationName: APP_NAME,
   title: { default: `${APP_NAME} — Tavolino Rimini`, template: `%s · ${APP_NAME}` },
   description: APP_DESC,
@@ -32,6 +34,18 @@ export const metadata: Metadata = {
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/icon.svg" }],
+  },
+  openGraph: {
+    type: "website",
+    siteName: APP_NAME,
+    locale: "it_IT",
+    title: `${APP_NAME} — Tavolino Rimini`,
+    description: APP_DESC,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${APP_NAME} — Tavolino Rimini`,
+    description: APP_DESC,
   },
 };
 

@@ -31,7 +31,17 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const data = await safe(() => getPlayerWithStatsBySlug(slug), null);
-  return { title: data?.player.name ?? "Giocatore" };
+  if (!data) return { title: "Giocatore" };
+  const { player, level, overall } = data;
+  const desc = player.statsPublic
+    ? `Lv ${level.level} · OVR ${overall} — la card di ${player.name} su sTablo.`
+    : `Il profilo di ${player.name} su sTablo.`;
+  return {
+    title: player.name,
+    description: desc,
+    openGraph: { title: `${player.name} · sTablo`, description: desc },
+    twitter: { title: `${player.name} · sTablo`, description: desc },
+  };
 }
 
 export default async function PlayerPage({
