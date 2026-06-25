@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Sora, Inter, Space_Grotesk } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -9,6 +11,7 @@ import { RouteProgress } from "@/components/layout/route-progress";
 import { ServiceWorker } from "@/components/service-worker";
 import { InstallBanner } from "@/components/install-banner";
 import { PushPrompt } from "@/components/push-prompt";
+import { ErrorListener } from "@/components/error-listener";
 import { getBaseUrl } from "@/lib/base-url";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -81,7 +84,10 @@ export default function RootLayout({
           <InstallBanner />
           <PushPrompt />
           <ServiceWorker />
+          <ErrorListener />
         </Providers>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
