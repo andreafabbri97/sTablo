@@ -12,7 +12,7 @@ import {
   recomputeAllElo,
   type SideInput,
 } from "@/lib/match-engine";
-import { sendPushToUsers } from "@/lib/push";
+import { notify } from "@/lib/notifications";
 import { rateLimit, retryAfterSeconds, RATE_LIMITS } from "@/lib/rate-limit";
 import { formatDateTime } from "@/lib/utils";
 import type { ActionResult } from "./auth-actions";
@@ -166,7 +166,9 @@ async function notifyConfirmNeeded(
     .where(inArray(users.playerId, opponentPlayerIds));
   const userIds = rows.map((r) => r.userId);
   if (!userIds.length) return;
-  await sendPushToUsers(userIds, {
+  await notify({
+    userIds,
+    kind: "confirm_needed",
     title: "Risultato da confermare ✅",
     body: `${fromName?.trim() || "Un avversario"} ha inserito un risultato: confermalo o rifiutalo`,
     url: "/partite",
@@ -298,7 +300,9 @@ async function notifyChallengeScheduled(
     .where(inArray(users.playerId, opponentPlayerIds));
   const userIds = rows.map((r) => r.userId);
   if (!userIds.length) return;
-  await sendPushToUsers(userIds, {
+  await notify({
+    userIds,
+    kind: "challenge",
     title: "⚔️ Nuova sfida!",
     body: `${fromName?.trim() || "Qualcuno"} ti ha sfidato per ${formatDateTime(when)}`,
     url: `/partite/${matchId}`,

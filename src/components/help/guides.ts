@@ -346,4 +346,37 @@ export const GUIDES: Record<string, Guide> = {
       },
     ],
   },
+
+  notifiche: {
+    title: "Le Notifiche",
+    emoji: "🔔",
+    intro:
+      "Il centro notifiche raccoglie tutto quello che ti riguarda: conferme, sfide, commenti, inviti e recap.",
+    sections: [
+      {
+        heading: "La campanella",
+        points: [
+          "La campanella in alto mostra le azioni in sospeso: risultati da confermare, richieste di amicizia e inviti ai tornei.",
+          "Il numero rosso conta quante azioni aspettano una tua risposta.",
+          "Tocca una voce per aprirla e rispondere al volo.",
+        ],
+      },
+      {
+        heading: "Il centro notifiche",
+        points: [
+          "Da «Centro notifiche» trovi lo storico completo: conferme, sfide, nuovi commenti, inviti e recap di stagione.",
+          "Le notifiche non ancora lette sono evidenziate; si segnano come lette appena apri la pagina.",
+          "Tocca una notifica per andare dritto alla partita, al torneo o alla sezione giusta.",
+        ],
+      },
+      {
+        heading: "Anche con l'app chiusa",
+        points: [
+          "Se attivi le notifiche push, ricevi gli avvisi sul telefono anche senza avere l'app aperta.",
+          "Le gestisci (o le disattivi) dal tuo Profilo, nella sezione «Account e notifiche».",
+          "Su iPhone installa prima l'app dalla schermata Home, poi consenti le notifiche.",
+        ],
+      },
+    ],
+  },
 };

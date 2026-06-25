@@ -7,7 +7,7 @@
 import { and, eq, gte, lt, inArray } from "drizzle-orm";
 import { db } from "./db";
 import { matches, users } from "./db/schema";
-import { sendPushToUsers } from "./push";
+import { notify } from "./notifications";
 import { formatDateTime } from "./utils";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -38,7 +38,9 @@ export async function sendScheduledReminders(): Promise<number> {
     const userIds = accounts.map((a) => a.userId);
     if (!userIds.length) continue;
 
-    await sendPushToUsers(userIds, {
+    await notify({
+      userIds,
+      kind: "match_reminder",
       title: "📅 Sfida in arrivo",
       body: `Hai una sfida programmata per ${formatDateTime(m.playedAt)}`,
       url: `/partite/${m.id}`,

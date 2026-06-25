@@ -13,7 +13,7 @@ import {
 import { isValidReaction } from "@/lib/reactions";
 import { commentSchema } from "@/lib/validation";
 import { assertAuth } from "@/lib/auth-helpers";
-import { sendPushToUsers } from "@/lib/push";
+import { notify } from "@/lib/notifications";
 import { rateLimit, retryAfterSeconds, RATE_LIMITS } from "@/lib/rate-limit";
 import type { ActionResult } from "./auth-actions";
 
@@ -156,7 +156,9 @@ export async function addComment(
   try {
     const userIds = await matchParticipantUserIds(matchId, user.id);
     if (userIds.length) {
-      await sendPushToUsers(userIds, {
+      await notify({
+        userIds,
+        kind: "comment",
         title: "💬 Nuovo commento",
         body: `${user.name?.trim() || "Qualcuno"} ha commentato la partita`,
         url: `/partite/${matchId}`,

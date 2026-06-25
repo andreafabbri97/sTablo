@@ -11,7 +11,7 @@ import {
 } from "./db/schema";
 import { computeElo, sideRating } from "./elo";
 import { replayElo, type ParticipantRating } from "./elo-replay";
-import { sendPushToUsers } from "./push";
+import { notify } from "./notifications";
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -256,7 +256,9 @@ async function notifyAutoConfirmed(matchIds: string[]): Promise<void> {
   const userIds = userRows.map((r) => r.userId);
   if (userIds.length === 0) return;
 
-  await sendPushToUsers(userIds, {
+  await notify({
+    userIds,
+    kind: "match_confirmed",
     title: "Risultato confermato ✅",
     body: "Un risultato in attesa è stato confermato automaticamente dopo 24h e ora conta in classifica.",
     url: "/partite",

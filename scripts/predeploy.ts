@@ -53,6 +53,12 @@ const ENSURE_SCHEMA_SQL = [
   `CREATE INDEX IF NOT EXISTS "match_reaction_match_idx" ON "match_reactions" ("match_id");`,
   `CREATE TABLE IF NOT EXISTS "match_comments" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "match_id" uuid NOT NULL REFERENCES "matches"("id") ON DELETE CASCADE, "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE, "body" text NOT NULL, "created_at" timestamp with time zone DEFAULT now() NOT NULL);`,
   `CREATE INDEX IF NOT EXISTS "match_comment_match_idx" ON "match_comments" ("match_id");`,
+  // In-app notification center (migration 0013). The bell + /notifiche page read
+  // this on every load and notify() writes to it on every gameplay event, so
+  // guarantee it exists regardless of migrate()'s journal bookkeeping.
+  `CREATE TABLE IF NOT EXISTS "notifications" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE, "kind" text DEFAULT 'generic' NOT NULL, "title" text NOT NULL, "body" text NOT NULL, "url" text, "read_at" timestamp with time zone, "created_at" timestamp with time zone DEFAULT now() NOT NULL);`,
+  `CREATE INDEX IF NOT EXISTS "notification_user_idx" ON "notifications" ("user_id","created_at");`,
+  `CREATE INDEX IF NOT EXISTS "notification_unread_idx" ON "notifications" ("user_id","read_at");`,
 ];
 
 async function main() {

@@ -20,6 +20,7 @@ export function NotificationsBell() {
     friendRequests: [],
     pendingMatches: [],
     tournamentInvites: [],
+    feedUnread: 0,
   });
   const [, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
@@ -175,12 +176,23 @@ export function NotificationsBell() {
 
           {count === 0 && (
             <p className="px-2 py-4 text-center text-sm text-muted">
-              Nessuna notifica
+              {data.feedUnread > 0
+                ? "Nessuna azione in sospeso"
+                : "Nessuna notifica"}
             </p>
           )}
 
-          <Link href="/amici" onClick={() => setOpen(false)} className="mt-1 block rounded-xl px-2 py-2 text-center text-sm font-semibold text-brand hover:bg-surface-2">
-            Vedi amici
+          <Link
+            href="/notifiche"
+            onClick={() => setOpen(false)}
+            className="mt-1 flex items-center justify-center gap-2 rounded-xl px-2 py-2 text-center text-sm font-semibold text-brand hover:bg-surface-2"
+          >
+            Centro notifiche
+            {data.feedUnread > 0 && (
+              <span className="grid h-5 min-w-5 place-items-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">
+                {data.feedUnread}
+              </span>
+            )}
           </Link>
         </div>
       )}

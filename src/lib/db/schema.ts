@@ -413,6 +413,40 @@ export const pushSubscriptions = pgTable(
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 
 /* ----------------------------------------------------------------------------
+   Notifications — persistent in-app inbox. One row per delivered notification;
+   mirrors every Web Push so each user keeps a history with read/unread state,
+   even when push is off or the device was offline. Writing here is best-effort
+   and isolated from the action that triggers it (see lib/notify): a failure
+   here must never break match recording, confirmation, etc.
+---------------------------------------------------------------------------- */
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** category slug (see lib/notifications) — drives the icon and badge rules */
+    kind: text("kind").notNull().default("generic"),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    /** in-app path to open on tap, e.g. "/partite/123" */
+    url: text("url"),
+    /** null while unread; set to the instant the user saw it */
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("notification_user_idx").on(t.userId, t.createdAt),
+    index("notification_unread_idx").on(t.userId, t.readAt),
+  ],
+);
+
+export type Notification = typeof notifications.$inferSelect;
+
+/* ----------------------------------------------------------------------------
    Match reactions — one row per (match, user, emoji). Slack-style toggle: a
    user may add several distinct emojis to a match, each on/off independently.
 ---------------------------------------------------------------------------- */

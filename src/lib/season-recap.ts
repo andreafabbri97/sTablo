@@ -6,7 +6,7 @@
  */
 import { db } from "./db";
 import { pushSubscriptions } from "./db/schema";
-import { sendPushToUsers } from "./push";
+import { notify } from "./notifications";
 import {
   getSeasonStandings,
   previousSeason,
@@ -60,7 +60,9 @@ export async function sendSeasonRecap(
       ? ` su ${totalMatches} ${totalMatches === 1 ? "partita" : "partite"} di stagione`
       : "";
 
-  await sendPushToUsers(userIds, {
+  await notify({
+    userIds,
+    kind: "season_recap",
     title: `🏆 Recap di ${season.label}`,
     body: `MVP del mese: ${mvp.player.name} con ${mvp.won} ${
       mvp.won === 1 ? "vittoria" : "vittorie"

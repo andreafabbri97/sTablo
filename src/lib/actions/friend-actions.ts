@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { friendships } from "@/lib/db/schema";
 import { assertAuth } from "@/lib/auth-helpers";
 import { getIncomingRequests, type FriendProfile } from "@/lib/friends";
-import { sendPushToUser } from "@/lib/push";
+import { notify } from "@/lib/notifications";
 import type { ActionResult } from "./auth-actions";
 
 /** Incoming pending requests for the current user (for the notification bell). */
@@ -128,7 +128,9 @@ async function notifyFriendRequest(
   targetUserId: string,
   fromName?: string | null,
 ) {
-  await sendPushToUser(targetUserId, {
+  await notify({
+    userIds: [targetUserId],
+    kind: "friend_request",
     title: "Nuova richiesta di amicizia 👋",
     body: `${fromName?.trim() || "Un giocatore"} vuole aggiungerti agli amici`,
     url: "/amici",

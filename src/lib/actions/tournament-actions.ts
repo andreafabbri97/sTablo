@@ -29,7 +29,7 @@ import {
   recomputeAllElo,
   type SideInput,
 } from "@/lib/match-engine";
-import { sendPushToUsers } from "@/lib/push";
+import { notify } from "@/lib/notifications";
 import { getFriends } from "@/lib/friends";
 import {
   generateRoundRobin,
@@ -1197,7 +1197,9 @@ export async function inviteFriendsToTournament(
       })),
     );
 
-    await sendPushToUsers(fresh, {
+    await notify({
+      userIds: fresh,
+      kind: "tournament_invite",
       title: "Invito a un torneo 🎾",
       body: `${user.name} ti ha invitato a "${t.name}"`,
       url: `/tornei/${t.slug}`,
