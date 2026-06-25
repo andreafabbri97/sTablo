@@ -9,6 +9,7 @@ import {
   Users,
   FlaskConical,
   KeyRound,
+  Download,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import { CreatePlayerForm } from "@/components/admin/create-player-form";
 import { CreateTeamForm } from "@/components/admin/create-team-form";
 import { DemoControls } from "@/components/admin/demo-controls";
 import { AccountManager } from "@/components/admin/account-manager";
+import { ExportData } from "@/components/admin/export-data";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import {
   getPlayerOptions,
@@ -100,6 +102,17 @@ export default async function AdminPage() {
           comunicargli: la cambierà poi dal suo profilo.
         </p>
         <AccountManager accounts={accounts} currentUserId={user.id} />
+      </Card>
+
+      <Card>
+        <CardTitle className="mb-3 flex items-center gap-2">
+          <Download className="h-5 w-5 text-brand" /> Esporta dati
+        </CardTitle>
+        <p className="mb-3 text-sm text-muted">
+          Scarica giocatori, partite e tornei in CSV (per Excel/Fogli Google) o
+          un backup completo in JSON. Le password non vengono mai esportate.
+        </p>
+        <ExportData />
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2">
