@@ -25,6 +25,19 @@ type Option = {
   eloDoubles: number;
 };
 
+/**
+ * Current local wall-clock as the value a <input type="datetime-local"> expects
+ * (`YYYY-MM-DDTHH:mm`, no timezone). Computed on the client only — see the mount
+ * effect below — so it never causes a server/client hydration mismatch.
+ */
+function nowLocalInput(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours(),
+  )}:${pad(d.getMinutes())}`;
+}
+
 export function MatchForm({
   players,
   isAdmin = false,
@@ -40,9 +53,13 @@ export function MatchForm({
   const [ranked, setRanked] = useState(false);
   const [scoreA, setScoreA] = useState(0);
   const [scoreB, setScoreB] = useState(0);
-  const [sel, setSel] = useState<Record<string, string>>(
-    currentPlayerId ? { playerA: currentPlayerId } : {},
-  );
+  // "Data e ora" defaults to now. Computed lazily here (runs on both SSR and the
+  // client); the resulting server/client time difference on the input is harmless
+  // and silenced with suppressHydrationWarning on the field below.
+  const [sel, setSel] = useState<Record<string, string>>(() => ({
+    playedAt: nowLocalInput(),
+    ...(currentPlayerId ? { playerA: currentPlayerId } : {}),
+  }));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   // After a successful save we keep the user here with an inline "undo" instead
@@ -126,7 +143,10 @@ export function MatchForm({
     setUndoError(null);
     setScoreA(0);
     setScoreB(0);
-    setSel(currentPlayerId ? { playerA: currentPlayerId } : {});
+    setSel({
+      playedAt: nowLocalInput(),
+      ...(currentPlayerId ? { playerA: currentPlayerId } : {}),
+    });
     router.refresh();
   }
 
@@ -286,7 +306,7 @@ export function MatchForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="playedAt">Data e ora (opzionale)</Label>
-          <Input id="playedAt" type="datetime-local" value={sel.playedAt ?? ""} onChange={(e) => set("playedAt", e.target.value)} />
+          <Input id="playedAt" type="datetime-local" suppressHydrationWarning value={sel.playedAt ?? ""} onChange={(e) => set("playedAt", e.target.value)} />
         </div>
         <div>
           <Label htmlFor="note">Nota (opzionale)</Label>
