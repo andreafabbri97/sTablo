@@ -25,6 +25,11 @@ import type { ActionResult } from "./auth-actions";
  * that's needed and the whole feed cache stays warm.
  */
 
+/** Canonical UUID v4-ish shape — guards the comparison against a uuid column,
+ * which throws on a malformed literal instead of returning no rows. */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function refreshMatch(matchId: string) {
   revalidatePath(`/partite/${matchId}`);
 }
@@ -106,10 +111,16 @@ export async function toggleReaction(
   return { ok: true };
 }
 
-/** Post a short comment under a match and notify the other participants. */
+/**
+ * Post a short comment under a match. When `parentId` is given it's a reply:
+ * the parent must be a comment on the same match, and threading is kept one
+ * level deep (a reply-to-a-reply is re-parented onto its root). Notifies the
+ * match participants for a root comment, or the replied-to author for a reply.
+ */
 export async function addComment(
   matchId: string,
   input: unknown,
+  parentId?: string | null,
 ): Promise<ActionResult> {
   let user;
   try {
@@ -141,10 +152,39 @@ export async function addComment(
     .limit(1);
   if (!match.length) return { ok: false, error: "Partita non trovata" };
 
+  // Resolve the reply target: it must be a comment on THIS match. Flatten a
+  // reply-to-a-reply onto its root so the thread never nests deeper than one.
+  let rootParentId: string | null = null;
+  let replyToAuthorId: string | null = null;
+  if (parentId) {
+    if (!UUID_RE.test(parentId)) {
+      return { ok: false, error: "Commento di riferimento non valido" };
+    }
+    const parentRows = await db
+      .select({
+        id: matchComments.id,
+        matchId: matchComments.matchId,
+        parentId: matchComments.parentId,
+        userId: matchComments.userId,
+      })
+      .from(matchComments)
+      .where(eq(matchComments.id, parentId))
+      .limit(1);
+    const parent = parentRows[0];
+    if (!parent || parent.matchId !== matchId) {
+      return { ok: false, error: "Commento di riferimento non trovato" };
+    }
+    rootParentId = parent.parentId ?? parent.id;
+    replyToAuthorId = parent.userId;
+  }
+
   try {
-    await db
-      .insert(matchComments)
-      .values({ matchId, userId: user.id, body: parsed.data.body });
+    await db.insert(matchComments).values({
+      matchId,
+      userId: user.id,
+      body: parsed.data.body,
+      parentId: rootParentId,
+    });
   } catch (err) {
     console.error("[addComment] errore:", err);
     return { ok: false, error: "Non è stato possibile salvare il commento" };
@@ -152,18 +192,33 @@ export async function addComment(
 
   refreshMatch(matchId);
 
-  // Best-effort: ping the other players on the match.
+  // Best-effort notifications: a reply pings the person it answers; a root
+  // comment pings the other players on the match.
   try {
-    const userIds = await matchParticipantUserIds(matchId, user.id);
-    if (userIds.length) {
-      await notify({
-        userIds,
-        kind: "comment",
-        title: "💬 Nuovo commento",
-        body: `${user.name?.trim() || "Qualcuno"} ha commentato la partita`,
-        url: `/partite/${matchId}`,
-        tag: "match-comment",
-      });
+    const actor = user.name?.trim() || "Qualcuno";
+    if (rootParentId) {
+      if (replyToAuthorId && replyToAuthorId !== user.id) {
+        await notify({
+          userIds: [replyToAuthorId],
+          kind: "comment",
+          title: "💬 Nuova risposta",
+          body: `${actor} ha risposto al tuo commento`,
+          url: `/partite/${matchId}`,
+          tag: "match-comment",
+        });
+      }
+    } else {
+      const userIds = await matchParticipantUserIds(matchId, user.id);
+      if (userIds.length) {
+        await notify({
+          userIds,
+          kind: "comment",
+          title: "💬 Nuovo commento",
+          body: `${actor} ha commentato la partita`,
+          url: `/partite/${matchId}`,
+          tag: "match-comment",
+        });
+      }
     }
   } catch (err) {
     console.error("[addComment] notifica saltata:", err);

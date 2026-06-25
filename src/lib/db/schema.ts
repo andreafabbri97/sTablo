@@ -9,6 +9,7 @@ import {
   boolean,
   uniqueIndex,
   index,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import type { AttributeKey } from "../gamification";
@@ -485,6 +486,8 @@ export type MatchReaction = typeof matchReactions.$inferSelect;
 
 /* ----------------------------------------------------------------------------
    Match comments — short text notes under a match, oldest-first in the thread.
+   Threaded one level deep (Facebook-style): a comment may reply to a root
+   comment via `parentId`; replies-to-replies are flattened onto the root.
 ---------------------------------------------------------------------------- */
 export const matchComments = pgTable(
   "match_comments",
@@ -496,12 +499,24 @@ export const matchComments = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /**
+     * Reply target: the root comment this one answers, or null for a root
+     * comment. Self-referencing FK with ON DELETE CASCADE so deleting a comment
+     * also removes its replies. Threading is one level deep — the server
+     * flattens any reply-to-a-reply onto the root.
+     */
+    parentId: uuid("parent_id").references((): AnyPgColumn => matchComments.id, {
+      onDelete: "cascade",
+    }),
     body: text("body").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
-  (t) => [index("match_comment_match_idx").on(t.matchId)],
+  (t) => [
+    index("match_comment_match_idx").on(t.matchId),
+    index("match_comment_parent_idx").on(t.parentId),
+  ],
 );
 
 export type MatchComment = typeof matchComments.$inferSelect;

@@ -53,6 +53,12 @@ const ENSURE_SCHEMA_SQL = [
   `CREATE INDEX IF NOT EXISTS "match_reaction_match_idx" ON "match_reactions" ("match_id");`,
   `CREATE TABLE IF NOT EXISTS "match_comments" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "match_id" uuid NOT NULL REFERENCES "matches"("id") ON DELETE CASCADE, "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE, "body" text NOT NULL, "created_at" timestamp with time zone DEFAULT now() NOT NULL);`,
   `CREATE INDEX IF NOT EXISTS "match_comment_match_idx" ON "match_comments" ("match_id");`,
+  // Threaded replies on comments (migration 0015). The detail page reads this on
+  // every view and addComment writes it, so guarantee the self-FK column exists
+  // regardless of migrate()'s journal bookkeeping. Nullable → existing comments
+  // stay top-level. ON DELETE CASCADE drops a thread's replies with its root.
+  `ALTER TABLE "match_comments" ADD COLUMN IF NOT EXISTS "parent_id" uuid REFERENCES "match_comments"("id") ON DELETE CASCADE;`,
+  `CREATE INDEX IF NOT EXISTS "match_comment_parent_idx" ON "match_comments" ("parent_id");`,
   // In-app notification center (migration 0013). The bell + /notifiche page read
   // this on every load and notify() writes to it on every gameplay event, so
   // guarantee it exists regardless of migrate()'s journal bookkeeping.

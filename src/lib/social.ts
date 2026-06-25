@@ -30,12 +30,45 @@ export type CommentView = {
   authorSlug: string | null;
   avatarColor: number;
   avatarUrl: string | null;
+  /** root comment this one replies to, or null for a root comment. */
+  parentId: string | null;
 };
+
+/** A root comment with its one-level replies — both oldest-first. */
+export type CommentThread = CommentView & { replies: CommentView[] };
 
 export type MatchSocial = {
   reactions: ReactionSummary[];
-  comments: CommentView[];
+  comments: CommentThread[];
 };
+
+/**
+ * Group a flat, oldest-first comment list into one-level threads: roots in
+ * order, each carrying its replies (also oldest-first). A reply whose parent is
+ * missing (e.g. a since-deleted root) is promoted to a root so nothing is ever
+ * hidden from the conversation. Pure — unit-tested in social.test.ts.
+ */
+export function buildCommentThreads(flat: CommentView[]): CommentThread[] {
+  const rootIds = new Set(
+    flat.filter((c) => c.parentId === null).map((c) => c.id),
+  );
+  const repliesByParent = new Map<string, CommentView[]>();
+  for (const c of flat) {
+    if (c.parentId !== null && rootIds.has(c.parentId)) {
+      const list = repliesByParent.get(c.parentId) ?? [];
+      list.push(c);
+      repliesByParent.set(c.parentId, list);
+    }
+  }
+  const threads: CommentThread[] = [];
+  for (const c of flat) {
+    // A genuine root, or an orphan reply promoted to root.
+    if (c.parentId === null || !rootIds.has(c.parentId)) {
+      threads.push({ ...c, replies: repliesByParent.get(c.id) ?? [] });
+    }
+  }
+  return threads;
+}
 
 /**
  * Load the reaction tallies (one entry per palette emoji, in palette order) and
@@ -57,6 +90,7 @@ export async function getMatchSocial(
         body: matchComments.body,
         createdAt: matchComments.createdAt,
         userId: matchComments.userId,
+        parentId: matchComments.parentId,
         userName: users.name,
         playerName: players.name,
         playerSlug: players.slug,
@@ -89,7 +123,8 @@ export async function getMatchSocial(
     authorSlug: r.playerSlug ?? null,
     avatarColor: r.avatarColor ?? 0,
     avatarUrl: r.avatarUrl ?? null,
+    parentId: r.parentId,
   }));
 
-  return { reactions, comments };
+  return { reactions, comments: buildCommentThreads(comments) };
 }
