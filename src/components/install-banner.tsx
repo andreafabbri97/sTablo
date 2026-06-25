@@ -10,64 +10,105 @@ type BIPEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
 
+// The early-capture script in layout.tsx stashes the deferred prompt here, so
+// we never miss the event when Chrome fires it before React mounts.
+type WindowWithBIP = Window & { __stabloBIP?: BIPEvent | null };
+
 const DISMISS_KEY = "stablo-install-dismissed";
+// Re-offer the install after a week instead of hiding it forever. Legacy "1"
+// values (old permanent dismissals) parse to epoch 1ms → already expired → the
+// banner shows again, which is what we want.
+const DISMISS_TTL = 7 * 24 * 60 * 60 * 1000;
+
+function getStashedPrompt(): BIPEvent | null {
+  if (typeof window === "undefined") return null;
+  return (window as WindowWithBIP).__stabloBIP ?? null;
+}
+
+function isDismissed(): boolean {
+  try {
+    const raw = localStorage.getItem(DISMISS_KEY);
+    if (!raw) return false;
+    const ts = Number(raw);
+    if (!Number.isFinite(ts)) return false;
+    return Date.now() - ts < DISMISS_TTL;
+  } catch {
+    return false;
+  }
+}
+
+function markDismissed() {
+  try {
+    localStorage.setItem(DISMISS_KEY, String(Date.now()));
+  } catch {
+    /* ignore */
+  }
+}
 
 export function InstallBanner() {
   const [deferred, setDeferred] = useState<BIPEvent | null>(null);
   // Whether to show the iOS "Add to Home Screen" instructions. True only on
   // real Safari, which is the only iOS browser that can install a PWA.
-  // Derived once; the banner stays hidden (show=false) during hydration, so
-  // there's no SSR/client mismatch.
   const [iosInstall] = useState(canIOSInstall);
   const [show, setShow] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Never offer to install an app that's already installed.
+    // Never offer to install an app that's already installed, or one the user
+    // dismissed in the last week.
     if (isInstalled()) return;
+    if (isDismissed()) return;
 
-    if (localStorage.getItem(DISMISS_KEY)) return;
+    // Initial visibility comes from client-only signals we can only read after
+    // mount: a prompt Chrome stashed before React hydrated (otherwise we'd miss
+    // the event), or iOS Safari, which never fires beforeinstallprompt and needs
+    // the manual "Aggiungi a schermata Home" instructions instead. A lazy
+    // useState initializer can't do this without an SSR hydration mismatch, so
+    // we sync here — the one legitimate case the rule below guards against.
+    const stashed = getStashedPrompt();
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (stashed) setDeferred(stashed);
+    if (stashed || iosInstall) setShow(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const onBIP = (e: Event) => {
       e.preventDefault();
+      (window as WindowWithBIP).__stabloBIP = e as BIPEvent;
       setDeferred(e as BIPEvent);
       setShow(true);
     };
     window.addEventListener("beforeinstallprompt", onBIP);
 
+    // Fired by the layout capture script when it stashes a late prompt.
+    const onStashed = () => {
+      const e = getStashedPrompt();
+      if (e) {
+        setDeferred(e);
+        setShow(true);
+      }
+    };
+    window.addEventListener("stablo-bip", onStashed);
+
     // If the app gets installed (via our button or the browser's own UI),
-    // hide the banner for good — nothing left to install.
+    // hide the banner — nothing left to install.
     const onInstalled = () => {
       setShow(false);
-      try {
-        localStorage.setItem(DISMISS_KEY, "1");
-      } catch {
-        /* ignore */
-      }
+      markDismissed();
+      (window as WindowWithBIP).__stabloBIP = null;
     };
     window.addEventListener("appinstalled", onInstalled);
 
-    // iOS doesn't fire beforeinstallprompt — show instructions banner.
-    // Intentionally client-only after mount: installed/dismissed/iOS can only
-    // be detected on the client, so the banner must stay hidden during SSR and
-    // hydration to avoid a mismatch.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (iosInstall) setShow(true);
-
     return () => {
       window.removeEventListener("beforeinstallprompt", onBIP);
+      window.removeEventListener("stablo-bip", onStashed);
       window.removeEventListener("appinstalled", onInstalled);
     };
   }, [iosInstall]);
 
   function dismiss() {
     setShow(false);
-    try {
-      localStorage.setItem(DISMISS_KEY, "1");
-    } catch {
-      /* ignore */
-    }
+    markDismissed();
   }
 
   async function install() {
@@ -75,6 +116,7 @@ export function InstallBanner() {
     await deferred.prompt();
     await deferred.userChoice;
     setDeferred(null);
+    (window as WindowWithBIP).__stabloBIP = null;
     dismiss();
   }
 

@@ -18,7 +18,12 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["sports", "games"],
     lang: "it",
     icons: [
+      // SVG first for crisp scaling on modern browsers; PNG 192/512 as the
+      // widely-required raster fallback so the install prompt (and the home
+      // icon on older Android) always has a valid icon.
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
       {
         src: "/icon-maskable.svg",
         sizes: "any",

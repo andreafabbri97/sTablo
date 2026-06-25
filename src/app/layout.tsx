@@ -73,6 +73,15 @@ export default function RootLayout({
       className={`${sans.variable} ${display.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
+        {/* Capture beforeinstallprompt as early as possible — Chrome often fires
+            it before React hydrates, and the event can't be retrieved later.
+            We stash it on window so <InstallBanner> can show the prompt. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__stabloBIP=e;window.dispatchEvent(new Event('stablo-bip'));});window.addEventListener('appinstalled',function(){window.__stabloBIP=null;});})();",
+          }}
+        />
         <Providers>
           <a
             href="#contenuto"

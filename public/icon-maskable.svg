@@ -1,43 +1,47 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bgm" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#ff8a4d"/>
-      <stop offset="0.55" stop-color="#ff6a2c"/>
-      <stop offset="1" stop-color="#e8480a"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#16202d"/>
+      <stop offset="1" stop-color="#070a0f"/>
     </linearGradient>
-    <radialGradient id="bgmGlow" cx="256" cy="168" r="300" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#ffffff" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    <radialGradient id="glow" cx="343" cy="170" r="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff7a40" stop-opacity="0.36"/>
+      <stop offset="1" stop-color="#ff7a40" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="tablem" x1="150" y1="300" x2="362" y2="360" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#ffffff"/>
-      <stop offset="1" stop-color="#ffe3d3"/>
+    <radialGradient id="seaGlow" cx="160" cy="420" r="300" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2ad0ef" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#2ad0ef" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Same mark as the in-app <Logo>; kept inside the maskable safe zone
+         (central 80% circle) so platform masks never clip it. Full-bleed bg. -->
+    <linearGradient id="stablo-table" x1="6" y1="34" x2="42" y2="34" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff7a40"/>
+      <stop offset="1" stop-color="#ff6a2c"/>
     </linearGradient>
-    <!-- Footvolley ball (Mikasa FT-5 style): flat lime + black soccer panels. -->
-    <clipPath id="ballClip"><circle r="100"/></clipPath>
+    <clipPath id="stablo-ball-clip"><circle r="100"/></clipPath>
   </defs>
 
-  <rect width="512" height="512" fill="url(#bgm)"/>
-  <rect width="512" height="512" fill="url(#bgmGlow)"/>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+  <rect width="512" height="512" fill="url(#seaGlow)"/>
 
-  <ellipse cx="256" cy="392" rx="120" ry="14" fill="#7a2603" opacity="0.30"/>
-
-  <path d="M150 330c0-58 50-92 106-92s106 34 106 92" stroke="url(#tablem)" stroke-width="30" stroke-linecap="round"/>
-  <path d="M186 330l-16 40M326 330l16 40" stroke="url(#tablem)" stroke-width="24" stroke-linecap="round"/>
-  <path d="M256 244v122" stroke="#3a1402" stroke-width="22" stroke-linecap="round" opacity="0.9"/>
-
-  <g transform="translate(328,196) scale(0.4)" clip-path="url(#ballClip)">
-    <circle r="100" fill="#d7ff3e"/>
-    <path d="M0,-33.3L0,-108" stroke="#10131a" stroke-width="6" stroke-linecap="round"/>
-    <path d="M31.67,-10.29L102.71,-33.37" stroke="#10131a" stroke-width="6" stroke-linecap="round"/>
-    <path d="M19.57,26.94L63.48,87.37" stroke="#10131a" stroke-width="6" stroke-linecap="round"/>
-    <path d="M-19.57,26.94L-63.48,87.37" stroke="#10131a" stroke-width="6" stroke-linecap="round"/>
-    <path d="M-31.67,-10.29L-102.71,-33.37" stroke="#10131a" stroke-width="6" stroke-linecap="round"/>
-    <path d="M0,-37L35.19,-11.43L21.75,29.93L-21.75,29.93L-35.19,-11.43Z" fill="#10131a"/>
-    <path d="M33.5,-46.11L21.52,-83.01L52.9,-105.81L84.29,-83.01L72.3,-46.11Z" fill="#10131a"/>
-    <path d="M54.21,17.61L85.6,-5.19L116.98,17.61L104.99,54.51L66.2,54.51Z" fill="#10131a"/>
-    <path d="M0,57L31.38,79.8L19.4,116.7L-19.4,116.7L-31.38,79.8Z" fill="#10131a"/>
-    <path d="M-54.21,17.61L-66.2,54.51L-104.99,54.51L-116.98,17.61L-85.6,-5.19Z" fill="#10131a"/>
-    <path d="M-33.5,-46.11L-72.3,-46.11L-84.29,-83.01L-52.9,-105.81L-21.52,-83.01Z" fill="#10131a"/>
+  <g transform="translate(73.6,75.5) scale(7.6)">
+    <path d="M6 34c0-7 8-11 18-11s18 4 18 11" stroke="url(#stablo-table)" stroke-width="4" stroke-linecap="round"/>
+    <path d="M24 23v15" stroke="#2ad0ef" stroke-width="3" stroke-linecap="round"/>
+    <path d="M11 34l-2 6M37 34l2 6" stroke="url(#stablo-table)" stroke-width="3" stroke-linecap="round"/>
+    <g transform="translate(33,13) scale(0.07)" clip-path="url(#stablo-ball-clip)">
+      <circle r="100" fill="#d7ff3e"/>
+      <path d="M0,-41.8L0,-108" stroke="#10131a" stroke-width="9" stroke-linecap="round"/>
+      <path d="M39.75,-12.92L102.71,-33.37" stroke="#10131a" stroke-width="9" stroke-linecap="round"/>
+      <path d="M24.57,33.82L63.48,87.37" stroke="#10131a" stroke-width="9" stroke-linecap="round"/>
+      <path d="M-24.57,33.82L-63.48,87.37" stroke="#10131a" stroke-width="9" stroke-linecap="round"/>
+      <path d="M-39.75,-12.92L-102.71,-33.37" stroke="#10131a" stroke-width="9" stroke-linecap="round"/>
+      <path d="M0,-44L41.85,-13.6L25.86,35.6L-25.86,35.6L-41.85,-13.6Z" fill="#10131a"/>
+      <path d="M36.44,-50.16L25.54,-83.7L54.08,-104.43L82.61,-83.7L71.71,-50.16Z" fill="#10131a"/>
+      <path d="M58.97,19.16L87.5,-1.57L116.03,19.16L105.13,52.7L69.86,52.7Z" fill="#10131a"/>
+      <path d="M0,62L28.53,82.73L17.63,116.27L-17.63,116.27L-28.53,82.73Z" fill="#10131a"/>
+      <path d="M-58.97,19.16L-69.86,52.7L-105.13,52.7L-116.03,19.16L-87.5,-1.57Z" fill="#10131a"/>
+      <path d="M-36.44,-50.16L-71.71,-50.16L-82.61,-83.7L-54.08,-104.43L-25.54,-83.7Z" fill="#10131a"/>
+    </g>
   </g>
 </svg>
