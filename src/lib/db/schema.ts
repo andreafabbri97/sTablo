@@ -116,6 +116,12 @@ export const players = pgTable(
     playStyle: text("play_style"),
     /** free-text signature move written by the player */
     specialMove: text("special_move"),
+    /**
+     * Player-chosen FIFA-card background. Cosmetic slug into the preset catalog
+     * in lib/card-backgrounds; `viola` reproduces the original gradient and is
+     * the default so existing cards are unchanged.
+     */
+    cardBackground: text("card_background").notNull().default("viola"),
     /** when false, gamification card (level/attrs/style/move) is owner-only */
     statsPublic: boolean("stats_public").notNull().default(true),
     /**

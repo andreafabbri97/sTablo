@@ -10,6 +10,7 @@ import { PLAY_STYLES, type Attributes } from "@/lib/gamification";
 import { updateProfile } from "@/lib/actions/player-actions";
 import { fileToAvatarDataUrl } from "@/lib/avatar-image";
 import { AttributeEditor } from "@/components/player/attribute-editor";
+import { CardBackgroundPicker } from "@/components/player/card-background-picker";
 import type { Player } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
 
@@ -19,12 +20,17 @@ export function ProfileForm({
   email,
   derived,
   level,
+  cardBackground,
+  onCardBackgroundChange,
 }: {
   player: Player;
   username: string;
   email: string;
   derived: Attributes;
   level: number;
+  /** Controlled by the parent so the live card preview shares the value. */
+  cardBackground: string;
+  onCardBackgroundChange: (id: string) => void;
 }) {
   const router = useRouter();
   const [statsPublic, setStatsPublic] = useState(player.statsPublic);
@@ -69,6 +75,7 @@ export function ProfileForm({
       playStyle: String(form.get("playStyle") ?? ""),
       specialMove: String(form.get("specialMove") ?? ""),
       avatarUrl,
+      cardBackground,
       statsPublic,
       customAttributes,
     });
@@ -198,6 +205,12 @@ export function ProfileForm({
         level={level}
         initial={player.customAttributes ?? {}}
         onChange={setCustomAttributes}
+      />
+
+      {/* Card background picker (cosmetic) */}
+      <CardBackgroundPicker
+        value={cardBackground}
+        onChange={onCardBackgroundChange}
       />
 
       {/* Privacy toggle */}

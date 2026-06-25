@@ -396,6 +396,7 @@ export const GUIDES: Record<string, Guide> = {
           "Le caratteristiche (Potenza, Tecnica, Costanza, Difesa, Clutch) partono dalle tue partite, ma puoi ridistribuirle a piacere.",
           "Hai un budget di punti che cresce col livello: per alzare una stat devi abbassarne un'altra, così i giocatori dello stesso livello restano coerenti.",
           "Ogni stat ha anche un tetto massimo legato al livello: niente 99 ovunque a livello basso, te li guadagni giocando.",
+          "Scegli lo sfondo della card tra 8 colori: tocca una tessera e l'anteprima si aggiorna subito. Salva per renderlo definitivo.",
           "È solo estetica: non cambia Elo né classifica. Con «Ripristina auto» torni alla card calcolata dalle tue partite.",
         ],
       },

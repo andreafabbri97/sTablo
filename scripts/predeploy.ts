@@ -44,6 +44,11 @@ const ENSURE_SCHEMA_SQL = [
   // and stats layer read this column, so guarantee it exists regardless of
   // migrate()'s journal bookkeeping.
   `ALTER TABLE "players" ADD COLUMN IF NOT EXISTS "custom_attributes" jsonb DEFAULT '{}'::jsonb NOT NULL;`,
+  // Player-chosen FIFA-card background (migration 0018). The profile editor, the
+  // public player page and the card itself read this column on every render, so
+  // guarantee it exists regardless of migrate()'s journal bookkeeping. Defaults
+  // to 'viola' (the original gradient) so existing cards are unchanged.
+  `ALTER TABLE "players" ADD COLUMN IF NOT EXISTS "card_background" text DEFAULT 'viola' NOT NULL;`,
   // Match social — reactions + comments (migration 0012). The match detail page
   // reads/writes both on every view, so guarantee they exist regardless of
   // migrate()'s journal bookkeeping. ON DELETE CASCADE keeps them tidy when a

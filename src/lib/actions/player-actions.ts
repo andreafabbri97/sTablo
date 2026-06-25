@@ -113,6 +113,7 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
         playStyle: orNull(d.playStyle),
         specialMove: orNull(d.specialMove),
         avatarUrl: orNull(d.avatarUrl),
+        cardBackground: d.cardBackground,
         statsPublic: d.statsPublic,
         customAttributes,
       })

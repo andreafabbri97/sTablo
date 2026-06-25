@@ -3,6 +3,7 @@ import { PLAY_STYLES } from "./gamification";
 import { validateTavolinoScore } from "./score-rules";
 import { MAX_COMMENT_LENGTH } from "./reactions";
 import { MAX_MESSAGE_LENGTH } from "./chat-core";
+import { CARD_BACKGROUND_IDS, DEFAULT_CARD_BACKGROUND } from "./card-backgrounds";
 
 const styleIds = PLAY_STYLES.map((s) => s.id) as [string, ...string[]];
 
@@ -97,6 +98,11 @@ export const profileSchema = z.object({
   playStyle: z.enum(styleIds).optional().or(z.literal("")),
   specialMove: z.string().trim().max(60).optional().or(z.literal("")),
   avatarUrl: avatarUrlSchema,
+  // Cosmetic card background slug; unknown/empty falls back to the default.
+  cardBackground: z
+    .enum(CARD_BACKGROUND_IDS)
+    .optional()
+    .default(DEFAULT_CARD_BACKGROUND),
   statsPublic: z.boolean().default(true),
   customAttributes: customAttributesSchema.optional().default({}),
 });

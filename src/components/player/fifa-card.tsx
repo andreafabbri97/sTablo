@@ -1,5 +1,6 @@
 import { Avatar } from "@/components/ui/avatar";
 import { getPlayStyle, FOOT_LABELS, type Attributes, type LevelInfo } from "@/lib/gamification";
+import { resolveCardBackground } from "@/lib/card-backgrounds";
 import type { Player } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
 
@@ -9,13 +10,17 @@ export function FifaCard({
   overall,
   attributes,
   level,
+  backgroundId,
 }: {
   player: Player;
   overall: number;
   attributes: Attributes;
   level: LevelInfo;
+  /** Override the player's saved background (used for the live editor preview). */
+  backgroundId?: string;
 }) {
   const style = getPlayStyle(player.playStyle);
+  const background = resolveCardBackground(backgroundId ?? player.cardBackground);
 
   return (
     <div className="relative mx-auto w-full max-w-xs">
@@ -23,10 +28,7 @@ export function FifaCard({
         className={cn(
           "relative overflow-hidden rounded-[var(--radius-2xl)] border border-border p-5 text-white shadow-[var(--shadow-lg)]",
         )}
-        style={{
-          background:
-            "linear-gradient(160deg, var(--brand) 0%, var(--brand-strong) 45%, #1b1033 100%)",
-        }}
+        style={{ background: background.css }}
       >
         <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/15 blur-2xl" />
 
