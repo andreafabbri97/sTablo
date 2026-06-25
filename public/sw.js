@@ -1,6 +1,16 @@
-// sTablo service worker — minimal offline shell + network-first navigation.
-const CACHE = "stablo-v1";
-const PRECACHE = ["/", "/offline", "/icon.svg", "/manifest.webmanifest"];
+// sTablo service worker — safe offline shell + network-first navigation.
+//
+// v2 fixes a stale-shell bug that crashed the app on mobile after a deploy
+// ("Qualcosa è andato storto" / ChunkLoadError) while desktop stayed fine:
+//   - the cache name never changed, so a poisoned cache was never purged;
+//   - navigations used `fetch(request)` (no `no-store`), so the worker could
+//     re-serve an old HTML shell pointing at JS chunks the server had already
+//     replaced → the missing chunk threw on load.
+// v2: bump the cache name (wipes the old one on activate), fetch navigations
+// with `no-store` so the shell is always fresh while online, and only ever
+// cache-first the immutable, content-hashed /_next/static assets.
+const CACHE = "stablo-v2";
+const PRECACHE = ["/offline", "/icon.svg", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -15,22 +25,27 @@ self.addEventListener("activate", (event) => {
       .keys()
       .then((keys) =>
         Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))),
-      ),
+      )
+      .then(() => self.clients.claim()),
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
 
-  // Network-first for navigations, fall back to cache / offline page.
+  const url = new URL(request.url);
+
+  // Navigations: always fetch the freshest HTML straight from the network,
+  // bypassing the HTTP cache so we can never re-serve (or re-cache) a stale
+  // shell that points at deleted chunks. Only fall back to a cached page or
+  // the offline shell when the network is actually unreachable.
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: "no-store" })
         .then((res) => {
           const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(request, copy));
+          caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
           return res;
         })
         .catch(() =>
@@ -40,20 +55,29 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first for static assets.
-  if (/\.(?:svg|png|jpg|jpeg|webp|ico|css|js|woff2?)$/.test(request.url)) {
+  // Immutable, content-hashed build assets — safe to serve cache-first.
+  if (url.origin === self.location.origin && url.pathname.startsWith("/_next/static/")) {
     event.respondWith(
       caches.match(request).then(
         (cached) =>
           cached ||
           fetch(request).then((res) => {
             const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(request, copy));
+            caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
             return res;
           }),
       ),
     );
+    return;
   }
+
+  // Precached shell files (icon, manifest): cache-first with network fallback.
+  if (url.origin === self.location.origin && PRECACHE.includes(url.pathname)) {
+    event.respondWith(caches.match(request).then((c) => c || fetch(request)));
+    return;
+  }
+
+  // Everything else (APIs, RSC payloads, cross-origin) goes straight to network.
 });
 
 // ---------------------------------------------------------------------------
@@ -63,7 +87,7 @@ self.addEventListener("push", (event) => {
   let payload = {};
   try {
     payload = event.data ? event.data.json() : {};
-  } catch (e) {
+  } catch {
     payload = { title: "sTablo", body: event.data ? event.data.text() : "" };
   }
   const title = payload.title || "sTablo";
