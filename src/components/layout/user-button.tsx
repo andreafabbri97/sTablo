@@ -7,10 +7,14 @@ import { LogOut, User, Shield, LogIn, ChevronDown, Users } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { colorFromString } from "@/lib/utils";
+import { getMyAvatar } from "@/lib/actions/player-actions";
+
+type AvatarInfo = { avatarUrl: string | null; avatarColor: number };
 
 export function UserButton() {
   const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
+  const [avatar, setAvatar] = useState<AvatarInfo | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -19,6 +23,33 @@ export function UserButton() {
     }
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  // The avatar (uploaded picture + colour) can't live in the JWT session — the
+  // picture is a data-URL that would bloat the cookie — and loading it in the
+  // root layout would make every route dynamic, including the offline fallback.
+  // So the header fetches it client-side once the user is authenticated…
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    let alive = true;
+    getMyAvatar()
+      .then((a) => {
+        if (alive) setAvatar(a);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [status]);
+
+  // …and updates instantly when the profile page reports a change (no reload).
+  useEffect(() => {
+    function onAvatar(e: Event) {
+      const detail = (e as CustomEvent<AvatarInfo>).detail;
+      if (detail) setAvatar(detail);
+    }
+    window.addEventListener("stablo-avatar", onAvatar);
+    return () => window.removeEventListener("stablo-avatar", onAvatar);
   }, []);
 
   if (status === "loading") {
@@ -45,7 +76,12 @@ export function UserButton() {
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1.5 rounded-full border border-border bg-surface/60 p-1 pr-2 transition hover:bg-surface"
       >
-        <Avatar name={name} colorIndex={colorFromString(name)} size="sm" />
+        <Avatar
+          name={name}
+          colorIndex={avatar?.avatarColor ?? colorFromString(name)}
+          size="sm"
+          imageUrl={avatar?.avatarUrl}
+        />
         <ChevronDown className="h-4 w-4 text-muted" />
       </button>
 

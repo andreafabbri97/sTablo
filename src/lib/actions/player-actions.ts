@@ -20,6 +20,31 @@ import type { ActionResult } from "./auth-actions";
 
 const orNull = (v?: string) => (v && v.length > 0 ? v : null);
 
+/**
+ * Read-only fetch of the signed-in player's avatar, used by the header.
+ * Deliberately not part of the JWT session: the picture is a data-URL that would
+ * bloat the auth cookie and only refresh on the next login. The header loads it
+ * client-side instead, so it stays current and the layout stays static.
+ */
+export async function getMyAvatar(): Promise<{
+  avatarUrl: string | null;
+  avatarColor: number;
+} | null> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return null;
+  }
+  if (!user.playerId) return null;
+  const me = await db.query.players.findFirst({
+    where: eq(players.id, user.playerId),
+    columns: { avatarUrl: true, avatarColor: true },
+  });
+  if (!me) return null;
+  return { avatarUrl: me.avatarUrl, avatarColor: me.avatarColor };
+}
+
 export async function updateProfile(input: unknown): Promise<ActionResult> {
   let user;
   try {

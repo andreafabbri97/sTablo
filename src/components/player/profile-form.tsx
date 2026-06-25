@@ -79,6 +79,12 @@ export function ProfileForm({
     }
     setSaved(true);
     router.refresh();
+    // Nudge the header to refresh its avatar instantly (it loads it client-side).
+    window.dispatchEvent(
+      new CustomEvent("stablo-avatar", {
+        detail: { avatarUrl: avatarUrl || null, avatarColor: player.avatarColor },
+      }),
+    );
     setTimeout(() => setSaved(false), 2500);
   }
 
