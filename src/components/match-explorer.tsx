@@ -1,13 +1,27 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Search, X } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
+import { Search, X, Loader2, ChevronDown } from "lucide-react";
 import { MatchCard } from "@/components/match-card";
 import { DeleteMatchButton } from "@/components/admin/delete-match-button";
 import { EmptyState } from "@/components/ui/page";
 import { Input } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
+import { loadMoreMatches } from "@/lib/actions/match-feed-actions";
 import type { ShapedMatch } from "@/lib/queries";
+
+const PAGE_SIZE = 200;
+
+function dedupeById(list: ShapedMatch[]): ShapedMatch[] {
+  const seen = new Set<string>();
+  const out: ShapedMatch[] = [];
+  for (const m of list) {
+    if (seen.has(m.id)) continue;
+    seen.add(m.id);
+    out.push(m);
+  }
+  return out;
+}
 
 type Format = "all" | "singles" | "doubles";
 
@@ -32,16 +46,40 @@ export function MatchExplorer({
   const [query, setQuery] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  // Older pages fetched via "carica altre". Kept separate from the `matches`
+  // prop so that when the page refreshes (e.g. after a new match) the freshest
+  // window always wins and the extra history we already pulled isn't lost.
+  const [extra, setExtra] = useState<ShapedMatch[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadingMore, startLoading] = useTransition();
 
-  const windowed =
-    typeof totalCount === "number" && totalCount > matches.length;
+  const all = useMemo(
+    () => dedupeById([...matches, ...extra]),
+    [matches, extra],
+  );
+
+  const hasMore =
+    typeof totalCount === "number" && all.length < totalCount;
+
+  function handleLoadMore() {
+    setLoadError(null);
+    startLoading(async () => {
+      try {
+        const next = await loadMoreMatches(all.length, PAGE_SIZE);
+        if (next.length === 0) return;
+        setExtra((prev) => dedupeById([...prev, ...next]));
+      } catch {
+        setLoadError("Impossibile caricare altre partite. Riprova.");
+      }
+    });
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const fromTs = from ? new Date(`${from}T00:00:00`).getTime() : -Infinity;
     const toTs = to ? new Date(`${to}T23:59:59`).getTime() : Infinity;
 
-    return matches.filter((m) => {
+    return all.filter((m) => {
       if (format !== "all" && m.format !== format) return false;
 
       const ts = new Date(m.playedAt).getTime();
@@ -57,7 +95,7 @@ export function MatchExplorer({
       }
       return true;
     });
-  }, [matches, format, query, from, to]);
+  }, [all, format, query, from, to]);
 
   const hasFilters = format !== "all" || query || from || to;
 
@@ -139,10 +177,10 @@ export function MatchExplorer({
         </div>
       </div>
 
-      {windowed && (
+      {typeof totalCount === "number" && totalCount > all.length && (
         <p className="px-1 text-xs text-muted">
-          Per velocità sono caricate le {matches.length} partite più recenti su{" "}
-          {totalCount} totali.
+          Caricate {all.length} partite su {totalCount}. Usa «Carica altre» per
+          vedere lo storico più vecchio.
         </p>
       )}
 
@@ -160,6 +198,24 @@ export function MatchExplorer({
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {hasMore && (
+        <div className="flex flex-col items-center gap-2 pt-2">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-surface-2 disabled:opacity-60"
+          >
+            {loadingMore ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+            {loadingMore ? "Caricamento…" : "Carica altre"}
+          </button>
+          {loadError && <p className="text-xs text-loss">{loadError}</p>}
         </div>
       )}
     </div>

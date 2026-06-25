@@ -81,13 +81,18 @@ export function shapeMatch(row: MatchRow): ShapedMatch {
   };
 }
 
-function loadMatches(opts: { limit?: number; casualOnly?: boolean }) {
+function loadMatches(opts: {
+  limit?: number;
+  offset?: number;
+  casualOnly?: boolean;
+}) {
   return db.query.matches.findMany({
     where: opts.casualOnly
       ? and(eq(matches.status, "completed"), isNull(matches.tournamentId))
       : eq(matches.status, "completed"),
     orderBy: [desc(matches.playedAt)],
     limit: opts.limit,
+    offset: opts.offset,
     with: {
       participants: { with: { player: true, team: true } },
     },
@@ -113,6 +118,18 @@ export const getAllMatches = cachedQuery(
     return rows.map(shapeMatch);
   },
   ["all-matches"],
+);
+
+/**
+ * One page of completed matches, newest first. Powers the "carica altre"
+ * button on /partite so older history loads on demand instead of all at once.
+ */
+export const getMatchesPage = cachedQuery(
+  async (offset: number, limit: number): Promise<ShapedMatch[]> => {
+    const rows = await loadMatches({ offset, limit, casualOnly: false });
+    return rows.map(shapeMatch);
+  },
+  ["matches-page"],
 );
 
 /** Count of completed matches — pairs with the windowed getAllMatches. */
