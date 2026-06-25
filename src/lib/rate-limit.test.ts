@@ -1,50 +1,53 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
-  rateLimit,
+  rateLimitMemory,
   clientKeyFromHeaders,
   retryAfterSeconds,
   __resetRateLimiter,
 } from "./rate-limit";
 
-describe("rateLimit", () => {
+// The in-memory core is the fallback used when the Postgres backend is down;
+// it's also the unit-testable heart of the windowing logic. The global DB path
+// (rateLimitDb) is covered end-to-end against a real database, not here.
+describe("rateLimitMemory", () => {
   beforeEach(() => __resetRateLimiter());
 
   it("allows up to the limit, then blocks", () => {
     const opts = { limit: 3, windowMs: 1000, now: 0 };
-    expect(rateLimit("k", opts).ok).toBe(true); // 1
-    expect(rateLimit("k", opts).ok).toBe(true); // 2
-    expect(rateLimit("k", opts).ok).toBe(true); // 3
-    const blocked = rateLimit("k", opts); // 4 → over
+    expect(rateLimitMemory("k", opts).ok).toBe(true); // 1
+    expect(rateLimitMemory("k", opts).ok).toBe(true); // 2
+    expect(rateLimitMemory("k", opts).ok).toBe(true); // 3
+    const blocked = rateLimitMemory("k", opts); // 4 → over
     expect(blocked.ok).toBe(false);
     expect(blocked.remaining).toBe(0);
   });
 
   it("reports remaining allowance correctly", () => {
     const opts = { limit: 2, windowMs: 1000, now: 0 };
-    expect(rateLimit("k", opts).remaining).toBe(1);
-    expect(rateLimit("k", opts).remaining).toBe(0);
+    expect(rateLimitMemory("k", opts).remaining).toBe(1);
+    expect(rateLimitMemory("k", opts).remaining).toBe(0);
   });
 
   it("resets after the window elapses", () => {
     const base = { limit: 1, windowMs: 1000 };
-    expect(rateLimit("k", { ...base, now: 0 }).ok).toBe(true);
-    expect(rateLimit("k", { ...base, now: 500 }).ok).toBe(false); // still in window
-    expect(rateLimit("k", { ...base, now: 1000 }).ok).toBe(true); // window rolled
+    expect(rateLimitMemory("k", { ...base, now: 0 }).ok).toBe(true);
+    expect(rateLimitMemory("k", { ...base, now: 500 }).ok).toBe(false); // still in window
+    expect(rateLimitMemory("k", { ...base, now: 1000 }).ok).toBe(true); // window rolled
   });
 
   it("reports retryAfterMs until the window resets", () => {
     const base = { limit: 1, windowMs: 1000 };
-    rateLimit("k", { ...base, now: 0 }); // opens window [0, 1000)
-    const blocked = rateLimit("k", { ...base, now: 200 });
+    rateLimitMemory("k", { ...base, now: 0 }); // opens window [0, 1000)
+    const blocked = rateLimitMemory("k", { ...base, now: 200 });
     expect(blocked.ok).toBe(false);
     expect(blocked.retryAfterMs).toBe(800);
   });
 
   it("keeps separate keys independent", () => {
     const opts = { limit: 1, windowMs: 1000, now: 0 };
-    expect(rateLimit("a", opts).ok).toBe(true);
-    expect(rateLimit("b", opts).ok).toBe(true); // different key, own bucket
-    expect(rateLimit("a", opts).ok).toBe(false);
+    expect(rateLimitMemory("a", opts).ok).toBe(true);
+    expect(rateLimitMemory("b", opts).ok).toBe(true); // different key, own bucket
+    expect(rateLimitMemory("a", opts).ok).toBe(false);
   });
 });
 

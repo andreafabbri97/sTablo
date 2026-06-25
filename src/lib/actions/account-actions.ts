@@ -75,7 +75,7 @@ export async function resetUserPassword(
   } catch {
     return { ok: false, error: "Azione riservata all'amministratore" };
   }
-  if (!rateLimit(`reset:${admin.id}`, RATE_LIMITS.adminReset).ok) {
+  if (!(await rateLimit(`reset:${admin.id}`, RATE_LIMITS.adminReset)).ok) {
     return { ok: false, error: "Troppi reset di fila. Riprova tra poco." };
   }
   if (!newPassword || newPassword.length < 8) {
@@ -108,7 +108,7 @@ export async function resetUserPasswordToTemp(
   } catch {
     return { ok: false, error: "Azione riservata all'amministratore" };
   }
-  if (!rateLimit(`reset:${admin.id}`, RATE_LIMITS.adminReset).ok) {
+  if (!(await rateLimit(`reset:${admin.id}`, RATE_LIMITS.adminReset)).ok) {
     return { ok: false, error: "Troppi reset di fila. Riprova tra poco." };
   }
   const password = makeTempPassword();

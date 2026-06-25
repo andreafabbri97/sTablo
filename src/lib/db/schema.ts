@@ -403,6 +403,21 @@ export const pushSubscriptions = pgTable(
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 
 /* ----------------------------------------------------------------------------
+   Rate limits — one row per (actor, action) fixed window. Shared across all
+   serverless instances so the limit is GLOBAL, not per-instance. Written via an
+   atomic upsert (see lib/rate-limit.ts); rows are short-lived and pruned on
+   deploy. `key` already encodes the action, so a single table covers them all.
+---------------------------------------------------------------------------- */
+export const rateLimits = pgTable("rate_limits", {
+  /** Opaque actor+action identity, e.g. "login:1.2.3.4" or "propose:<uuid>". */
+  key: text("key").primaryKey(),
+  /** Hits recorded in the current window. */
+  count: integer("count").notNull(),
+  /** When the current window ends and the counter rolls over. */
+  resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+});
+
+/* ----------------------------------------------------------------------------
    Tournament invites — a private tournament invitation to a specific account
 ---------------------------------------------------------------------------- */
 export const tournamentInvites = pgTable(

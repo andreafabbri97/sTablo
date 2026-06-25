@@ -24,7 +24,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // we fail like a normal bad-credentials attempt — no info leak about
         // whether the username exists or that a limit was hit.
         const ip = clientKeyFromHeaders(request.headers);
-        if (!rateLimit(`login:${ip}`, RATE_LIMITS.login).ok) return null;
+        if (!(await rateLimit(`login:${ip}`, RATE_LIMITS.login)).ok) return null;
 
         const parsed = loginSchema.safeParse(raw);
         if (!parsed.success) return null;

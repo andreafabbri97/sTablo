@@ -33,6 +33,13 @@ const ENSURE_SCHEMA_SQL = [
   // independent of migrate()'s journal bookkeeping, so the DB stays fast even
   // if migration 0009 is ever skipped.
   `CREATE INDEX IF NOT EXISTS "matches_status_played_idx" ON "matches" ("status","played_at");`,
+  // Global rate-limit store (migration 0010). The running code reads/writes it
+  // on login/register/propose/reset, so guarantee it exists regardless of
+  // migrate()'s journal bookkeeping — same belt-and-suspenders as above.
+  `CREATE TABLE IF NOT EXISTS "rate_limits" ("key" text PRIMARY KEY NOT NULL, "count" integer NOT NULL, "reset_at" timestamp with time zone NOT NULL);`,
+  // Housekeeping: drop windows that closed over a day ago so the table can't
+  // grow unbounded from one-off client IPs. Safe — expired rows are inert.
+  `DELETE FROM "rate_limits" WHERE "reset_at" < now() - interval '1 day';`,
 ];
 
 async function main() {

@@ -36,7 +36,7 @@ export async function registerUser(
   input: unknown,
 ): Promise<ActionResult> {
   const ip = clientKeyFromHeaders(await headers());
-  const limit = rateLimit(`register:${ip}`, RATE_LIMITS.register);
+  const limit = await rateLimit(`register:${ip}`, RATE_LIMITS.register);
   if (!limit.ok) {
     return {
       ok: false,

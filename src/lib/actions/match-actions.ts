@@ -59,7 +59,7 @@ export async function proposeMatch(input: unknown): Promise<ProposeResult> {
   }
 
   // Per-user guard against a stuck client looping or spamming proposals.
-  const limit = rateLimit(`propose:${user.id}`, RATE_LIMITS.proposeMatch);
+  const limit = await rateLimit(`propose:${user.id}`, RATE_LIMITS.proposeMatch);
   if (!limit.ok) {
     return {
       ok: false,
