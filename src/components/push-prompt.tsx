@@ -84,9 +84,11 @@ export function PushPrompt() {
 
   if (status !== "authenticated" || !show) return null;
 
+  // Full-width wrapper down to the screen bottom: make its transparent padding
+  // click-through so it can't block taps on the mobile bottom-nav beneath it.
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+76px)] md:pb-4">
-      <div className="mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-[var(--shadow-lg)] animate-fade-up">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+76px)] md:pb-4">
+      <div className="pointer-events-auto mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-[var(--shadow-lg)] animate-fade-up">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand text-white">
           <BellRing className="h-5 w-5" />
         </span>

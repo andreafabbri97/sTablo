@@ -122,9 +122,12 @@ export function InstallBanner() {
 
   if (!show) return null;
 
+  // The wrapper spans the full width down to the screen bottom, so its
+  // transparent padding would sit over the mobile bottom-nav and swallow taps on
+  // it. pointer-events-none lets those taps through; the card re-enables them.
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+76px)] md:pb-4">
-      <div className="mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-[var(--shadow-lg)] animate-fade-up">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+76px)] md:pb-4">
+      <div className="pointer-events-auto mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-[var(--shadow-lg)] animate-fade-up">
         <Logo />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold">Installa sTablo</p>

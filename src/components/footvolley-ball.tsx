@@ -2,10 +2,11 @@ import { cn } from "@/lib/utils";
 
 /**
  * Mikasa FT-5 footvolley ball — the real beach ball used on the Rimini courts:
- * yellow leather with blue soccer panels and a glossy sheen. Reuses the same
- * panel geometry as the in-app <Logo> mark (drawn in a unit r=100 space), but
- * rendered large, colour-accurate and glossy so it can star as the bouncing
- * hero ball. Self-contained SVG → size it freely via `className`.
+ * a glossy yellow sphere with bold blue panels running pole-to-pole, exactly the
+ * blue/yellow beach-soccer look. The panels are true elliptical meridians (so
+ * the sphere reads as round, not flat), tilted a touch as if caught mid-spin,
+ * lit from the top-left with a wet, glossy sheen. Self-contained SVG → size it
+ * freely via `className`.
  */
 export function FootvolleyBall({ className }: { className?: string }) {
   return (
@@ -16,21 +17,23 @@ export function FootvolleyBall({ className }: { className?: string }) {
       aria-label="Pallone Mikasa FT-5 da footvolley"
     >
       <defs>
-        <radialGradient id="fvb-base" cx="-32" cy="-40" r="155" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#ffe98a" />
-          <stop offset="0.5" stopColor="#f8d62a" />
-          <stop offset="1" stopColor="#d6ab07" />
+        <radialGradient id="fvb-base" cx="-34" cy="-42" r="160" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#fff1a6" />
+          <stop offset="0.5" stopColor="#f7d51f" />
+          <stop offset="1" stopColor="#cfa006" />
         </radialGradient>
-        <linearGradient id="fvb-panel" x1="0" y1="-108" x2="0" y2="112" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#4f93f2" />
-          <stop offset="1" stopColor="#15539f" />
+        <linearGradient id="fvb-panel" x1="-70" y1="-100" x2="70" y2="100" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#5aa0f7" />
+          <stop offset="0.55" stopColor="#2f78e6" />
+          <stop offset="1" stopColor="#103f8f" />
         </linearGradient>
-        <radialGradient id="fvb-shade" cx="-28" cy="-36" r="150" gradientUnits="userSpaceOnUse">
-          <stop offset="0.58" stopColor="#060e24" stopOpacity="0" />
-          <stop offset="1" stopColor="#060e24" stopOpacity="0.34" />
+        <radialGradient id="fvb-shade" cx="-30" cy="-38" r="150" gradientUnits="userSpaceOnUse">
+          <stop offset="0.55" stopColor="#05122e" stopOpacity="0" />
+          <stop offset="1" stopColor="#05122e" stopOpacity="0.4" />
         </radialGradient>
-        <radialGradient id="fvb-gloss" cx="-40" cy="-46" r="56" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#ffffff" stopOpacity="0.8" />
+        <radialGradient id="fvb-gloss" cx="-42" cy="-48" r="62" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#ffffff" stopOpacity="0.9" />
+          <stop offset="0.7" stopColor="#ffffff" stopOpacity="0.12" />
           <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
         </radialGradient>
         <clipPath id="fvb-clip">
@@ -42,28 +45,36 @@ export function FootvolleyBall({ className }: { className?: string }) {
         {/* yellow leather sphere */}
         <circle r="100" fill="url(#fvb-base)" />
 
-        {/* stitched seams */}
-        <g stroke="#16294d" strokeWidth="5" strokeLinecap="round" opacity="0.45">
-          <path d="M0,-41.8L0,-108" />
-          <path d="M39.75,-12.92L102.71,-33.37" />
-          <path d="M24.57,33.82L63.48,87.37" />
-          <path d="M-24.57,33.82L-63.48,87.37" />
-          <path d="M-39.75,-12.92L-102.71,-33.37" />
+        {/* blue panels + their stitched seams, tilted as if mid-spin. The pattern
+            spins with the ball; the lighting below stays fixed to the light. */}
+        <g transform="rotate(-18)">
+          {/* blue panels: centre lune + the two silhouette lunes (pole-to-pole) */}
+          <g fill="url(#fvb-panel)">
+            <path d="M0,-100 C17.07,-100 30.9,-55.23 30.9,0 C30.9,55.23 17.07,100 0,100 C-17.07,100 -30.9,55.23 -30.9,0 C-30.9,-55.23 -17.07,-100 0,-100 Z" />
+            <path d="M0,-100 C55.23,-100 100,-55.23 100,0 C100,55.23 55.23,100 0,100 C44.68,100 80.9,55.23 80.9,0 C80.9,-55.23 44.68,-100 0,-100 Z" />
+            <path d="M0,-100 C-55.23,-100 -100,-55.23 -100,0 C-100,55.23 -55.23,100 0,100 C-44.68,100 -80.9,55.23 -80.9,0 C-80.9,-55.23 -44.68,-100 0,-100 Z" />
+          </g>
+
+          {/* seams where the panels meet (the four inner meridians) */}
+          <g
+            fill="none"
+            stroke="#102347"
+            strokeWidth="4.5"
+            strokeLinecap="round"
+            opacity="0.4"
+          >
+            <path d="M0,-100 C17.07,-100 30.9,-55.23 30.9,0 C30.9,55.23 17.07,100 0,100" />
+            <path d="M0,-100 C-17.07,-100 -30.9,-55.23 -30.9,0 C-30.9,55.23 -17.07,100 0,100" />
+            <path d="M0,-100 C44.68,-100 80.9,-55.23 80.9,0 C80.9,55.23 44.68,100 0,100" />
+            <path d="M0,-100 C-44.68,-100 -80.9,-55.23 -80.9,0 C-80.9,55.23 -44.68,100 0,100" />
+          </g>
         </g>
 
-        {/* blue soccer panels */}
-        <g fill="url(#fvb-panel)">
-          <path d="M0,-44L41.85,-13.6L25.86,35.6L-25.86,35.6L-41.85,-13.6Z" />
-          <path d="M36.44,-50.16L25.54,-83.7L54.08,-104.43L82.61,-83.7L71.71,-50.16Z" />
-          <path d="M58.97,19.16L87.5,-1.57L116.03,19.16L105.13,52.7L69.86,52.7Z" />
-          <path d="M0,62L28.53,82.73L17.63,116.27L-17.63,116.27L-28.53,82.73Z" />
-          <path d="M-58.97,19.16L-69.86,52.7L-105.13,52.7L-116.03,19.16L-87.5,-1.57Z" />
-          <path d="M-36.44,-50.16L-71.71,-50.16L-82.61,-83.7L-54.08,-104.43L-25.54,-83.7Z" />
-        </g>
-
-        {/* spherical shading + glossy highlight */}
+        {/* spherical shading + glossy highlight (fixed to the light source) */}
         <circle r="100" fill="url(#fvb-shade)" />
         <circle r="100" fill="url(#fvb-gloss)" />
+        {/* small wet specular dot for the lucid sheen */}
+        <ellipse cx="-40" cy="-50" rx="20" ry="14" fill="#ffffff" opacity="0.55" transform="rotate(-24 -40 -50)" />
       </g>
 
       {/* crisp edge so the ball reads on any background */}
