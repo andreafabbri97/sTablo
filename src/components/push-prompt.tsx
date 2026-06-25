@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { BellRing, X, Loader2 } from "lucide-react";
 import { sendTestPush } from "@/lib/actions/push-actions";
 import { pushSupported, pushConfigured, subscribeToPush } from "@/lib/push-client";
+import { isInstalled } from "@/lib/pwa";
 
 const DISMISS_KEY = "stablo-push-prompt-dismissed";
 
@@ -44,11 +45,10 @@ export function PushPrompt() {
         /* private mode: just proceed */
       }
 
-      const standalone =
-        window.matchMedia("(display-mode: standalone)").matches ||
-        (window.navigator as unknown as { standalone?: boolean }).standalone ===
-          true;
-      if (!standalone) return; // installed-app only, to avoid banner clashes
+      // Installed-app only: avoids clashing with the install banner (which only
+      // shows when NOT installed) and matches iOS, where push needs the PWA
+      // installed first.
+      if (!isInstalled()) return;
 
       if (!cancelled) setShow(true);
     })();

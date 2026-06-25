@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Download, X, Share } from "lucide-react";
 import { Logo } from "@/components/logo";
+import { isInstalled, canIOSInstall } from "@/lib/pwa";
 
 type BIPEvent = Event & {
   prompt: () => Promise<void>;
@@ -13,23 +14,18 @@ const DISMISS_KEY = "stablo-install-dismissed";
 
 export function InstallBanner() {
   const [deferred, setDeferred] = useState<BIPEvent | null>(null);
-  // Derived once from the user agent — stable, and the banner stays hidden
-  // (show=false) during hydration, so there's no SSR/client mismatch.
-  const [isIOS] = useState(
-    () =>
-      typeof navigator !== "undefined" &&
-      /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase()),
-  );
+  // Whether to show the iOS "Add to Home Screen" instructions. True only on
+  // real Safari, which is the only iOS browser that can install a PWA.
+  // Derived once; the banner stays hidden (show=false) during hydration, so
+  // there's no SSR/client mismatch.
+  const [iosInstall] = useState(canIOSInstall);
   const [show, setShow] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      // iOS Safari
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-    if (standalone) return;
+    // Never offer to install an app that's already installed.
+    if (isInstalled()) return;
 
     if (localStorage.getItem(DISMISS_KEY)) return;
 
@@ -40,15 +36,30 @@ export function InstallBanner() {
     };
     window.addEventListener("beforeinstallprompt", onBIP);
 
+    // If the app gets installed (via our button or the browser's own UI),
+    // hide the banner for good — nothing left to install.
+    const onInstalled = () => {
+      setShow(false);
+      try {
+        localStorage.setItem(DISMISS_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener("appinstalled", onInstalled);
+
     // iOS doesn't fire beforeinstallprompt — show instructions banner.
-    // Intentionally client-only after mount: standalone/dismissed/iOS can only
+    // Intentionally client-only after mount: installed/dismissed/iOS can only
     // be detected on the client, so the banner must stay hidden during SSR and
     // hydration to avoid a mismatch.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (isIOS) setShow(true);
+    if (iosInstall) setShow(true);
 
-    return () => window.removeEventListener("beforeinstallprompt", onBIP);
-  }, [isIOS]);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBIP);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, [iosInstall]);
 
   function dismiss() {
     setShow(false);
@@ -75,7 +86,7 @@ export function InstallBanner() {
         <Logo />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold">Installa sTablo</p>
-          {isIOS && !deferred ? (
+          {iosInstall && !deferred ? (
             <p className="text-xs text-muted">
               Tocca <Share className="inline h-3.5 w-3.5" /> e poi{" "}
               <span className="font-semibold">“Aggiungi a schermata Home”</span>
