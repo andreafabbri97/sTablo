@@ -120,6 +120,13 @@
       "when": 1783700000000,
       "tag": "0016_tournament_comments",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1783800000000,
+      "tag": "0017_direct_messages",
+      "breakpoints": true
     }
   ]
 }

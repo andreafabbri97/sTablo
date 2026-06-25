@@ -430,6 +430,40 @@ export const GUIDES: Record<string, Guide> = {
     ],
   },
 
+  chat: {
+    title: "I Messaggi",
+    emoji: "💬",
+    intro:
+      "Chiacchiere 1:1 con gli altri giocatori: organizza una sfida, sfotti dopo una vittoria, mettiti d'accordo.",
+    sections: [
+      {
+        heading: "Come funziona",
+        points: [
+          "Tocca l'icona 💬 in alto per aprire i tuoi messaggi: trovi tutte le conversazioni, le più recenti in cima.",
+          "Per scrivere a qualcuno, vai sul suo profilo e tocca «Messaggio».",
+          "I messaggi arrivano in tempo reale mentre la conversazione è aperta; con le notifiche push attive ti avvisa anche con l'app chiusa.",
+          "Il pallino rosso sull'icona 💬 conta le conversazioni con messaggi non letti.",
+        ],
+      },
+      {
+        heading: "Scrivere",
+        points: [
+          "Scrivi nel campo in basso e tocca invia (o premi Invio). Per andare a capo usa Maiusc+Invio.",
+          "I messaggi che invii tu appaiono a destra, quelli dell'altra persona a sinistra.",
+          "Sotto ogni messaggio vedi l'orario; le date dividono i giorni.",
+        ],
+      },
+      {
+        heading: "Bloccare qualcuno",
+        points: [
+          "Dal menu «⋮» in alto nella conversazione puoi bloccare la persona.",
+          "Quando blocchi qualcuno, nessuno dei due può più scrivere all'altro.",
+          "Puoi sbloccare in qualsiasi momento dallo stesso menu per riprendere a scrivervi.",
+        ],
+      },
+    ],
+  },
+
   notifiche: {
     title: "Le Notifiche",
     emoji: "🔔",

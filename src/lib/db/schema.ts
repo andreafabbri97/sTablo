@@ -555,6 +555,98 @@ export const tournamentComments = pgTable(
 export type TournamentComment = typeof tournamentComments.$inferSelect;
 
 /* ----------------------------------------------------------------------------
+   Direct messages — 1:1 private chat between two accounts.
+
+   `conversations` holds exactly one row per unordered pair of users (invariant:
+   userAId < userBId, enforced in code via canonicalPair). The last message is
+   denormalized onto the row (body/sender/at) so the inbox and the unread badge
+   are a single, index-friendly query that never touches `direct_messages`.
+   `*LastReadAt` track how far each side has read → a conversation is "unread"
+   for me when the last message isn't mine and is newer than my read marker.
+---------------------------------------------------------------------------- */
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userAId: uuid("user_a_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    userBId: uuid("user_b_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** Denormalized preview of the most recent message (drives the inbox). */
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastMessageBody: text("last_message_body"),
+    lastMessageSenderId: uuid("last_message_sender_id").references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
+    /** How far each participant has read; null = never opened. */
+    aLastReadAt: timestamp("a_last_read_at", { withTimezone: true }),
+    bLastReadAt: timestamp("b_last_read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("conversation_pair_idx").on(t.userAId, t.userBId),
+    index("conversation_user_a_idx").on(t.userAId),
+    index("conversation_user_b_idx").on(t.userBId),
+  ],
+);
+
+export type Conversation = typeof conversations.$inferSelect;
+
+export const directMessages = pgTable(
+  "direct_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    senderId: uuid("sender_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("dm_conversation_idx").on(t.conversationId, t.createdAt)],
+);
+
+export type DirectMessage = typeof directMessages.$inferSelect;
+
+/* ----------------------------------------------------------------------------
+   User blocks — a directional block (blocker → blocked). Either direction
+   present between two users forbids messaging both ways. Independent of any
+   conversation so a block can exist (and persist) without one.
+---------------------------------------------------------------------------- */
+export const userBlocks = pgTable(
+  "user_blocks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    blockerId: uuid("blocker_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    blockedId: uuid("blocked_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("user_block_pair_idx").on(t.blockerId, t.blockedId),
+    index("user_block_blocked_idx").on(t.blockedId),
+  ],
+);
+
+export type UserBlock = typeof userBlocks.$inferSelect;
+
+/* ----------------------------------------------------------------------------
    Rate limits — one row per (actor, action) fixed window. Shared across all
    serverless instances so the limit is GLOBAL, not per-instance. Written via an
    atomic upsert (see lib/rate-limit.ts); rows are short-lived and pruned on

@@ -161,6 +161,8 @@ export const RATE_LIMITS = {
   proposeMatch: { limit: 40, windowMs: 60_000 },
   /** Match comments per user. Keeps the feed civil without blocking banter. */
   comment: { limit: 20, windowMs: 60_000 },
+  /** Direct messages per user. Generous (~1/s) so live chat never trips it. */
+  message: { limit: 60, windowMs: 60_000 },
   /** Client error reports per IP. Caps log spam from a misbehaving browser. */
   clientLog: { limit: 30, windowMs: 60_000 },
   /** Admin password resets per admin. A sane ceiling on a powerful action. */

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { PLAY_STYLES } from "./gamification";
 import { validateTavolinoScore } from "./score-rules";
 import { MAX_COMMENT_LENGTH } from "./reactions";
+import { MAX_MESSAGE_LENGTH } from "./chat-core";
 
 const styleIds = PLAY_STYLES.map((s) => s.id) as [string, ...string[]];
 
@@ -185,6 +186,17 @@ export const commentSchema = z.object({
 });
 
 export type CommentInput = z.infer<typeof commentSchema>;
+
+/** A single 1:1 direct-message body. */
+export const messageSchema = z.object({
+  body: z
+    .string()
+    .trim()
+    .min(1, "Scrivi un messaggio")
+    .max(MAX_MESSAGE_LENGTH, `Massimo ${MAX_MESSAGE_LENGTH} caratteri`),
+});
+
+export type MessageInput = z.infer<typeof messageSchema>;
 
 export const teamSchema = z.object({
   name: z.string().trim().min(2).max(32),

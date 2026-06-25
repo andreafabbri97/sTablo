@@ -40,12 +40,22 @@ const DATETIME_FMT = new Intl.DateTimeFormat("it-IT", {
   minute: "2-digit",
 });
 
+const TIME_FMT = new Intl.DateTimeFormat("it-IT", {
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
 export function formatDate(date: Date | string): string {
   return DATE_FMT.format(new Date(date));
 }
 
 export function formatDateTime(date: Date | string): string {
   return DATETIME_FMT.format(new Date(date));
+}
+
+/** Hour:minute only (it-IT). Stable locale → safe across server/client render. */
+export function formatTime(date: Date | string): string {
+  return TIME_FMT.format(new Date(date));
 }
 
 /** "2 giorni fa" style relative time in Italian. */

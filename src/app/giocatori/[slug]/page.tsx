@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Lock, Pencil, TrendingUp, Quote, Swords } from "lucide-react";
+import { Lock, Pencil, TrendingUp, Quote, Swords, MessageCircle } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -140,6 +140,13 @@ export default async function PlayerPage({
             <div className="flex flex-col gap-2">
               {targetUserId && (
                 <AddFriendButton targetUserId={targetUserId} state={friendState} />
+              )}
+              {targetUserId && (
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/chat/${player.slug}`}>
+                    <MessageCircle className="h-4 w-4" /> Messaggio
+                  </Link>
+                </Button>
               )}
               {viewerSlug && (
                 <Button asChild variant="outline" size="sm">
