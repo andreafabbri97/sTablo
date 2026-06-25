@@ -208,7 +208,7 @@ export function MatchForm({
         </div>
 
         <p className="text-xs text-muted">
-          Hai qualche minuto per annullare se hai sbagliato qualcosa.
+          Hai dieci minuti per annullare se hai sbagliato qualcosa.
         </p>
       </div>
     );
