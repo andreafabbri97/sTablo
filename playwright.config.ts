@@ -1,16 +1,35 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * Playwright E2E config — smoke journeys for the critical public flows.
+ * Playwright E2E config.
  *
- * Requires a running app backed by a **test** database (never production: the
- * journeys are read-only today, but point this at a throwaway Postgres anyway).
- * See e2e/README.md for setup. The webServer below builds and starts the app;
- * provide POSTGRES_URL and AUTH_SECRET in the environment first.
+ * Two layers:
+ *  - PUBLIC smoke (desktop + mobile): read-only journeys over the public flows.
+ *    Safe against any deployment — they never write data. Run as-is, or point at
+ *    a running URL with E2E_BASE_URL (e.g. a Vercel preview / the live site).
+ *  - AUTHENTICATED (opt-in via E2E_AUTH): a "setup" project logs in once and
+ *    saves a session, then the "authenticated" project reuses it. These need a
+ *    SEEDED THROWAWAY database (E2E_USERNAME / E2E_PASSWORD) — never production.
  *
  * A "mobile" project is included on purpose: a real layout bug (match cards
- * clipped on narrow screens) shipped to phones, so we keep a 360px-wide guard.
+ * clipped on narrow screens) shipped to phones, so we keep a ~390px-wide guard.
  */
+const STORAGE_STATE = "e2e/.auth/user.json";
+
+// Authenticated journeys are gated behind E2E_AUTH so the default run stays
+// public-only and works against any deployment without a database.
+const authProjects = process.env.E2E_AUTH
+  ? [
+      { name: "setup", testMatch: /auth\.setup\.ts/ },
+      {
+        name: "authenticated",
+        testMatch: /\.auth\.spec\.ts/,
+        dependencies: ["setup"],
+        use: { ...devices["Desktop Chrome"], storageState: STORAGE_STATE },
+      },
+    ]
+  : [];
+
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "**/*.spec.ts",
@@ -25,12 +44,15 @@ export default defineConfig({
   projects: [
     {
       name: "desktop",
+      testMatch: /smoke\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
       name: "mobile",
+      testMatch: /smoke\.spec\.ts/,
       use: { ...devices["Pixel 5"] }, // 393px-wide viewport
     },
+    ...authProjects,
   ],
   // Reuse a server you already started locally; otherwise build + start one.
   // Skip entirely when E2E_BASE_URL points at an already-running deployment.

@@ -13,7 +13,13 @@ import { test, expect } from "@playwright/test";
 test.describe("public pages load", () => {
   test("home renders the latest-matches section", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("Ultime partite")).toBeVisible();
+    // The heading is rendered twice (responsive desktop/mobile variants, one
+    // hidden); assert the visible one to avoid a strict-mode violation.
+    await expect(
+      page
+        .getByRole("heading", { name: "Ultime partite" })
+        .filter({ visible: true }),
+    ).toBeVisible();
   });
 
   test("home has no horizontal overflow (mobile clipping guard)", async ({
@@ -37,6 +43,15 @@ test.describe("public pages load", () => {
     expect(page.url()).toContain("/classifica");
     await expect(page.getByRole("heading").first()).toBeVisible();
   });
+
+  test("register page renders the sign-up form", async ({ page }) => {
+    await page.goto("/register");
+    await expect(page.getByText("Entra in campo")).toBeVisible();
+    await expect(page.getByLabel("Username")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Crea profilo" }),
+    ).toBeVisible();
+  });
 });
 
 test.describe("authentication boundaries", () => {
@@ -49,6 +64,27 @@ test.describe("authentication boundaries", () => {
 
   test("admin area redirects anonymous users to login", async ({ page }) => {
     await page.goto("/admin");
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("new-match page redirects anonymous users to login", async ({
+    page,
+  }) => {
+    await page.goto("/partite/nuova");
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("wrong credentials are rejected with an error", async ({ page }) => {
+    // Exercises the real auth path (Credentials → authorize) end to end. Uses a
+    // schema-valid username that can't exist, so it's a read-only failed login:
+    // no data written, well under the per-IP rate limit.
+    await page.goto("/login");
+    await page.getByLabel("Username").fill("e2e_no_such_user");
+    await page.getByLabel("Password").fill("definitely-wrong-pw");
+    await page.getByRole("button", { name: "Accedi" }).click();
+    await expect(
+      page.getByText("Username o password non corretti"),
+    ).toBeVisible();
     await expect(page).toHaveURL(/\/login/);
   });
 });
