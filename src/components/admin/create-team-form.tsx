@@ -34,15 +34,31 @@ export function CreateTeamForm({ players }: { players: Option[] }) {
 
   return (
     <form onSubmit={onSubmit} className="space-y-3">
-      <Input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Nome team (alias)" />
+      <Input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+        aria-label="Nome team (alias)"
+        placeholder="Nome team (alias)"
+      />
       <div className="grid gap-3 sm:grid-cols-2">
-        <Select value={p1} onChange={(e) => setP1(e.target.value)} required>
+        <Select
+          value={p1}
+          onChange={(e) => setP1(e.target.value)}
+          required
+          aria-label="Giocatore 1"
+        >
           <option value="">Giocatore 1…</option>
           {players.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </Select>
-        <Select value={p2} onChange={(e) => setP2(e.target.value)} required>
+        <Select
+          value={p2}
+          onChange={(e) => setP2(e.target.value)}
+          required
+          aria-label="Giocatore 2"
+        >
           <option value="">Giocatore 2…</option>
           {players.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>

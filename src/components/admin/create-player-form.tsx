@@ -33,8 +33,17 @@ export function CreatePlayerForm() {
   return (
     <form ref={formRef} onSubmit={onSubmit} className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input name="name" required placeholder="Nome e cognome" />
-        <Input name="nickname" placeholder="Soprannome (opzionale)" />
+        <Input
+          name="name"
+          required
+          aria-label="Nome e cognome"
+          placeholder="Nome e cognome"
+        />
+        <Input
+          name="nickname"
+          aria-label="Soprannome (opzionale)"
+          placeholder="Soprannome (opzionale)"
+        />
       </div>
       <FieldError>{error}</FieldError>
       <Button type="submit" size="sm" disabled={pending}>

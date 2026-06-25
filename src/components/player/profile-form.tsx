@@ -197,6 +197,9 @@ export function ProfileForm({
       {/* Privacy toggle */}
       <button
         type="button"
+        role="switch"
+        aria-checked={statsPublic}
+        aria-label="Statistiche pubbliche"
         onClick={() => setStatsPublic((v) => !v)}
         className={cn(
           "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition",

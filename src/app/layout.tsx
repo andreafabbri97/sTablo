@@ -73,11 +73,20 @@ export default function RootLayout({
     >
       <body className="min-h-full">
         <Providers>
+          <a
+            href="#contenuto"
+            className="sr-only z-50 rounded-lg bg-brand px-4 py-2 font-semibold text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+          >
+            Vai al contenuto
+          </a>
           <Suspense fallback={null}>
             <RouteProgress />
           </Suspense>
           <SiteHeader />
-          <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 md:pb-12">
+          <main
+            id="contenuto"
+            className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 md:pb-12"
+          >
             {children}
           </main>
           <BottomNav />

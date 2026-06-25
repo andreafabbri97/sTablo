@@ -450,6 +450,8 @@ function Toggle({
   return (
     <button
       type="button"
+      role="switch"
+      aria-checked={checked}
       onClick={() => onChange(!checked)}
       className={cn(
         "flex w-full items-center gap-3 rounded-xl border p-3 text-left transition",
@@ -484,11 +486,11 @@ function NumberField({
     <div>
       <Label>{label}</Label>
       <div className="flex items-center gap-2">
-        <button type="button" onClick={() => setValue(Math.max(min, value - 1))} className="grid h-10 w-10 place-items-center rounded-lg bg-surface-2 font-bold">
+        <button type="button" aria-label={`Diminuisci ${label}`} onClick={() => setValue(Math.max(min, value - 1))} className="grid h-10 w-10 place-items-center rounded-lg bg-surface-2 font-bold">
           −
         </button>
-        <span className="w-10 text-center font-mono text-xl font-bold">{value}</span>
-        <button type="button" onClick={() => setValue(Math.min(max, value + 1))} className="grid h-10 w-10 place-items-center rounded-lg bg-brand font-bold text-white">
+        <span className="w-10 text-center font-mono text-xl font-bold" aria-live="polite">{value}</span>
+        <button type="button" aria-label={`Aumenta ${label}`} onClick={() => setValue(Math.min(max, value + 1))} className="grid h-10 w-10 place-items-center rounded-lg bg-brand font-bold text-white">
           +
         </button>
       </div>

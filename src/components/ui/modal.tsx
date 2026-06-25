@@ -35,6 +35,8 @@ export function Modal({
   className?: string;
 }) {
   const mounted = useMounted();
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  const titleId = React.useId();
 
   React.useEffect(() => {
     if (!open) return;
@@ -44,6 +46,8 @@ export function Modal({
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // Move focus into the dialog so keyboard/screen-reader users land inside it.
+    panelRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
@@ -57,6 +61,7 @@ export function Modal({
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
+      aria-labelledby={title ? titleId : undefined}
     >
       <button
         type="button"
@@ -65,8 +70,10 @@ export function Modal({
         className="absolute inset-0 h-full w-full cursor-default bg-black/60 backdrop-blur-sm animate-fade-in"
       />
       <div
+        ref={panelRef}
+        tabIndex={-1}
         className={cn(
-          "relative z-10 max-h-[85vh] w-full overflow-y-auto rounded-3xl border border-border bg-surface p-5 shadow-[var(--shadow-lg)] animate-fade-up sm:max-w-lg",
+          "relative z-10 max-h-[85vh] w-full overflow-y-auto rounded-3xl border border-border bg-surface p-5 shadow-[var(--shadow-lg)] outline-none animate-fade-up sm:max-w-lg",
           className,
         )}
       >
@@ -74,7 +81,10 @@ export function Modal({
           <div className="flex items-center gap-2">
             {icon}
             {title && (
-              <h2 className="font-display text-xl font-extrabold tracking-tight">
+              <h2
+                id={titleId}
+                className="font-display text-xl font-extrabold tracking-tight"
+              >
                 {title}
               </h2>
             )}
