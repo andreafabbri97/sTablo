@@ -334,6 +334,14 @@ export const GUIDES: Record<string, Guide> = {
           "Così puoi commentare la singola partita del torneo, esattamente come una partita normale.",
         ],
       },
+      {
+        heading: "Commenti sul torneo",
+        points: [
+          "In fondo alla pagina del torneo c'è lo spazio «Commenti sul torneo»: scrivi lì per parlare del torneo in generale.",
+          "Tocca «Rispondi» sotto un commento per rispondere, come su Facebook.",
+          "L'organizzatore riceve una notifica per ogni nuovo commento; chi viene citato la riceve quando gli rispondi.",
+        ],
+      },
     ],
   },
 

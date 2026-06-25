@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
-import { Swords, Trophy, QrCode, Users } from "lucide-react";
+import { Swords, Trophy, QrCode, Users, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
+import { TournamentComments } from "@/components/tournament/tournament-comments";
 import { StandingsTable } from "@/components/tournament/standings-table";
 import { Bracket } from "@/components/tournament/bracket";
 import { MatchRow } from "@/components/tournament/match-row";
@@ -20,6 +21,7 @@ import {
   DISCIPLINE_LABEL,
   type TournamentMatchView,
 } from "@/lib/tournament/queries";
+import { getTournamentComments } from "@/lib/social";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { canViewTournament, getInvitedUserIds } from "@/lib/tournament/invites";
 import { getFriends } from "@/lib/friends";
@@ -108,6 +110,8 @@ export default async function TournamentPage({
   const invitedIds = canInvite
     ? await safe(() => getInvitedUserIds(tournament.id), [])
     : [];
+
+  const comments = await safe(() => getTournamentComments(tournament.id), []);
 
   return (
     <div className="space-y-6">
@@ -296,6 +300,20 @@ export default async function TournamentPage({
           )}
         </>
       )}
+
+      {/* Tournament-wide conversation — comment on the tournament as a whole,
+          separate from the per-match threads reachable via each match. */}
+      <Card className="space-y-4">
+        <CardTitle className="flex items-center gap-2">
+          <MessageCircle className="h-5 w-5 text-brand" /> Commenti sul torneo
+        </CardTitle>
+        <TournamentComments
+          tournamentId={tournament.id}
+          comments={comments}
+          viewerUserId={user?.id ?? null}
+          isAdmin={isAdmin}
+        />
+      </Card>
 
       {isAdmin && (
         <div className="border-t border-border pt-4">

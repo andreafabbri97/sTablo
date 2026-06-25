@@ -1,6 +1,12 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "./db";
-import { matchReactions, matchComments, users, players } from "./db/schema";
+import {
+  matchReactions,
+  matchComments,
+  tournamentComments,
+  users,
+  players,
+} from "./db/schema";
 import { MATCH_REACTIONS } from "./reactions";
 
 /**
@@ -41,6 +47,39 @@ export type MatchSocial = {
   reactions: ReactionSummary[];
   comments: CommentThread[];
 };
+
+/**
+ * Shape of a comment row joined to its author (user + optional player). Both
+ * the match and tournament reads select exactly these fields so they can share
+ * the `toCommentView` mapping below.
+ */
+type CommentRow = {
+  id: string;
+  body: string;
+  createdAt: Date;
+  userId: string;
+  parentId: string | null;
+  userName: string;
+  playerName: string | null;
+  playerSlug: string | null;
+  avatarColor: number | null;
+  avatarUrl: string | null;
+};
+
+/** Flatten a joined comment row into the view model the UI consumes. */
+function toCommentView(r: CommentRow): CommentView {
+  return {
+    id: r.id,
+    body: r.body,
+    createdAt: r.createdAt,
+    userId: r.userId,
+    authorName: r.playerName ?? r.userName,
+    authorSlug: r.playerSlug ?? null,
+    avatarColor: r.avatarColor ?? 0,
+    avatarUrl: r.avatarUrl ?? null,
+    parentId: r.parentId,
+  };
+}
 
 /**
  * Group a flat, oldest-first comment list into one-level threads: roots in
@@ -114,17 +153,39 @@ export async function getMatchSocial(
     };
   });
 
-  const comments: CommentView[] = commentRows.map((r) => ({
-    id: r.id,
-    body: r.body,
-    createdAt: r.createdAt,
-    userId: r.userId,
-    authorName: r.playerName ?? r.userName,
-    authorSlug: r.playerSlug ?? null,
-    avatarColor: r.avatarColor ?? 0,
-    avatarUrl: r.avatarUrl ?? null,
-    parentId: r.parentId,
-  }));
+  return {
+    reactions,
+    comments: buildCommentThreads(commentRows.map(toCommentView)),
+  };
+}
 
-  return { reactions, comments: buildCommentThreads(comments) };
+/**
+ * Load the comment thread for a whole tournament (oldest-first, grouped into
+ * one-level threads). Mirrors the match comment read; tournaments carry no
+ * reactions, so this returns just the threads. Uncached for the same reason as
+ * the match social reads — the tournament page is force-dynamic.
+ */
+export async function getTournamentComments(
+  tournamentId: string,
+): Promise<CommentThread[]> {
+  const rows = await db
+    .select({
+      id: tournamentComments.id,
+      body: tournamentComments.body,
+      createdAt: tournamentComments.createdAt,
+      userId: tournamentComments.userId,
+      parentId: tournamentComments.parentId,
+      userName: users.name,
+      playerName: players.name,
+      playerSlug: players.slug,
+      avatarColor: players.avatarColor,
+      avatarUrl: players.avatarUrl,
+    })
+    .from(tournamentComments)
+    .innerJoin(users, eq(tournamentComments.userId, users.id))
+    .leftJoin(players, eq(users.playerId, players.id))
+    .where(eq(tournamentComments.tournamentId, tournamentId))
+    .orderBy(asc(tournamentComments.createdAt));
+
+  return buildCommentThreads(rows.map(toCommentView));
 }

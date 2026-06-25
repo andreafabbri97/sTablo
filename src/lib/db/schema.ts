@@ -522,6 +522,39 @@ export const matchComments = pgTable(
 export type MatchComment = typeof matchComments.$inferSelect;
 
 /* ----------------------------------------------------------------------------
+   Tournament comments — the conversation under a whole tournament, mirroring
+   match comments (same one-level Facebook-style threading). Kept in its own
+   table so the live match-comment flow is never touched.
+---------------------------------------------------------------------------- */
+export const tournamentComments = pgTable(
+  "tournament_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tournamentId: uuid("tournament_id")
+      .notNull()
+      .references(() => tournaments.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** Reply target — see matchComments.parentId; same one-level semantics. */
+    parentId: uuid("parent_id").references(
+      (): AnyPgColumn => tournamentComments.id,
+      { onDelete: "cascade" },
+    ),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("tournament_comment_tournament_idx").on(t.tournamentId),
+    index("tournament_comment_parent_idx").on(t.parentId),
+  ],
+);
+
+export type TournamentComment = typeof tournamentComments.$inferSelect;
+
+/* ----------------------------------------------------------------------------
    Rate limits — one row per (actor, action) fixed window. Shared across all
    serverless instances so the limit is GLOBAL, not per-instance. Written via an
    atomic upsert (see lib/rate-limit.ts); rows are short-lived and pruned on

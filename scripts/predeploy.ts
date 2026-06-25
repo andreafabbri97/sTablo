@@ -59,6 +59,13 @@ const ENSURE_SCHEMA_SQL = [
   // stay top-level. ON DELETE CASCADE drops a thread's replies with its root.
   `ALTER TABLE "match_comments" ADD COLUMN IF NOT EXISTS "parent_id" uuid REFERENCES "match_comments"("id") ON DELETE CASCADE;`,
   `CREATE INDEX IF NOT EXISTS "match_comment_parent_idx" ON "match_comments" ("parent_id");`,
+  // Tournament comments (migration 0016). The tournament page reads this on every
+  // view and addTournamentComment writes it, so guarantee the table exists
+  // regardless of migrate()'s journal bookkeeping. Mirrors match_comments,
+  // including the self-FK for one-level threaded replies.
+  `CREATE TABLE IF NOT EXISTS "tournament_comments" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "tournament_id" uuid NOT NULL REFERENCES "tournaments"("id") ON DELETE CASCADE, "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE, "parent_id" uuid REFERENCES "tournament_comments"("id") ON DELETE CASCADE, "body" text NOT NULL, "created_at" timestamp with time zone DEFAULT now() NOT NULL);`,
+  `CREATE INDEX IF NOT EXISTS "tournament_comment_tournament_idx" ON "tournament_comments" ("tournament_id");`,
+  `CREATE INDEX IF NOT EXISTS "tournament_comment_parent_idx" ON "tournament_comments" ("parent_id");`,
   // In-app notification center (migration 0013). The bell + /notifiche page read
   // this on every load and notify() writes to it on every gameplay event, so
   // guarantee it exists regardless of migrate()'s journal bookkeeping.
