@@ -280,6 +280,15 @@ export const GUIDES: Record<string, Guide> = {
           "Aggiungi un giocatore agli amici per seguirlo più da vicino.",
         ],
       },
+      {
+        heading: "Approfondimenti del profilo",
+        points: [
+          "«Forma recente» mostra l'esito delle ultime partite (V verde, S rossa), dalla più vecchia alla più recente.",
+          "«La tua nemesi» 😤 è chi ti ha battuto più spesso; «Vittima preferita» 🎯 chi hai battuto di più.",
+          "«Miglior compagno» 🤝 è il partner di doppio con cui vinci di più.",
+          "Compaiono dopo qualche partita contro lo stesso avversario o con lo stesso compagno.",
+        ],
+      },
     ],
   },
 

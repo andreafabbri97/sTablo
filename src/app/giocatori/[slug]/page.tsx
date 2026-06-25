@@ -12,7 +12,9 @@ import { LevelBar } from "@/components/player/level-bar";
 import { AttributeBars } from "@/components/player/attribute-bars";
 import { EloChart } from "@/components/player/elo-chart";
 import { BadgeShelf } from "@/components/player/badge-shelf";
+import { PlayerInsightsPanel } from "@/components/player/player-insights";
 import { getPlayerWithStatsBySlug } from "@/lib/stats";
+import { getPlayerInsights } from "@/lib/player-insights";
 import { getEloSeries, getMatchesForPlayer, getPlayerSlugById } from "@/lib/queries";
 import { computeBadges } from "@/lib/badges";
 import { getCurrentUser } from "@/lib/auth-helpers";
@@ -64,10 +66,16 @@ export default async function PlayerPage({
     tournamentsWon,
     level: level.level,
   });
-  const [user, series, recent] = await Promise.all([
+  const [user, series, recent, insights] = await Promise.all([
     getCurrentUser(),
     safe(() => getEloSeries(player.id, "player_singles"), []),
     safe(() => getMatchesForPlayer(player.id, 8), []),
+    safe(() => getPlayerInsights(player.id), {
+      form: [],
+      nemesis: null,
+      victim: null,
+      bestPartner: null,
+    }),
   ]);
 
   const isOwner = user?.playerId === player.id;
@@ -187,6 +195,9 @@ export default async function PlayerPage({
 
       {/* Trofei — sbloccati dalle statistiche pubbliche */}
       <BadgeShelf badges={badges} ownerName={player.name} />
+
+      {/* Approfondimenti — forma, nemesi, vittima preferita, miglior compagno */}
+      <PlayerInsightsPanel insights={insights} />
 
       {/* Elo chart */}
       <Card>
