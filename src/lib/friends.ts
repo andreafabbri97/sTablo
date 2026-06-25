@@ -83,6 +83,27 @@ export async function getFriends(userId: string): Promise<FriendProfile[]> {
   });
 }
 
+/**
+ * Slugs that power the match feed's «Solo amici» filter: every accepted friend
+ * plus the viewer themselves (so their own matches stay in their circle).
+ * Returns [] when the viewer has no friends yet — the toggle is then pointless
+ * and the caller hides it. Players without a public slug are skipped.
+ */
+export async function getFriendFeedSlugs(userId: string): Promise<string[]> {
+  const friends = await getFriends(userId);
+  if (friends.length === 0) return [];
+  const slugs = new Set<string>();
+  for (const f of friends) if (f.slug) slugs.add(f.slug);
+  const me = await db
+    .select({ slug: players.slug })
+    .from(users)
+    .innerJoin(players, eq(users.playerId, players.id))
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (me[0]?.slug) slugs.add(me[0].slug);
+  return [...slugs];
+}
+
 export async function getIncomingRequests(
   userId: string,
 ): Promise<FriendProfile[]> {

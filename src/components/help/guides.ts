@@ -137,6 +137,7 @@ export const GUIDES: Record<string, Guide> = {
         heading: "Cercare e filtrare",
         points: [
           "Filtra per tipo: Tutte, 1 vs 1 o 2 vs 2.",
+          "«Solo amici» mostra solo le partite tue e dei tuoi amici (compare quando hai almeno un amico).",
           "Cerca per nome, soprannome, username o nome del torneo.",
           "Restringi per data con i campi «Dal» e «Al».",
           "Tocca «Azzera filtri» per tornare all'elenco completo.",

@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Search, X, Loader2, ChevronDown } from "lucide-react";
+import { Search, X, Loader2, ChevronDown, Users } from "lucide-react";
 import { MatchCard } from "@/components/match-card";
 import { DeleteMatchButton } from "@/components/admin/delete-match-button";
 import { EmptyState } from "@/components/ui/page";
 import { Input } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { loadMoreMatches } from "@/lib/actions/match-feed-actions";
+import { matchInvolvesAnySlug } from "@/lib/match-filter";
 import type { ShapedMatch } from "@/lib/queries";
 
 const PAGE_SIZE = 200;
@@ -35,17 +36,25 @@ export function MatchExplorer({
   matches,
   isAdmin,
   totalCount,
+  friendSlugs,
 }: {
   matches: ShapedMatch[];
   isAdmin: boolean;
   /** Total completed matches in the DB; when it exceeds the loaded window we
    *  show a note so the count discrepancy is never confusing. */
   totalCount?: number;
+  /** The viewer's circle (themselves + accepted friends) as player slugs. When
+   *  present and non-empty, the «Solo amici» toggle is shown. Undefined for
+   *  signed-out visitors or users with no friends yet. */
+  friendSlugs?: string[];
 }) {
   const [format, setFormat] = useState<Format>("all");
   const [query, setQuery] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [friendsOnly, setFriendsOnly] = useState(false);
+  const canFilterFriends = !!friendSlugs && friendSlugs.length > 0;
+  const friendSet = useMemo(() => new Set(friendSlugs ?? []), [friendSlugs]);
   // Older pages fetched via "carica altre". Kept separate from the `matches`
   // prop so that when the page refreshes (e.g. after a new match) the freshest
   // window always wins and the extra history we already pulled isn't lost.
@@ -82,6 +91,9 @@ export function MatchExplorer({
     return all.filter((m) => {
       if (format !== "all" && m.format !== format) return false;
 
+      if (friendsOnly && canFilterFriends && !matchInvolvesAnySlug(m, friendSet))
+        return false;
+
       const ts = new Date(m.playedAt).getTime();
       if (ts < fromTs || ts > toTs) return false;
 
@@ -99,9 +111,9 @@ export function MatchExplorer({
       }
       return true;
     });
-  }, [all, format, query, from, to]);
+  }, [all, format, query, from, to, friendsOnly, canFilterFriends, friendSet]);
 
-  const hasFilters = format !== "all" || query || from || to;
+  const hasFilters = format !== "all" || query || from || to || friendsOnly;
 
   return (
     <div className="space-y-4">
@@ -121,6 +133,24 @@ export function MatchExplorer({
             </button>
           ))}
         </div>
+
+        {/* Friends-only scope — only when the viewer has friends to filter by */}
+        {canFilterFriends && (
+          <button
+            type="button"
+            onClick={() => setFriendsOnly((v) => !v)}
+            aria-pressed={friendsOnly}
+            className={cn(
+              "flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition",
+              friendsOnly
+                ? "border-transparent bg-brand text-white"
+                : "border-border bg-surface text-muted hover:bg-surface-2",
+            )}
+          >
+            <Users className="h-4 w-4" />
+            Solo amici
+          </button>
+        )}
 
         {/* Search */}
         <div className="relative">
@@ -172,6 +202,7 @@ export function MatchExplorer({
                 setQuery("");
                 setFrom("");
                 setTo("");
+                setFriendsOnly(false);
               }}
               className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
             >
@@ -189,7 +220,14 @@ export function MatchExplorer({
       )}
 
       {filtered.length === 0 ? (
-        <EmptyState title="Nessuna partita trovata" description="Prova a cambiare i filtri." />
+        <EmptyState
+          title="Nessuna partita trovata"
+          description={
+            friendsOnly
+              ? "Nessuna partita tra i tuoi amici qui. Disattiva «Solo amici» o usa «Carica altre» per cercare più indietro."
+              : "Prova a cambiare i filtri."
+          }
+        />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {filtered.map((m) => (

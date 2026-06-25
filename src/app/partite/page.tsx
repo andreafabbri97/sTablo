@@ -14,6 +14,7 @@ import {
 } from "@/lib/queries";
 import { canConfirmMatch } from "@/lib/match-perms";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { getFriendFeedSlugs } from "@/lib/friends";
 import { safe } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,11 @@ export default async function PartitePage() {
   ]);
   const isAdmin = user?.role === "admin";
   const viewer = user ? { playerId: user.playerId, role: user.role } : null;
+  // The viewer's circle (self + friends) as slugs, to power the «Solo amici»
+  // feed toggle. Empty for signed-out visitors or users with no friends yet.
+  const friendSlugs = user
+    ? await safe(() => getFriendFeedSlugs(user.id), [])
+    : [];
 
   return (
     <div>
@@ -135,7 +141,12 @@ export default async function PartitePage() {
           }
         />
       ) : (
-        <MatchExplorer matches={matches} isAdmin={isAdmin} totalCount={total} />
+        <MatchExplorer
+          matches={matches}
+          isAdmin={isAdmin}
+          totalCount={total}
+          friendSlugs={friendSlugs.length ? friendSlugs : undefined}
+        />
       )}
     </div>
   );
