@@ -325,6 +325,14 @@ export const GUIDES: Record<string, Guide> = {
           "Nello svizzero, generi il turno successivo quando il turno è completo.",
         ],
       },
+      {
+        heading: "Commentare le partite del torneo",
+        points: [
+          "Accanto a ogni partita tocca l'icona 💬 per aprirne il dettaglio.",
+          "Lì trovi il turno (Girone, Quarti, Finale…), il risultato, le reazioni e i commenti.",
+          "Così puoi commentare la singola partita del torneo, esattamente come una partita normale.",
+        ],
+      },
     ],
   },
 

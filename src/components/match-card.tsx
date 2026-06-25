@@ -4,6 +4,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn, timeAgo, timeUntil, formatDateTime } from "@/lib/utils";
 import type { ShapedMatch, ShapedSide } from "@/lib/queries";
+import { tournamentRoundLabel } from "@/lib/tournament/round-label";
 import { TEAMS_ENABLED } from "@/lib/features";
 
 /**
@@ -23,6 +24,10 @@ export function MatchCard({
   const isScheduled = match.status === "scheduled";
   const aWon = match.winner === "A";
   const bWon = match.winner === "B";
+  const roundLabel = tournamentRoundLabel(match);
+  // Tournament matches store their round name in `note`; only show a free-text
+  // quote for casual matches, where `note` is a real player comment.
+  const userNote = match.tournamentId ? null : match.note;
 
   return (
     <div
@@ -53,6 +58,7 @@ export function MatchCard({
             <Badge tone="ball">⏳ Da confermare</Badge>
           )}
           {isScheduled && <Badge tone="sea">📅 In programma</Badge>}
+          {roundLabel && <Badge tone="muted">{roundLabel}</Badge>}
         </div>
         <span className="text-xs text-muted">
           {isScheduled ? timeUntil(match.playedAt) : timeAgo(match.playedAt)}
@@ -105,9 +111,9 @@ export function MatchCard({
         )}
       </div>
 
-      {match.note && (
+      {userNote && (
         <p className="border-t border-border px-4 py-2 text-xs italic text-muted">
-          “{match.note}”
+          “{userNote}”
         </p>
       )}
     </div>

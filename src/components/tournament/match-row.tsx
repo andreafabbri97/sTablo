@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Pencil } from "lucide-react";
+import Link from "next/link";
+import { Check, Pencil, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { recordTournamentMatch } from "@/lib/actions/tournament-actions";
 import type { TournamentMatchView } from "@/lib/tournament/queries";
@@ -89,6 +90,16 @@ export function MatchRow({
           >
             <Check className="h-3.5 w-3.5" />
           </button>
+        )}
+        {!editing && ready && (
+          <Link
+            href={`/partite/${match.id}`}
+            aria-label="Apri dettaglio e commenti della partita"
+            title="Dettaglio e commenti"
+            className="ml-1 grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-border text-muted transition hover:border-brand/40 hover:text-brand"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+          </Link>
         )}
       </div>
       {match.label && !completed && (

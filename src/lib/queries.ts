@@ -51,6 +51,10 @@ export type ShapedMatch = {
   tournamentId: string | null;
   tournamentName: string | null;
   tournamentSlug: string | null;
+  /** Bracket context (tournament matches only): stage type, group, round. */
+  stage: "group" | "league" | "swiss" | "knockout" | null;
+  groupName: string | null;
+  round: number | null;
   proposedById: string | null;
   proposedSide: "A" | "B" | null;
   confirmDeadline: Date | null;
@@ -97,6 +101,9 @@ export function shapeMatch(row: MatchRow): ShapedMatch {
     tournamentId: row.tournamentId,
     tournamentName: row.tournament?.name ?? null,
     tournamentSlug: row.tournament?.slug ?? null,
+    stage: row.stage,
+    groupName: row.groupName,
+    round: row.round,
     proposedById: row.proposedById,
     proposedSide: row.proposedSide,
     confirmDeadline: row.confirmDeadline,
