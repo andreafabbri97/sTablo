@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { cn, timeAgo } from "@/lib/utils";
+import { cn, timeAgo, timeUntil, formatDateTime } from "@/lib/utils";
 import type { ShapedMatch, ShapedSide } from "@/lib/queries";
 
 export function MatchCard({ match }: { match: ShapedMatch }) {
+  const isScheduled = match.status === "scheduled";
   const aWon = match.winner === "A";
   const bWon = match.winner === "B";
 
@@ -23,23 +24,35 @@ export function MatchCard({ match }: { match: ShapedMatch }) {
           {match.status === "pending" && (
             <Badge tone="ball">⏳ Da confermare</Badge>
           )}
+          {isScheduled && <Badge tone="sea">📅 In programma</Badge>}
         </div>
-        <span className="text-xs text-muted">{timeAgo(match.playedAt)}</span>
+        <span className="text-xs text-muted">
+          {isScheduled ? timeUntil(match.playedAt) : timeAgo(match.playedAt)}
+        </span>
       </div>
 
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 py-4">
         <SideView side={match.sideA} won={aWon} align="start" />
 
         <div className="flex flex-col items-center px-2">
-          <div className="flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums">
-            <span className={cn(aWon ? "text-foreground" : "text-muted")}>
-              {match.scoreA}
-            </span>
-            <span className="text-muted/50">-</span>
-            <span className={cn(bWon ? "text-foreground" : "text-muted")}>
-              {match.scoreB}
-            </span>
-          </div>
+          {isScheduled ? (
+            <div className="flex flex-col items-center text-center">
+              <span className="font-display text-lg font-extrabold text-muted">VS</span>
+              <span className="mt-0.5 text-[11px] font-semibold leading-tight text-brand">
+                {formatDateTime(match.playedAt)}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums">
+              <span className={cn(aWon ? "text-foreground" : "text-muted")}>
+                {match.scoreA}
+              </span>
+              <span className="text-muted/50">-</span>
+              <span className={cn(bWon ? "text-foreground" : "text-muted")}>
+                {match.scoreB}
+              </span>
+            </div>
+          )}
         </div>
 
         <SideView side={match.sideB} won={bWon} align="end" />

@@ -132,6 +132,48 @@ export const matchSchema = z
 
 export type MatchInput = z.infer<typeof matchSchema>;
 
+/**
+ * Programmare una sfida: stessi lati di una partita ma SENZA punteggi.
+ * Data e ora sono obbligatorie (è il senso della sfida); la validazione del
+ * punteggio del tavolino arriverà al momento di registrare il risultato.
+ */
+export const scheduleSchema = z.object({
+  format: z.enum(["singles", "doubles"]),
+  ranked: z.boolean().default(true),
+  playedAt: z.string().min(1, "Scegli data e ora della sfida"),
+  note: z.string().trim().max(140).optional().or(z.literal("")),
+  // singles
+  playerA: z.string().uuid().optional(),
+  playerB: z.string().uuid().optional(),
+  // doubles
+  teamA: z.string().uuid().optional(),
+  teamB: z.string().uuid().optional(),
+  playerA2: z.string().uuid().optional(),
+  playerB2: z.string().uuid().optional(),
+});
+
+export type ScheduleInput = z.infer<typeof scheduleSchema>;
+
+/** Registrare il risultato di una sfida già programmata. */
+export const scheduledResultSchema = z
+  .object({
+    scoreA: z.coerce.number().int().min(0).max(99),
+    scoreB: z.coerce.number().int().min(0).max(99),
+    note: z.string().trim().max(140).optional().or(z.literal("")),
+  })
+  .superRefine((d, ctx) => {
+    const check = validateTavolinoScore(d.scoreA, d.scoreB);
+    if (!check.ok) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: check.reason,
+        path: ["scoreB"],
+      });
+    }
+  });
+
+export type ScheduledResultInput = z.infer<typeof scheduledResultSchema>;
+
 export const teamSchema = z.object({
   name: z.string().trim().min(2).max(32),
   player1Id: z.string().uuid(),

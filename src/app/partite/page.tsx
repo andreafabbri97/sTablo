@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ListChecks, Plus, Clock, QrCode } from "lucide-react";
+import { ListChecks, Plus, Clock, QrCode, Swords, CalendarClock } from "lucide-react";
 import { PageHeader, EmptyState } from "@/components/ui/page";
 import { Button } from "@/components/ui/button";
 import { MatchCard } from "@/components/match-card";
 import { MatchExplorer } from "@/components/match-explorer";
 import { MatchConfirmActions } from "@/components/match-confirm-actions";
-import { getAllMatches, getMatchesCount, getPendingMatches } from "@/lib/queries";
+import {
+  getAllMatches,
+  getMatchesCount,
+  getPendingMatches,
+  getScheduledMatches,
+} from "@/lib/queries";
 import { canConfirmMatch } from "@/lib/match-perms";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { safe } from "@/lib/safe";
@@ -18,10 +23,11 @@ export const metadata: Metadata = { title: "Partite" };
 const MATCHES_WINDOW = 500;
 
 export default async function PartitePage() {
-  const [matches, total, pending, user] = await Promise.all([
+  const [matches, total, pending, scheduled, user] = await Promise.all([
     safe(() => getAllMatches(MATCHES_WINDOW), []),
     safe(() => getMatchesCount(), 0),
     safe(() => getPendingMatches(), []),
+    safe(() => getScheduledMatches(), []),
     getCurrentUser(),
   ]);
   const isAdmin = user?.role === "admin";
@@ -35,15 +41,43 @@ export default async function PartitePage() {
         subtitle={`${total} partite registrate`}
         action={
           user && (
-            <Button asChild size="sm">
-              <Link href="/partite/nuova">
-                <Plus className="h-4 w-4" /> Nuova
-              </Link>
-            </Button>
+            <div className="flex gap-2">
+              <Button asChild size="sm" variant="outline">
+                <Link href="/partite/programma">
+                  <Swords className="h-4 w-4" /> Programma
+                </Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href="/partite/nuova">
+                  <Plus className="h-4 w-4" /> Nuova
+                </Link>
+              </Button>
+            </div>
           )
         }
         help="partite"
       />
+
+      {scheduled.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-extrabold">
+            <CalendarClock className="h-4 w-4 text-brand" /> Prossime sfide ({scheduled.length})
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {scheduled.map((m) => (
+              <div key={m.id} className="space-y-2">
+                <MatchCard match={m} />
+                <Link
+                  href={`/partite/${m.id}`}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-border py-2 text-xs font-semibold text-muted hover:text-brand"
+                >
+                  <CalendarClock className="h-3.5 w-3.5" /> Apri sfida / registra risultato
+                </Link>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {pending.length > 0 && (
         <section className="mb-8">

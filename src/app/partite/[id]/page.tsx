@@ -2,17 +2,22 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { ArrowLeft, QrCode, Clock } from "lucide-react";
+import { ArrowLeft, QrCode, Clock, CalendarClock } from "lucide-react";
 import { MatchCard } from "@/components/match-card";
 import { MatchConfirmActions } from "@/components/match-confirm-actions";
+import { ScheduledMatchPanel } from "@/components/scheduled-match-panel";
 import { ProfileQr } from "@/components/friends/profile-qr";
 import { ShareButton } from "@/components/share-button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { getMatchById } from "@/lib/queries";
-import { canConfirmMatch } from "@/lib/match-perms";
+import {
+  canConfirmMatch,
+  canRecordScheduled,
+  canCancelScheduled,
+} from "@/lib/match-perms";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { safe } from "@/lib/safe";
-import { timeAgo } from "@/lib/utils";
+import { timeAgo, formatDateTime, timeUntil } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -50,9 +55,15 @@ export default async function MatchPage({
 
   const user = await getCurrentUser();
   const viewer = user ? { playerId: user.playerId, role: user.role } : null;
+  const viewerFull = user
+    ? { playerId: user.playerId, role: user.role, userId: user.id }
+    : null;
   const isPending = match.status === "pending";
+  const isScheduled = match.status === "scheduled";
   const canConfirm = canConfirmMatch(match, viewer);
   const isProposer = !!user && match.proposedById === user.id;
+  const canRecord = canRecordScheduled(match, viewer);
+  const canCancel = canCancelScheduled(match, viewerFull);
 
   const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "https";
@@ -69,6 +80,35 @@ export default async function MatchPage({
       </Link>
 
       <MatchCard match={match} />
+
+      {isScheduled && (
+        <Card className="space-y-4">
+          <div className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2">
+              <CalendarClock className="h-5 w-5 text-brand" /> Sfida in programma
+            </CardTitle>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {formatDateTime(match.playedAt)}
+            </p>
+            <p className="text-xs text-muted">{timeUntil(match.playedAt)}</p>
+          </div>
+
+          {canRecord || canCancel ? (
+            <ScheduledMatchPanel
+              matchId={match.id}
+              labelA={match.sideA.label || "Squadra A"}
+              labelB={match.sideB.label || "Squadra B"}
+              canRecord={canRecord}
+              canCancel={canCancel}
+              isAdmin={user?.role === "admin"}
+            />
+          ) : (
+            <p className="text-center text-sm text-muted">
+              Solo chi gioca la sfida può registrare il risultato.
+            </p>
+          )}
+        </Card>
+      )}
 
       {isPending && (
         <Card className="space-y-4 text-center">

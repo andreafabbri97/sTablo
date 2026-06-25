@@ -66,7 +66,7 @@ export const GUIDES: Record<string, Guide> = {
     title: "Le Partite",
     emoji: "🎾",
     intro:
-      "Qui trovi lo storico delle partite e registri i nuovi risultati.",
+      "Qui trovi lo storico delle partite, programmi le sfide e registri i nuovi risultati.",
     sections: [
       {
         heading: "Registrare e confermare",
@@ -77,11 +77,21 @@ export const GUIDES: Record<string, Guide> = {
         ],
       },
       {
+        heading: "Programmare una sfida",
+        points: [
+          "Tocca «Programma» per fissare una sfida futura: scegli avversario, data e ora.",
+          "L'avversario riceve una notifica e la sfida compare in «Prossime sfide».",
+          "Il giorno della sfida ricevi un promemoria push.",
+          "Dopo aver giocato, apri la sfida e inserisci il risultato: poi segue la normale conferma.",
+        ],
+      },
+      {
         heading: "Stati di una partita",
         points: [
+          "📅 In programma: sfida fissata, ancora da giocare.",
           "⏳ In attesa: proposta inserita, manca la conferma.",
           "✓ Confermata: conteggiata in classifica (se «Classificata»).",
-          "Puoi rifiutare una proposta sbagliata prima che venga confermata.",
+          "Puoi rifiutare una proposta sbagliata o annullare una sfida in programma.",
         ],
       },
       {
@@ -92,6 +102,33 @@ export const GUIDES: Record<string, Guide> = {
           "Restringi per data con i campi «Dal» e «Al».",
           "Tocca «Azzera filtri» per tornare all'elenco completo.",
           "In fondo, «Carica altre» mostra lo storico più vecchio a blocchi.",
+        ],
+      },
+    ],
+  },
+
+  programma: {
+    title: "Programmare una sfida",
+    emoji: "⚔️",
+    intro:
+      "Fissa una partita futura e sfida un avversario: il risultato lo registri dopo aver giocato.",
+    sections: [
+      {
+        heading: "Come funziona",
+        points: [
+          "Scegli 1 vs 1 o 2 vs 2 e se la sfida sarà «Classificata» 🏆 o «Amichevole» 🤝.",
+          "Indica chi sfidi (e i compagni, nel doppio) e imposta data e ora.",
+          "Al volo del «Lancia la sfida», l'avversario riceve una notifica.",
+          "La sfida appare in «Prossime sfide» nella pagina Partite.",
+        ],
+      },
+      {
+        heading: "Dopo aver giocato",
+        points: [
+          "Apri la sfida e inserisci il punteggio: diventa una proposta da confermare.",
+          "Solo chi gioca la sfida (o un admin) può registrarne il risultato.",
+          "Chi ha creato la sfida, un partecipante o un admin possono annullarla finché è in programma.",
+          "Il giorno della sfida ricevi un promemoria push, se hai attivato le notifiche.",
         ],
       },
     ],

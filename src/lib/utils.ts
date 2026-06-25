@@ -62,6 +62,19 @@ export function timeAgo(date: Date | string): string {
   return formatDate(date);
 }
 
+/** "fra 2 ore" / "fra 3 giorni" style countdown, for upcoming events. */
+export function timeUntil(date: Date | string): string {
+  const diff = new Date(date).getTime() - Date.now();
+  if (diff <= 0) return "ora";
+  const min = Math.round(diff / 60000);
+  const hr = Math.round(min / 60);
+  const day = Math.round(hr / 24);
+  if (min < 60) return `fra ${min} min`;
+  if (hr < 24) return `fra ${hr} ${hr === 1 ? "ora" : "ore"}`;
+  if (day < 30) return `fra ${day} ${day === 1 ? "giorno" : "giorni"}`;
+  return formatDate(date);
+}
+
 /** Deterministic color index for an id/name, used for avatar gradients. */
 export function colorFromString(value: string): number {
   let hash = 0;

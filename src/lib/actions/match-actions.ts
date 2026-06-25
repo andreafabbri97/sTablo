@@ -5,7 +5,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bustDataCache } from "@/lib/cache";
 import { matches, teams, users } from "@/lib/db/schema";
-import { matchSchema } from "@/lib/validation";
+import { matchSchema, scheduleSchema, scheduledResultSchema } from "@/lib/validation";
 import { assertAuth, assertAdmin } from "@/lib/auth-helpers";
 import {
   insertParticipants,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/match-engine";
 import { sendPushToUsers } from "@/lib/push";
 import { rateLimit, retryAfterSeconds, RATE_LIMITS } from "@/lib/rate-limit";
+import { formatDateTime } from "@/lib/utils";
 import type { ActionResult } from "./auth-actions";
 
 const CONFIRM_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -171,6 +172,264 @@ async function notifyConfirmNeeded(
     url: "/partite",
     tag: "match-confirm",
   });
+}
+
+/* ----------------------------------------------------------------------------
+   Scheduled challenges — plan a match ahead of time (status 'scheduled', no
+   score). A participant later records the result, which converts it into the
+   normal proposal/confirmation flow (or completes it directly for an admin).
+---------------------------------------------------------------------------- */
+
+/**
+ * Schedule a future challenge between two sides. No score yet — status
+ * 'scheduled'. Notifies the opponent(s) so they know a match is on the calendar.
+ */
+export async function scheduleMatch(input: unknown): Promise<ProposeResult> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere per programmare una sfida" };
+  }
+
+  const limit = await rateLimit(`schedule:${user.id}`, RATE_LIMITS.proposeMatch);
+  if (!limit.ok) {
+    return {
+      ok: false,
+      error: `Troppe sfide create di fila. Aspetta ${retryAfterSeconds(
+        limit.retryAfterMs,
+      )} secondi.`,
+    };
+  }
+
+  const parsed = scheduleSchema.safeParse(input);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    return { ok: false, error: first.message, field: String(first.path[0]) };
+  }
+  const d = parsed.data;
+
+  let sideA: SideInput | null;
+  let sideB: SideInput | null;
+  if (d.format === "singles") {
+    if (!d.playerA || !d.playerB) {
+      return { ok: false, error: "Seleziona entrambi i giocatori" };
+    }
+    sideA = { playerIds: [d.playerA], teamId: null };
+    sideB = { playerIds: [d.playerB], teamId: null };
+  } else {
+    sideA = await resolveDoublesSide(d.teamA, d.playerA, d.playerA2);
+    sideB = await resolveDoublesSide(d.teamB, d.playerB, d.playerB2);
+    if (!sideA || !sideB) {
+      return { ok: false, error: "Completa entrambe le coppie" };
+    }
+  }
+
+  const allIds = [...sideA.playerIds, ...sideB.playerIds];
+  if (new Set(allIds).size !== allIds.length) {
+    return { ok: false, error: "Un giocatore non può stare in entrambe le squadre" };
+  }
+
+  const isAdmin = user.role === "admin";
+  let proposerSide: "A" | "B" | null = null;
+  if (user.playerId) {
+    if (sideA.playerIds.includes(user.playerId)) proposerSide = "A";
+    else if (sideB.playerIds.includes(user.playerId)) proposerSide = "B";
+  }
+  if (!isAdmin && !proposerSide) {
+    return { ok: false, error: "Puoi programmare solo sfide in cui giochi tu" };
+  }
+
+  const playedAt = new Date(d.playedAt);
+  if (Number.isNaN(playedAt.getTime())) {
+    return { ok: false, error: "Data non valida", field: "playedAt" };
+  }
+
+  try {
+    const matchId = await db.transaction(async (tx) => {
+      const [match] = await tx
+        .insert(matches)
+        .values({
+          format: d.format,
+          status: "scheduled",
+          ranked: d.ranked,
+          scoreA: null,
+          scoreB: null,
+          winner: null,
+          playedAt,
+          note: d.note || null,
+          createdById: user.id,
+          proposedById: user.id,
+          proposedSide: proposerSide,
+          confirmDeadline: null,
+        })
+        .returning({ id: matches.id });
+
+      await insertParticipants(tx, match.id, sideA!, sideB!);
+      return match.id;
+    });
+
+    refresh();
+
+    // Tell the opponent(s) — or everyone, if an admin scheduled it — that a
+    // challenge is now on the calendar.
+    const opponentIds = proposerSide
+      ? (proposerSide === "A" ? sideB! : sideA!).playerIds
+      : allIds;
+    await notifyChallengeScheduled(matchId, opponentIds, user.name, playedAt);
+    return { ok: true, matchId };
+  } catch (error) {
+    console.error("[scheduleMatch]", error);
+    return { ok: false, error: "Errore nella programmazione della sfida" };
+  }
+}
+
+/** Best-effort push to the players challenged to a newly scheduled match. */
+async function notifyChallengeScheduled(
+  matchId: string,
+  opponentPlayerIds: string[],
+  fromName: string | null | undefined,
+  when: Date,
+) {
+  if (!opponentPlayerIds.length) return;
+  const rows = await db
+    .select({ userId: users.id })
+    .from(users)
+    .where(inArray(users.playerId, opponentPlayerIds));
+  const userIds = rows.map((r) => r.userId);
+  if (!userIds.length) return;
+  await sendPushToUsers(userIds, {
+    title: "⚔️ Nuova sfida!",
+    body: `${fromName?.trim() || "Qualcuno"} ti ha sfidato per ${formatDateTime(when)}`,
+    url: `/partite/${matchId}`,
+    tag: "match-scheduled",
+  });
+}
+
+/**
+ * Record the result of a scheduled challenge. Any participant (or admin) can
+ * enter it: it converts the match into a normal proposal ('pending', the
+ * opponent confirms) or, for an admin, a completed result. Race-safe.
+ */
+export async function recordScheduledResult(
+  matchId: string,
+  input: unknown,
+): Promise<ActionResult> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere" };
+  }
+
+  const parsed = scheduledResultSchema.safeParse(input);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    return { ok: false, error: first.message, field: String(first.path[0]) };
+  }
+  const d = parsed.data;
+
+  const match = await db.query.matches.findFirst({
+    where: eq(matches.id, matchId),
+    with: { participants: true },
+  });
+  if (!match) return { ok: false, error: "Sfida non trovata" };
+  if (match.status !== "scheduled") {
+    return { ok: false, error: "Questa sfida ha già un risultato" };
+  }
+
+  const isAdmin = user.role === "admin";
+  const mine = user.playerId
+    ? match.participants.find((p) => p.playerId === user.playerId)
+    : undefined;
+  const viewerSide = mine?.side ?? null;
+  if (!isAdmin && !viewerSide) {
+    return { ok: false, error: "Solo chi gioca la sfida può inserire il risultato" };
+  }
+
+  const winner: "A" | "B" = d.scoreA > d.scoreB ? "A" : "B";
+  const finalize = isAdmin; // admin records directly
+
+  try {
+    // Conditional on status 'scheduled' so two players can't both record it.
+    const updated = await db
+      .update(matches)
+      .set({
+        status: finalize ? "completed" : "pending",
+        scoreA: d.scoreA,
+        scoreB: d.scoreB,
+        winner,
+        note: d.note || match.note,
+        playedAt: new Date(),
+        proposedById: user.id,
+        proposedSide: viewerSide,
+        confirmedById: null,
+        autoConfirmed: false,
+        confirmDeadline: finalize
+          ? null
+          : new Date(Date.now() + CONFIRM_WINDOW_MS),
+      })
+      .where(and(eq(matches.id, matchId), eq(matches.status, "scheduled")))
+      .returning({ id: matches.id });
+
+    if (updated.length === 0) return { ok: true }; // recorded by someone first
+
+    if (finalize) await recomputeAllElo();
+    refresh();
+
+    // If it still needs confirmation, alert the opposing side.
+    if (!finalize && viewerSide) {
+      const opposite = viewerSide === "A" ? "B" : "A";
+      const opponents = match.participants
+        .filter((p) => p.side === opposite)
+        .map((p) => p.playerId);
+      await notifyConfirmNeeded(opponents, user.name);
+    }
+    return { ok: true };
+  } catch (error) {
+    console.error("[recordScheduledResult]", error);
+    return { ok: false, error: "Errore nel salvataggio del risultato" };
+  }
+}
+
+/** Cancel (delete) a scheduled challenge. Creator, a participant, or an admin. */
+export async function cancelScheduledMatch(matchId: string): Promise<ActionResult> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere" };
+  }
+
+  const match = await db.query.matches.findFirst({
+    where: eq(matches.id, matchId),
+    with: { participants: true },
+  });
+  if (!match) return { ok: true }; // already gone
+  if (match.status !== "scheduled") {
+    return { ok: false, error: "Solo le sfide in programma si possono annullare" };
+  }
+
+  const isAdmin = user.role === "admin";
+  const isCreator =
+    match.proposedById === user.id || match.createdById === user.id;
+  const isPlayer =
+    !!user.playerId &&
+    match.participants.some((p) => p.playerId === user.playerId);
+  if (!isAdmin && !isCreator && !isPlayer) {
+    return { ok: false, error: "Non puoi annullare questa sfida" };
+  }
+
+  try {
+    await db
+      .delete(matches)
+      .where(and(eq(matches.id, matchId), eq(matches.status, "scheduled")));
+    refresh();
+    return { ok: true };
+  } catch (error) {
+    console.error("[cancelScheduledMatch]", error);
+    return { ok: false, error: "Errore nell'annullamento della sfida" };
+  }
 }
 
 /** Confirm a pending result. Opponent (1 of 2 in doubles) or admin. Race-safe. */

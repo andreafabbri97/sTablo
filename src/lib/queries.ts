@@ -146,6 +146,16 @@ export const getPlayersList = cachedQuery(
   ["players-list"],
 );
 
+/** Upcoming scheduled challenges, soonest first. */
+export const getScheduledMatches = cachedQuery(async (): Promise<ShapedMatch[]> => {
+  const rows = await db.query.matches.findMany({
+    where: eq(matches.status, "scheduled"),
+    orderBy: [asc(matches.playedAt)],
+    with: { participants: { with: { player: true, team: true } } },
+  });
+  return rows.map(shapeMatch);
+}, ["scheduled-matches"]);
+
 /** All results awaiting confirmation. */
 export const getPendingMatches = cachedQuery(async (): Promise<ShapedMatch[]> => {
   const rows = await db.query.matches.findMany({
