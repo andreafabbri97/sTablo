@@ -34,10 +34,10 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: APP_NAME },
   formatDetection: { telephone: false },
-  icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/icon.svg" }],
-  },
+  // Icons are intentionally NOT set here: the file conventions
+  // src/app/icon.svg (favicon) and src/app/apple-icon.tsx (PNG apple-touch-icon,
+  // required because iOS ignores SVG) generate the <link> tags. Setting
+  // metadata.icons would suppress those file-convention icons.
   openGraph: {
     type: "website",
     siteName: APP_NAME,
