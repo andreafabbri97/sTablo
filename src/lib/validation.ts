@@ -68,6 +68,23 @@ const avatarUrlSchema = z
   .optional()
   .or(z.literal(""));
 
+/**
+ * Optional hand-tuned attribute overrides for the FIFA card. The 1..99 bounds
+ * here are just a sanity net — the real constraints (per-level per-attribute
+ * cap + total-points budget) are enforced server-side via resolveAttributes.
+ * An empty object means "auto" (use the derived baseline).
+ */
+const attributeValueSchema = z.coerce.number().int().min(1).max(99);
+export const customAttributesSchema = z
+  .object({
+    potenza: attributeValueSchema,
+    tecnica: attributeValueSchema,
+    costanza: attributeValueSchema,
+    difesa: attributeValueSchema,
+    clutch: attributeValueSchema,
+  })
+  .partial();
+
 export const profileSchema = z.object({
   username: usernameSchema,
   email: optionalEmail,
@@ -79,6 +96,7 @@ export const profileSchema = z.object({
   specialMove: z.string().trim().max(60).optional().or(z.literal("")),
   avatarUrl: avatarUrlSchema,
   statsPublic: z.boolean().default(true),
+  customAttributes: customAttributesSchema.optional().default({}),
 });
 
 export type ProfileInput = z.infer<typeof profileSchema>;

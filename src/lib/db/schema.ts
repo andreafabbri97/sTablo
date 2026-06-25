@@ -11,6 +11,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import type { AttributeKey } from "../gamification";
 
 /* ----------------------------------------------------------------------------
    Enums
@@ -116,6 +117,15 @@ export const players = pgTable(
     specialMove: text("special_move"),
     /** when false, gamification card (level/attrs/style/move) is owner-only */
     statsPublic: boolean("stats_public").notNull().default(true),
+    /**
+     * Player-chosen attribute overrides for the FIFA card, e.g. {potenza: 70}.
+     * Cosmetic only (never affects Elo/ranking). Each value is clamped to a
+     * level-based ceiling server-side; an absent key means "auto" (derived).
+     */
+    customAttributes: jsonb("custom_attributes")
+      .$type<Partial<Record<AttributeKey, number>>>()
+      .notNull()
+      .default({}),
     eloSingles: integer("elo_singles").notNull().default(STARTING_ELO),
     eloDoubles: integer("elo_doubles").notNull().default(STARTING_ELO),
     peakElo: integer("peak_elo").notNull().default(STARTING_ELO),

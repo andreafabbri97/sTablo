@@ -14,6 +14,8 @@ import {
 } from "@/lib/validation";
 import { assertAuth, assertAdmin } from "@/lib/auth-helpers";
 import { slugify, colorFromString } from "@/lib/utils";
+import { getPlayerWithStats } from "@/lib/stats";
+import { hasCustomAttributes, resolveAttributes } from "@/lib/gamification";
 import type { ActionResult } from "./auth-actions";
 
 const orNull = (v?: string) => (v && v.length > 0 ? v : null);
@@ -58,6 +60,20 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
       .set({ username: d.username, email: orNull(d.email) })
       .where(eq(users.id, user.id));
 
+    // Resolve the card overrides against the player's *current* level budget so
+    // we persist a valid distribution. Empty input ⇒ back to the auto card.
+    let customAttributes: Record<string, number> = {};
+    if (hasCustomAttributes(d.customAttributes)) {
+      const current = await getPlayerWithStats(user.playerId);
+      if (current) {
+        customAttributes = resolveAttributes(
+          current.derived,
+          d.customAttributes,
+          current.level.level,
+        );
+      }
+    }
+
     await db
       .update(players)
       .set({
@@ -73,6 +89,7 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
         specialMove: orNull(d.specialMove),
         avatarUrl: orNull(d.avatarUrl),
         statsPublic: d.statsPublic,
+        customAttributes,
       })
       .where(eq(players.id, user.playerId));
 

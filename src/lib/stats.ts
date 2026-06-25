@@ -11,6 +11,7 @@ import {
 } from "./db/schema";
 import {
   computeAttributes,
+  resolveAttributes,
   levelFromXp,
   matchXp,
   overall,
@@ -144,7 +145,10 @@ export type PlayerWithStats = {
   player: typeof players.$inferSelect;
   stats: StatLine;
   level: LevelInfo;
+  /** Attributes actually shown: derived performance + the player's overrides. */
   attributes: Attributes;
+  /** Pure performance-derived attributes (the "auto" baseline), pre-overrides. */
+  derived: Attributes;
   overall: number;
   tournamentsWon: number;
 };
@@ -181,7 +185,7 @@ async function buildPlayerWithStats(
   const stats = foldResults(rankedRows);
   const totalXp = xpFromResults(rows, tournamentsWon);
   const level = levelFromXp(totalXp);
-  const attributes = computeAttributes(
+  const derived = computeAttributes(
     {
       played: stats.played,
       won: stats.won,
@@ -195,11 +199,19 @@ async function buildPlayerWithStats(
     },
     player.playStyle,
   );
+  // Resolve the card: derived baseline reshaped by the player's overrides,
+  // re-validated against the level's floor / cap / total-points budget.
+  const attributes = resolveAttributes(
+    derived,
+    player.customAttributes,
+    level.level,
+  );
   return {
     player,
     stats,
     level,
     attributes,
+    derived,
     overall: overall(attributes),
     tournamentsWon,
   };

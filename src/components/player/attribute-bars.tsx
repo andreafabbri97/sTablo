@@ -1,7 +1,5 @@
-import { ATTRIBUTE_META, type Attributes, type AttributeKey } from "@/lib/gamification";
+import { ATTRIBUTE_KEYS, ATTRIBUTE_META, type Attributes } from "@/lib/gamification";
 import { cn } from "@/lib/utils";
-
-const ORDER: AttributeKey[] = ["potenza", "tecnica", "costanza", "difesa", "clutch"];
 
 function barColor(value: number): string {
   if (value >= 80) return "from-emerald-400 to-emerald-600";
@@ -13,7 +11,7 @@ function barColor(value: number): string {
 export function AttributeBars({ attributes }: { attributes: Attributes }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      {ORDER.map((key) => {
+      {ATTRIBUTE_KEYS.map((key) => {
         const value = attributes[key];
         const meta = ATTRIBUTE_META[key];
         return (

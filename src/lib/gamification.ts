@@ -111,6 +111,15 @@ export const ATTRIBUTE_META: Record<
   clutch: { label: "Clutch", emoji: "🔥" },
 };
 
+/** Canonical attribute order — the single source of truth for iteration. */
+export const ATTRIBUTE_KEYS: AttributeKey[] = [
+  "potenza",
+  "tecnica",
+  "costanza",
+  "difesa",
+  "clutch",
+];
+
 export type PlayerCoreStats = {
   played: number;
   won: number;
@@ -169,6 +178,126 @@ export function computeAttributes(
 export function overall(attrs: Attributes): number {
   const vals = Object.values(attrs);
   return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+}
+
+/* ----------------------------------------------------------------------------
+   Personalization — a budget system.
+
+   Each level grants a TOTAL pool of attribute points (`levelStatBudget`): the
+   five attributes may not sum to more than that. So players of the same level
+   are coherent with one another, and raising one attribute means lowering
+   another. Your LEVEL (earned via XP — you win, you climb faster) is the power
+   axis; the attribute *shape* is your personal style. A per-attribute ceiling
+   (`levelAttributeCap`) additionally stops a low-level player from spiking a
+   single stat to 99. All of this is purely cosmetic: it never touches Elo or
+   the ranking (Elo is a separate competitive scale, not comparable with XP).
+---------------------------------------------------------------------------- */
+
+/** Lowest value any single attribute can hold. */
+export const ATTRIBUTE_FLOOR = 10;
+
+/**
+ * Per-attribute ceiling at a given level. Starts modest and only reaches 99 in
+ * the low-30s levels, so no single stat can be maxed early.
+ *   Lv 1 → 51 · Lv 5 → 57 · Lv 10 → 65 · Lv 20 → 80 · Lv 33 → 99
+ */
+export function levelAttributeCap(level: number): number {
+  return Math.max(ATTRIBUTE_FLOOR, Math.min(99, Math.floor(50 + level * 1.5)));
+}
+
+/** Targeted average attribute value at a level — drives the total budget. Kept
+ *  strictly below the per-attribute cap so the budget always leaves room for
+ *  variation (you can't park every stat at the cap). */
+function levelAttributeAvg(level: number): number {
+  return Math.max(ATTRIBUTE_FLOOR, Math.min(88, Math.floor(42 + level * 1.3)));
+}
+
+/**
+ * Total attribute points available at a level: the sum of all five attributes
+ * may not exceed this. Grows with level and is always fully allocatable given
+ * the per-attribute cap.
+ *   Lv 1 → 215 · Lv 5 → 240 · Lv 10 → 275 · Lv 20 → 340 · Lv 33 → 420
+ */
+export function levelStatBudget(level: number): number {
+  return levelAttributeAvg(level) * ATTRIBUTE_KEYS.length;
+}
+
+const sumAttrs = (a: Attributes) =>
+  ATTRIBUTE_KEYS.reduce((s, k) => s + a[k], 0);
+
+/**
+ * Force a full attribute set into the valid region: each value clamped to
+ * [floor, cap], and the total shaved down (from the largest attributes first)
+ * until it fits the budget. Deterministic; always returns a valid set.
+ */
+export function clampToBudget(
+  values: Partial<Record<string, number>>,
+  budget: number,
+  cap: number,
+): Attributes {
+  const out = {} as Attributes;
+  for (const k of ATTRIBUTE_KEYS) {
+    out[k] = clamp(values[k] ?? ATTRIBUTE_FLOOR, ATTRIBUTE_FLOOR, cap);
+  }
+  let total = sumAttrs(out);
+  // Shave one point at a time off the current largest (reducible) attribute.
+  // Bounded by total-budget (≤ ~445 iterations), so effectively instant.
+  while (total > budget) {
+    let key: AttributeKey | null = null;
+    let max = ATTRIBUTE_FLOOR;
+    for (const k of ATTRIBUTE_KEYS) {
+      if (out[k] > max) {
+        max = out[k];
+        key = k;
+      }
+    }
+    if (!key) break; // every attribute already at the floor
+    out[key] -= 1;
+    total -= 1;
+  }
+  return out;
+}
+
+/** The "auto" card: performance-derived shape, brought within the level budget. */
+export function baselineAttributes(
+  derived: Attributes,
+  level: number,
+): Attributes {
+  return clampToBudget(derived, levelStatBudget(level), levelAttributeCap(level));
+}
+
+/** Does a stored overrides blob hold any real customization? */
+export function hasCustomAttributes(
+  custom: Partial<Record<string, number>> | null | undefined,
+): boolean {
+  return (
+    !!custom &&
+    ATTRIBUTE_KEYS.some((k) => typeof custom[k] === "number")
+  );
+}
+
+/**
+ * Final attributes to display and to persist: the derived baseline with the
+ * player's overrides overlaid, the whole thing re-validated against floor, cap
+ * and budget. With no overrides this is just the baseline.
+ */
+export function resolveAttributes(
+  derived: Attributes,
+  custom: Partial<Record<string, number>> | null | undefined,
+  level: number,
+): Attributes {
+  const baseline = baselineAttributes(derived, level);
+  if (!hasCustomAttributes(custom)) return baseline;
+  const merged: Partial<Record<string, number>> = { ...baseline };
+  for (const k of ATTRIBUTE_KEYS) {
+    const v = custom![k];
+    if (typeof v === "number" && Number.isFinite(v)) merged[k] = v;
+  }
+  return clampToBudget(
+    merged,
+    levelStatBudget(level),
+    levelAttributeCap(level),
+  );
 }
 
 /** XP earned by a single completed match for one participant. */

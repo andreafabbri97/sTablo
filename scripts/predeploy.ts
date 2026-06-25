@@ -40,6 +40,10 @@ const ENSURE_SCHEMA_SQL = [
   // Housekeeping: drop windows that closed over a day ago so the table can't
   // grow unbounded from one-off client IPs. Safe — expired rows are inert.
   `DELETE FROM "rate_limits" WHERE "reset_at" < now() - interval '1 day';`,
+  // Player-chosen card attribute overrides (migration 0011). The profile page
+  // and stats layer read this column, so guarantee it exists regardless of
+  // migrate()'s journal bookkeeping.
+  `ALTER TABLE "players" ADD COLUMN IF NOT EXISTS "custom_attributes" jsonb DEFAULT '{}'::jsonb NOT NULL;`,
 ];
 
 async function main() {

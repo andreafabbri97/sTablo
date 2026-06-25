@@ -6,9 +6,10 @@ import { Save, Check, Eye, EyeOff, Camera, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Input, Label, Select, Textarea, FieldError } from "@/components/ui/field";
-import { PLAY_STYLES } from "@/lib/gamification";
+import { PLAY_STYLES, type Attributes } from "@/lib/gamification";
 import { updateProfile } from "@/lib/actions/player-actions";
 import { fileToAvatarDataUrl } from "@/lib/avatar-image";
+import { AttributeEditor } from "@/components/player/attribute-editor";
 import type { Player } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
 
@@ -16,13 +17,20 @@ export function ProfileForm({
   player,
   username,
   email,
+  derived,
+  level,
 }: {
   player: Player;
   username: string;
   email: string;
+  derived: Attributes;
+  level: number;
 }) {
   const router = useRouter();
   const [statsPublic, setStatsPublic] = useState(player.statsPublic);
+  const [customAttributes, setCustomAttributes] = useState<
+    Record<string, number>
+  >(() => ({ ...(player.customAttributes ?? {}) }));
   const [avatarUrl, setAvatarUrl] = useState(player.avatarUrl ?? "");
   const [imgBusy, setImgBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -62,6 +70,7 @@ export function ProfileForm({
       specialMove: String(form.get("specialMove") ?? ""),
       avatarUrl,
       statsPublic,
+      customAttributes,
     });
     setLoading(false);
     if (!res.ok) {
@@ -176,6 +185,14 @@ export function ProfileForm({
         <Label htmlFor="bio">Bio</Label>
         <Textarea id="bio" name="bio" defaultValue={player.bio ?? ""} rows={3} maxLength={280} placeholder="Racconta qualcosa di te in campo…" />
       </div>
+
+      {/* Card attributes budget allocator */}
+      <AttributeEditor
+        derived={derived}
+        level={level}
+        initial={player.customAttributes ?? {}}
+        onChange={setCustomAttributes}
+      />
 
       {/* Privacy toggle */}
       <button

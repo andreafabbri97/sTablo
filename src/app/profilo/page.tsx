@@ -97,6 +97,8 @@ export default async function ProfiloPage() {
               player={data.player}
               username={user.username ?? ""}
               email={user.email ?? ""}
+              derived={data.derived}
+              level={data.level.level}
             />
           </Card>
           <Card>

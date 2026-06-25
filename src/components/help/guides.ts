@@ -245,6 +245,15 @@ export const GUIDES: Record<string, Guide> = {
         ],
       },
       {
+        heading: "Personalizza la card",
+        points: [
+          "Le caratteristiche (Potenza, Tecnica, Costanza, Difesa, Clutch) partono dalle tue partite, ma puoi ridistribuirle a piacere.",
+          "Hai un budget di punti che cresce col livello: per alzare una stat devi abbassarne un'altra, così i giocatori dello stesso livello restano coerenti.",
+          "Ogni stat ha anche un tetto massimo legato al livello: niente 99 ovunque a livello basso, te li guadagni giocando.",
+          "È solo estetica: non cambia Elo né classifica. Con «Ripristina auto» torni alla card calcolata dalle tue partite.",
+        ],
+      },
+      {
         heading: "Account e notifiche",
         points: [
           "Cambia la password dalla sezione Sicurezza.",
