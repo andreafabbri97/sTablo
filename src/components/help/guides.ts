@@ -224,6 +224,15 @@ export const GUIDES: Record<string, Guide> = {
           "Concluso: c'è un vincitore decretato.",
         ],
       },
+      {
+        heading: "🏆 Albo d'oro",
+        points: [
+          "Dal pulsante «Albo d'oro» apri la bacheca dei trofei di sempre.",
+          "Campioni dei tornei: ogni torneo concluso col suo vincitore, dal più recente.",
+          "MVP delle stagioni: il numero 1 della classifica classificata di ogni mese passato (👑 sul mese più recente).",
+          "Resta lì per sempre: è la memoria storica del gruppo.",
+        ],
+      },
     ],
   },
 

@@ -1,4 +1,4 @@
-import { and, eq, gte, lt, inArray } from "drizzle-orm";
+import { and, eq, gte, lt, inArray, asc } from "drizzle-orm";
 import { db } from "./db";
 import { matches, matchParticipants, players } from "./db/schema";
 import { cachedQuery } from "./cache";
@@ -161,3 +161,60 @@ async function getSeasonStandingsImpl(
 export const getSeasonStandings = cachedQuery(getSeasonStandingsImpl, [
   "season-standings",
 ]);
+
+export type SeasonMvp = {
+  season: { year: number; month: number; label: string };
+  /** the #1 of that month's ranked standings */
+  mvp: SeasonStanding;
+  /** distinct ranked matches played that month */
+  totalMatches: number;
+};
+
+/**
+ * The MVP (top of the ranked standings) of every PAST season that had at least
+ * one ranked match, most recent first. The current month is excluded — it's
+ * still in play, so it has no champion yet. Walks month-by-month from the season
+ * before `reference` back to the month of the very first ranked match, reusing
+ * the per-month cached `getSeasonStandings`. Not itself memoised: it only
+ * orchestrates already-cached reads plus one cheap "earliest match" lookup, and
+ * the Albo page is force-dynamic.
+ */
+export async function getSeasonMvps(
+  reference: Date = new Date(),
+): Promise<SeasonMvp[]> {
+  const earliest = await db
+    .select({ playedAt: matches.playedAt })
+    .from(matches)
+    .where(and(eq(matches.status, "completed"), eq(matches.ranked, true)))
+    .orderBy(asc(matches.playedAt))
+    .limit(1);
+
+  const first = earliest[0]?.playedAt;
+  if (!first) return [];
+
+  const firstSeason = seasonForDate(first);
+  const reached = (s: Season) =>
+    s.year > firstSeason.year ||
+    (s.year === firstSeason.year && s.month >= firstSeason.month);
+
+  const out: SeasonMvp[] = [];
+  // Start from the season just before the current one and walk backwards. The
+  // guard is a belt-and-braces stop against an unbounded loop (max ~20 years).
+  let s = previousSeason(seasonForDate(reference));
+  for (let guard = 0; guard < 240 && reached(s); guard++) {
+    const standings = await getSeasonStandings(s.start, s.end);
+    const mvp = standings[0];
+    if (mvp) {
+      const totalMatches = Math.round(
+        standings.reduce((sum, x) => sum + x.played, 0) / 2,
+      );
+      out.push({
+        season: { year: s.year, month: s.month, label: s.label },
+        mvp,
+        totalMatches,
+      });
+    }
+    s = previousSeason(s);
+  }
+  return out;
+}

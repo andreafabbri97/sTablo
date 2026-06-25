@@ -42,13 +42,20 @@ export default async function TorneiPage() {
         title="Tornei"
         subtitle="Campionati, gironi e tabelloni"
         action={
-          user && (
-            <Button asChild size="sm">
-              <Link href="/tornei/nuovo">
-                <Plus className="h-4 w-4" /> Crea torneo
+          <>
+            <Button asChild size="sm" variant="secondary">
+              <Link href="/tornei/albo">
+                <Trophy className="h-4 w-4" /> Albo d&apos;oro
               </Link>
             </Button>
-          )
+            {user && (
+              <Button asChild size="sm">
+                <Link href="/tornei/nuovo">
+                  <Plus className="h-4 w-4" /> Crea torneo
+                </Link>
+              </Button>
+            )}
+          </>
         }
         help="tornei"
       />
