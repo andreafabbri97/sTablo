@@ -20,7 +20,7 @@ const FORMATS: { id: Format; emoji: string; label: string; blurb: string }[] = [
   { id: "league",          emoji: "🏆", label: "Campionato",         blurb: "Tutti contro tutti a punti (con o senza ritorno)" },
   { id: "single_elim",     emoji: "⚔️", label: "Eliminazione diretta", blurb: "Tabellone a eliminazione" },
   { id: "groups_knockout", emoji: "🌍", label: "Gironi + eliminazione", blurb: "Gironi poi tabellone finale" },
-  { id: "swiss",           emoji: "🇨🇭", label: "Svizzero",           blurb: "Accoppiamenti per punteggio" },
+  { id: "swiss",           emoji: "🏔️", label: "Svizzero",           blurb: "Accoppiamenti per punteggio" },
   { id: "americano",       emoji: "🟡", label: "Americano",          blurb: "Coppie a rotazione, classifica individuale" },
 ];
 
@@ -176,6 +176,10 @@ export function TournamentOpenForm() {
               />
             </div>
           </div>
+          <p className="text-[11px] leading-relaxed text-muted">
+            «Punti per game»: a quanti punti finisce ogni mini-partita (es. 15).
+            In classifica conta la somma dei punti che segni, non 3/1/0.
+          </p>
         </div>
       )}
 

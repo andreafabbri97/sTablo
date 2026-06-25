@@ -24,7 +24,7 @@ export default async function NuovoTorneoPage() {
         <PageHeader
           icon={<Swords className="h-6 w-6" />}
           title="Nuovo torneo"
-          subtitle="Invito aperto con link/QR, oppure scegli tu i partecipanti"
+          subtitle="Scegli tu i partecipanti, oppure invito aperto con link/QR"
           help="nuovo-torneo"
         />
         <Card>

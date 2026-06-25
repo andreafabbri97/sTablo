@@ -17,7 +17,7 @@ const FORMATS: { id: Format; emoji: string; label: string; blurb: string }[] = [
   { id: "league", emoji: "🏆", label: "Campionato", blurb: "Tutti contro tutti a punti (con o senza ritorno)" },
   { id: "single_elim", emoji: "⚔️", label: "Eliminazione diretta", blurb: "Tabellone a eliminazione" },
   { id: "groups_knockout", emoji: "🌍", label: "Gironi + eliminazione", blurb: "Gironi poi tabellone finale" },
-  { id: "swiss", emoji: "🇨🇭", label: "Svizzero", blurb: "Accoppiamenti per punteggio" },
+  { id: "swiss", emoji: "🏔️", label: "Svizzero", blurb: "Accoppiamenti per punteggio" },
   { id: "americano", emoji: "🟡", label: "Americano", blurb: "Coppie a rotazione, classifica individuale" },
 ];
 
@@ -230,7 +230,13 @@ export function TournamentForm({ players }: { players: Option[] }) {
         </div>
       )}
       {format === "swiss" && (
-        <NumberField label="Numero turni" value={swissRounds} setValue={setSwissRounds} min={2} max={9} />
+        <div>
+          <NumberField label="Numero turni" value={swissRounds} setValue={setSwissRounds} min={2} max={9} />
+          <p className="mt-1.5 text-xs text-muted">
+            Quante partite gioca ciascuno (una per turno). A ogni turno sei
+            accoppiato con chi ha un punteggio simile; vince chi fa più punti.
+          </p>
+        </div>
       )}
       {isAmericano && (
         <div className="space-y-3 rounded-xl border border-border bg-surface p-4">
@@ -262,6 +268,11 @@ export function TournamentForm({ players }: { players: Option[] }) {
               />
             </div>
           </div>
+          <p className="text-[11px] leading-relaxed text-muted">
+            «Punti per game»: a quanti punti finisce ogni mini-partita (es. 15).
+            In classifica conta la somma dei punti che segni, non 3/1/0. Lascia
+            «Turni» vuoto per il calcolo automatico.
+          </p>
         </div>
       )}
 

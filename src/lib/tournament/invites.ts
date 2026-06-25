@@ -26,30 +26,31 @@ export async function getAccessiblePrivateTournamentIds(
   const ids = new Set<string>();
   if (!user) return ids;
 
-  const created = await db
-    .select({ id: tournaments.id })
-    .from(tournaments)
-    .where(
-      and(
-        eq(tournaments.createdById, user.id),
-        eq(tournaments.visibility, "private"),
+  // The three lookups are independent — run them together (one round-trip).
+  const [created, invited, entered] = await Promise.all([
+    db
+      .select({ id: tournaments.id })
+      .from(tournaments)
+      .where(
+        and(
+          eq(tournaments.createdById, user.id),
+          eq(tournaments.visibility, "private"),
+        ),
       ),
-    );
+    db
+      .select({ id: tournamentInvites.tournamentId })
+      .from(tournamentInvites)
+      .where(eq(tournamentInvites.invitedUserId, user.id)),
+    user.playerId
+      ? db
+          .select({ id: tournamentEntrants.tournamentId })
+          .from(tournamentEntrants)
+          .where(eq(tournamentEntrants.playerId, user.playerId))
+      : Promise.resolve([] as { id: string }[]),
+  ]);
   for (const r of created) ids.add(r.id);
-
-  const invited = await db
-    .select({ id: tournamentInvites.tournamentId })
-    .from(tournamentInvites)
-    .where(eq(tournamentInvites.invitedUserId, user.id));
   for (const r of invited) ids.add(r.id);
-
-  if (user.playerId) {
-    const entered = await db
-      .select({ id: tournamentEntrants.tournamentId })
-      .from(tournamentEntrants)
-      .where(eq(tournamentEntrants.playerId, user.playerId));
-    for (const r of entered) ids.add(r.id);
-  }
+  for (const r of entered) ids.add(r.id);
 
   return ids;
 }

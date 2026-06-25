@@ -212,8 +212,8 @@ export const GUIDES: Record<string, Guide> = {
           "🏆 Campionato: tutti contro tutti, classifica a punti. Puoi giocarlo con andata e ritorno (ogni sfida due volte) o solo andata.",
           "⚔️ Eliminazione diretta: tabellone a eliminazione.",
           "🌍 Gironi + eliminazione: gironi e poi fase finale.",
-          "🇨🇭 Svizzero: accoppiamenti per punteggio, turno dopo turno.",
-          "🟡 Americano: coppie a rotazione, classifica individuale a punti (min. 4 giocatori).",
+          "🏔️ Svizzero: a ogni turno sei accoppiato con chi ha il tuo stesso punteggio. Il «numero turni» è quante partite gioca ciascuno; vince chi totalizza più punti (3 a vittoria, niente pareggi).",
+          "🟡 Americano: coppie a rotazione (a ogni turno cambi compagno e avversari). Classifica individuale per punti totali segnati, non 3/1/0 (min. 4 giocatori).",
         ],
       },
       {
@@ -270,6 +270,14 @@ export const GUIDES: Record<string, Guide> = {
           "Nel campionato puoi attivare «Andata e ritorno» per far giocare ogni sfida due volte.",
           "Disciplina: Singolo (1v1) o Doppio (2v2). Nel doppio formi le coppie al volo.",
           "Classificato 🏆 muove l'Elo, Amichevole 🤝 dà solo XP.",
+        ],
+      },
+      {
+        heading: "Impostazioni per formato",
+        points: [
+          "Svizzero · «Numero turni»: quante partite gioca ciascuno (una per turno). A ogni turno vieni accoppiato con chi ha un punteggio simile; vince chi totalizza più punti (3 a vittoria, niente pareggi).",
+          "Americano · «Punti per game»: a quanti punti finisce ogni mini-partita (es. 15). Non è un 3/1/0: in classifica conta la somma dei punti che segni davvero.",
+          "Americano · «Turni»: quanti giri di rotazione giocare. Lascialo vuoto per il calcolo automatico in base al numero di giocatori.",
         ],
       },
       {

@@ -25,7 +25,7 @@ export const FORMAT_META: Record<
   round_robin: { label: "Girone all'italiana", emoji: "🔄", blurb: "Round robin a girone unico" },
   single_elim: { label: "Eliminazione diretta", emoji: "⚔️", blurb: "Tabellone a eliminazione" },
   groups_knockout: { label: "Gironi + eliminazione", emoji: "🌍", blurb: "Fase a gironi poi tabellone" },
-  swiss: { label: "Svizzero", emoji: "🇨🇭", blurb: "Accoppiamenti per punteggio" },
+  swiss: { label: "Svizzero", emoji: "🏔️", blurb: "Accoppiamenti per punteggio" },
   americano: { label: "Americano", emoji: "🟡", blurb: "Coppie a rotazione, classifica individuale" },
 };
 

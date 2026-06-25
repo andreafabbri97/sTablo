@@ -24,7 +24,12 @@ const globalForDb = globalThis as unknown as {
 const client =
   globalForDb.pgClient ??
   postgres(connectionString, {
-    max: 1,
+    // A small pool (not 1) so the independent queries a page fires together via
+    // Promise.all actually run in parallel instead of queueing on one socket.
+    // POSTGRES_URL is Neon's pooled (pgBouncer) endpoint, so a handful of
+    // connections per warm instance is safe; prepare:false is required for it.
+    max: 5,
+    idle_timeout: 20,
     ssl: connectionString.includes("sslmode=require") ? "require" : undefined,
     prepare: false,
   });

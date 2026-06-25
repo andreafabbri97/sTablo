@@ -11,6 +11,7 @@ import { AddFriendButton } from "@/components/friends/add-friend-button";
 import { RequestActions } from "@/components/friends/request-actions";
 import { RemoveFriendButton } from "@/components/friends/remove-friend-button";
 import { CopyLink } from "@/components/friends/copy-link";
+import { ShareButton } from "@/components/share-button";
 import { ProfileQr } from "@/components/friends/profile-qr";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
@@ -74,7 +75,12 @@ export default async function AmiciPage() {
             Fai scansionare il QR (o invia il link) per farti trovare e aggiungere
             al volo, anche in spiaggia.
           </p>
-          <div className="mt-3 flex justify-center sm:justify-start">
+          <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
+            <ShareButton
+              url={profileUrl}
+              title="Il mio profilo su sTablo"
+              text="Aggiungimi su sTablo 🏓"
+            />
             <CopyLink url={profileUrl} />
           </div>
         </div>

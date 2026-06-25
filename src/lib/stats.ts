@@ -177,22 +177,39 @@ export type RankRow = {
 async function getRankingImpl(
   discipline: RankingDiscipline = "overall",
 ): Promise<RankRow[]> {
-  const players_ = await db.select().from(players);
-  // All completed matches: ranked ones feed the competitive record/Elo, every
-  // match (ranked or friendly) feeds XP/level.
-  const rows = await db
-    .select({
-      playerId: matchParticipants.playerId,
-      side: matchParticipants.side,
-      format: matches.format,
-      ranked: matches.ranked,
-      scoreA: matches.scoreA,
-      scoreB: matches.scoreB,
-      winner: matches.winner,
-    })
-    .from(matchParticipants)
-    .innerJoin(matches, eq(matchParticipants.matchId, matches.id))
-    .where(eq(matches.status, "completed"));
+  // These three reads are independent: fire them together so a cold ranking
+  // computation pays one DB round-trip, not three in series. (Needs a pool of
+  // more than one connection to truly parallelize — see lib/db.)
+  const [players_, rows, tWinRows] = await Promise.all([
+    db.select().from(players),
+    // All completed matches: ranked ones feed the competitive record/Elo, every
+    // match (ranked or friendly) feeds XP/level.
+    db
+      .select({
+        playerId: matchParticipants.playerId,
+        side: matchParticipants.side,
+        format: matches.format,
+        ranked: matches.ranked,
+        scoreA: matches.scoreA,
+        scoreB: matches.scoreB,
+        winner: matches.winner,
+      })
+      .from(matchParticipants)
+      .innerJoin(matches, eq(matchParticipants.matchId, matches.id))
+      .where(eq(matches.status, "completed")),
+    // Tournament wins (XP bonus + consistency with profile level)
+    db
+      .select({
+        playerId: tournamentEntrants.playerId,
+        partnerId: tournamentEntrants.partnerId,
+      })
+      .from(tournaments)
+      .innerJoin(
+        tournamentEntrants,
+        eq(tournaments.winnerEntrantId, tournamentEntrants.id),
+      )
+      .where(eq(tournaments.status, "completed")),
+  ]);
 
   const acc = new Map<
     string,
@@ -223,18 +240,7 @@ async function getRankingImpl(
     acc.set(r.playerId, cur);
   }
 
-  // Tournament wins (XP bonus + consistency with profile level)
-  const tWinRows = await db
-    .select({
-      playerId: tournamentEntrants.playerId,
-      partnerId: tournamentEntrants.partnerId,
-    })
-    .from(tournaments)
-    .innerJoin(
-      tournamentEntrants,
-      eq(tournaments.winnerEntrantId, tournamentEntrants.id),
-    )
-    .where(eq(tournaments.status, "completed"));
+  // Tally the tournament wins fetched above (XP bonus + profile-level parity).
   const tWins = new Map<string, number>();
   for (const w of tWinRows) {
     if (w.playerId) tWins.set(w.playerId, (tWins.get(w.playerId) ?? 0) + 1);

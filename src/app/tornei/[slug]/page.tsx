@@ -112,11 +112,8 @@ export default async function TournamentPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="card-surface relative p-6">
-        <div className="absolute right-4 top-4">
-          <HelpButton topic="torneo" />
-        </div>
-        <div className="mb-2 flex flex-wrap items-center gap-2 pr-12">
+      <div className="card-surface p-6">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
           <span className="text-3xl">{meta?.emoji}</span>
           <Badge tone={tournament.status === "draft" ? "ball" : tournament.status === "completed" ? "muted" : "win"}>
             {tournament.status === "draft" ? "⏳ In attesa" : tournament.status === "completed" ? "Concluso" : "In corso"}
@@ -125,9 +122,12 @@ export default async function TournamentPage({
             {ranked ? "🏆 Classificato" : "🤝 Amichevole"}
           </Badge>
         </div>
-        <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
-          {tournament.name}
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
+            {tournament.name}
+          </h1>
+          <HelpButton topic="torneo" className="shrink-0" />
+        </div>
         <p className="mt-1 text-sm text-muted">
           {meta?.label} · {DISCIPLINE_LABEL[tournament.discipline]} · {detail.entrants.length} partecipanti
         </p>

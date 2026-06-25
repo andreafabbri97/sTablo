@@ -16,24 +16,24 @@ type Mode = "open" | "manual";
  *  - "manual": pick the participants now and start immediately.
  */
 export function TournamentCreateSwitch({ players }: { players: Option[] }) {
-  const [mode, setMode] = useState<Mode>("open");
+  const [mode, setMode] = useState<Mode>("manual");
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-1.5 rounded-2xl border border-border bg-surface p-1.5">
-        <ModeTab
-          active={mode === "open"}
-          onClick={() => setMode("open")}
-          icon={<Link2 className="h-4 w-4" />}
-          title="Invito aperto"
-          sub="Link/QR · pubblico o privato"
-        />
         <ModeTab
           active={mode === "manual"}
           onClick={() => setMode("manual")}
           icon={<Users className="h-4 w-4" />}
           title="Scegli i partecipanti"
           sub="Imposti tu, parte subito"
+        />
+        <ModeTab
+          active={mode === "open"}
+          onClick={() => setMode("open")}
+          icon={<Link2 className="h-4 w-4" />}
+          title="Invito aperto"
+          sub="Link/QR, pubblico o privato"
         />
       </div>
 
@@ -66,7 +66,7 @@ function ModeTab({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex flex-col items-start gap-0.5 rounded-xl px-3 py-2.5 text-left transition",
+        "flex h-full flex-col items-start justify-center gap-0.5 rounded-xl px-3 py-2.5 text-left transition",
         active ? "bg-brand text-white shadow-[var(--shadow-brand)]" : "text-muted hover:bg-surface-2",
       )}
     >
