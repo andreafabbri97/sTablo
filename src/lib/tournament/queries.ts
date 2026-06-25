@@ -99,17 +99,20 @@ export const getTournamentDetail = cachedQuery(
   });
   if (!tournament) return null;
 
-  const entrants = await db
-    .select()
-    .from(tournamentEntrants)
-    .where(eq(tournamentEntrants.tournamentId, tournament.id))
-    .orderBy(asc(tournamentEntrants.seed));
-
-  const matchRows = await db
-    .select()
-    .from(matches)
-    .where(eq(matches.tournamentId, tournament.id))
-    .orderBy(asc(matches.round), asc(matches.slot));
+  // Entrants and matches only depend on the tournament id — load them together
+  // so the detail page pays one round-trip of latency instead of two.
+  const [entrants, matchRows] = await Promise.all([
+    db
+      .select()
+      .from(tournamentEntrants)
+      .where(eq(tournamentEntrants.tournamentId, tournament.id))
+      .orderBy(asc(tournamentEntrants.seed)),
+    db
+      .select()
+      .from(matches)
+      .where(eq(matches.tournamentId, tournament.id))
+      .orderBy(asc(matches.round), asc(matches.slot)),
+  ]);
 
   const nameById = new Map(entrants.map((e) => [e.id, e.name]));
   const view: TournamentMatchView[] = matchRows.map((m) => ({
