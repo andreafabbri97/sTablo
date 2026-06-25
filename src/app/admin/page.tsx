@@ -31,6 +31,8 @@ import {
 } from "@/lib/queries";
 import { getTeamRanking } from "@/lib/stats";
 import { countDemoMatches } from "@/lib/demo";
+import { cn } from "@/lib/utils";
+import { TEAMS_ENABLED } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Admin" };
@@ -55,7 +57,11 @@ export default async function AdminPage() {
       <PageHeader
         icon={<Shield className="h-6 w-6" />}
         title="Pannello admin"
-        subtitle="Gestisci partite, tornei, giocatori e team"
+        subtitle={
+          TEAMS_ENABLED
+            ? "Gestisci partite, tornei, giocatori e team"
+            : "Gestisci partite, tornei e giocatori"
+        }
       />
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -105,15 +111,17 @@ export default async function AdminPage() {
         <CreatePlayerForm />
       </Card>
 
-      <Card>
-        <CardTitle className="mb-3 flex items-center gap-2">
-          <Users className="h-5 w-5 text-brand" /> Nuovo team
-        </CardTitle>
-        <p className="mb-3 text-sm text-muted">
-          Una coppia con un alias che gioca e viene classificata insieme.
-        </p>
-        <CreateTeamForm players={playerOpts} />
-      </Card>
+      {TEAMS_ENABLED && (
+        <Card>
+          <CardTitle className="mb-3 flex items-center gap-2">
+            <Users className="h-5 w-5 text-brand" /> Nuovo team
+          </CardTitle>
+          <p className="mb-3 text-sm text-muted">
+            Una coppia con un alias che gioca e viene classificata insieme.
+          </p>
+          <CreateTeamForm players={playerOpts} />
+        </Card>
+      )}
 
       <Card>
         <CardTitle className="mb-3 flex items-center gap-2">
@@ -137,7 +145,7 @@ export default async function AdminPage() {
         <ExportData />
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className={cn("grid gap-4", TEAMS_ENABLED && "sm:grid-cols-2")}>
         <Card>
           <CardTitle className="mb-3">Giocatori ({players.length})</CardTitle>
           <ul className="space-y-2">
@@ -153,19 +161,21 @@ export default async function AdminPage() {
             {players.length === 0 && <p className="text-sm text-muted">Nessun giocatore.</p>}
           </ul>
         </Card>
-        <Card>
-          <CardTitle className="mb-3">Team ({teams.length})</CardTitle>
-          <ul className="space-y-2">
-            {teams.map((t) => (
-              <li key={t.id} className="flex items-center gap-2 text-sm">
-                <Avatar name={t.name} colorIndex={t.avatarColor} size="xs" />
-                <span className="flex-1 truncate">{t.name}</span>
-                <span className="font-mono text-xs text-muted">{t.eloDoubles}</span>
-              </li>
-            ))}
-            {teams.length === 0 && <p className="text-sm text-muted">Nessun team.</p>}
-          </ul>
-        </Card>
+        {TEAMS_ENABLED && (
+          <Card>
+            <CardTitle className="mb-3">Team ({teams.length})</CardTitle>
+            <ul className="space-y-2">
+              {teams.map((t) => (
+                <li key={t.id} className="flex items-center gap-2 text-sm">
+                  <Avatar name={t.name} colorIndex={t.avatarColor} size="xs" />
+                  <span className="flex-1 truncate">{t.name}</span>
+                  <span className="font-mono text-xs text-muted">{t.eloDoubles}</span>
+                </li>
+              ))}
+              {teams.length === 0 && <p className="text-sm text-muted">Nessun team.</p>}
+            </ul>
+          </Card>
+        )}
       </div>
     </div>
   );

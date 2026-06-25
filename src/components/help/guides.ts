@@ -51,10 +51,9 @@ export const GUIDES: Record<string, Guide> = {
         ],
       },
       {
-        heading: "Stagione, Generale, Singolo, Doppio e Team",
+        heading: "Stagione, Generale, Singolo e Doppio",
         points: [
-          "Cinque schede: «Stagione» è il mese in corso, poi «Generale» (tutto), Singolo (1v1), Doppio (2v2) e Team.",
-          "La scheda «Team» mostra l'Elo delle coppie registrate.",
+          "Quattro schede: «Stagione» è il mese in corso, poi «Generale» (tutto), Singolo (1v1) e Doppio (2v2).",
           "Solo le partite «Classificate» 🏆 muovono l'Elo: le «Amichevoli» 🤝 danno solo XP.",
           "Il picco (peak) è l'Elo più alto che hai mai raggiunto.",
         ],
@@ -128,7 +127,7 @@ export const GUIDES: Record<string, Guide> = {
         heading: "Cercare e filtrare",
         points: [
           "Filtra per tipo: Tutte, 1 vs 1 o 2 vs 2.",
-          "Cerca per nome di un giocatore o di un team.",
+          "Cerca per nome di un giocatore.",
           "Restringi per data con i campi «Dal» e «Al».",
           "Tocca «Azzera filtri» per tornare all'elenco completo.",
           "In fondo, «Carica altre» mostra lo storico più vecchio a blocchi.",
@@ -189,7 +188,7 @@ export const GUIDES: Record<string, Guide> = {
       {
         heading: "Buono a sapersi",
         points: [
-          "Nel doppio scegli i singoli giocatori: niente team da preimpostare.",
+          "Nel doppio scegli i due giocatori della coppia.",
           "Il punteggio non può finire in parità.",
           "Se non sei admin, il risultato va confermato dall'avversario.",
           "Per le classificate vedi in anteprima quanti punti Elo sposta il risultato.",

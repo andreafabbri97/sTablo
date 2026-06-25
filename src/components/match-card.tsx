@@ -3,6 +3,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn, timeAgo, timeUntil, formatDateTime } from "@/lib/utils";
 import type { ShapedMatch, ShapedSide } from "@/lib/queries";
+import { TEAMS_ENABLED } from "@/lib/features";
 
 export function MatchCard({ match }: { match: ShapedMatch }) {
   const isScheduled = match.status === "scheduled";
@@ -96,7 +97,7 @@ function SideView({
         </div>
         {won && <span className="text-base">🏆</span>}
       </div>
-      <div className={cn("min-w-0", align === "end" && "text-right")}>
+      <div className={cn("w-full min-w-0", align === "end" && "text-right")}>
         {side.players.map((p) => (
           <Link
             key={p.slug}
@@ -109,7 +110,7 @@ function SideView({
             {p.name}
           </Link>
         ))}
-        {side.teamName && (
+        {TEAMS_ENABLED && side.teamName && (
           <span className="text-[11px] font-bold uppercase tracking-wide text-brand">
             {side.teamName}
           </span>

@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/page";
 import { cn, pct } from "@/lib/utils";
 import type { RankRow } from "@/lib/stats";
 import type { SeasonStanding } from "@/lib/seasons";
+import { TEAMS_ENABLED } from "@/lib/features";
 
 type TeamRow = {
   id: string;
@@ -48,7 +49,7 @@ export function ClassificaView({
   return (
     <div>
       <div className="mb-5 flex gap-1.5 overflow-x-auto rounded-2xl border border-border bg-surface p-1.5">
-        {TABS.map((t) => (
+        {TABS.filter((t) => TEAMS_ENABLED || t.key !== "teams").map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
@@ -66,7 +67,7 @@ export function ClassificaView({
 
       {tab === "season" ? (
         <SeasonBoard season={season} seasonLabel={seasonLabel} />
-      ) : tab === "teams" ? (
+      ) : TEAMS_ENABLED && tab === "teams" ? (
         teams.length === 0 ? (
           <EmptyState
             icon={<Trophy className="h-6 w-6" />}
