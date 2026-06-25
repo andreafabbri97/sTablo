@@ -4,6 +4,7 @@ import {
   ATTRIBUTE_KEYS,
   baselineAttributes,
   clampToBudget,
+  fillToBudget,
   hasCustomAttributes,
   levelAttributeCap,
   levelStatBudget,
@@ -83,10 +84,67 @@ describe("baselineAttributes", () => {
     }
   });
 
-  it("keeps a weak derived card below the ceiling as-is", () => {
-    const derived = flat(20); // sum 100, well under any budget
+  it("spends the whole budget on a weak derived card, lifting it evenly", () => {
+    const derived = flat(20); // sum 100, well under the level-10 budget
     const baseline = baselineAttributes(derived, 10);
-    expect(baseline).toEqual(flat(20));
+    // Five equal stats stay equal and share the full budget between them.
+    expect(sum(baseline)).toBe(levelStatBudget(10));
+    expect(baseline).toEqual(flat(levelStatBudget(10) / ATTRIBUTE_KEYS.length));
+    for (const k of ATTRIBUTE_KEYS) {
+      expect(baseline[k]).toBeLessThanOrEqual(levelAttributeCap(10));
+    }
+  });
+});
+
+describe("fillToBudget — the auto card uses every point", () => {
+  const shapes: Attributes[] = [
+    flat(20),
+    flat(50),
+    flat(90),
+    { potenza: 39, tecnica: 47, costanza: 37, difesa: 60, clutch: 38 },
+  ];
+
+  it("always spends the entire level budget, within floor/cap", () => {
+    for (const lvl of [1, 5, 10, 20, 33]) {
+      for (const s of shapes) {
+        const b = baselineAttributes(s, lvl);
+        expect(sum(b)).toBe(levelStatBudget(lvl));
+        for (const k of ATTRIBUTE_KEYS) {
+          expect(b[k]).toBeGreaterThanOrEqual(ATTRIBUTE_FLOOR);
+          expect(b[k]).toBeLessThanOrEqual(levelAttributeCap(lvl));
+        }
+      }
+    }
+  });
+
+  it("hands the leftover to the lowest stats first, leaving capped ones be", () => {
+    // Lv1: budget 215, cap 51. This shape sums to 212 (difesa already capped),
+    // so 3 points are free — they must land on the three lowest stats.
+    const out = fillToBudget(
+      { potenza: 39, tecnica: 47, costanza: 37, difesa: 51, clutch: 38 },
+      215,
+      51,
+    );
+    expect(sum(out)).toBe(215);
+    expect(out.difesa).toBe(51); // at the cap → untouched
+    expect(out).toEqual({
+      potenza: 39,
+      tecnica: 47,
+      costanza: 39,
+      difesa: 51,
+      clutch: 39,
+    });
+  });
+
+  it("never pushes a stat past the cap while filling", () => {
+    const out = fillToBudget(flat(ATTRIBUTE_FLOOR), 215, 51);
+    expect(sum(out)).toBe(215);
+    for (const k of ATTRIBUTE_KEYS) expect(out[k]).toBeLessThanOrEqual(51);
+  });
+
+  it("makes resolved custom cards spend the whole budget too", () => {
+    const out = resolveAttributes(flat(40), { potenza: 45 }, 1);
+    expect(sum(out)).toBe(levelStatBudget(1));
   });
 });
 

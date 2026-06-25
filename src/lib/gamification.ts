@@ -258,12 +258,49 @@ export function clampToBudget(
   return out;
 }
 
-/** The "auto" card: performance-derived shape, brought within the level budget. */
+/**
+ * Spend EVERY available point. Starts from {@link clampToBudget} (each value in
+ * [floor, cap], total never above budget) and then, while the total is still
+ * below budget, hands out the leftover one point at a time to the lowest
+ * attribute that still has head-room. Lifting the weakest stat first keeps the
+ * card balanced and the result deterministic; the budget is always fully
+ * allocatable (budget ≤ cap × 5 by construction), so the total lands on exactly
+ * the budget. This is what makes a card use all its points instead of leaving
+ * some free.
+ */
+export function fillToBudget(
+  values: Partial<Record<string, number>>,
+  budget: number,
+  cap: number,
+): Attributes {
+  const out = clampToBudget(values, budget, cap);
+  let total = sumAttrs(out);
+  while (total < budget) {
+    let key: AttributeKey | null = null;
+    let min = Infinity;
+    for (const k of ATTRIBUTE_KEYS) {
+      if (out[k] < cap && out[k] < min) {
+        min = out[k];
+        key = k;
+      }
+    }
+    if (!key) break; // every attribute already at the cap
+    out[key] += 1;
+    total += 1;
+  }
+  return out;
+}
+
+/**
+ * The "auto" card: performance-derived shape, fitted to the level budget. Always
+ * spends the whole budget — an under-budget derived shape is topped up (lowest
+ * stats first) so no points are ever left free.
+ */
 export function baselineAttributes(
   derived: Attributes,
   level: number,
 ): Attributes {
-  return clampToBudget(derived, levelStatBudget(level), levelAttributeCap(level));
+  return fillToBudget(derived, levelStatBudget(level), levelAttributeCap(level));
 }
 
 /** Does a stored overrides blob hold any real customization? */
@@ -279,7 +316,9 @@ export function hasCustomAttributes(
 /**
  * Final attributes to display and to persist: the derived baseline with the
  * player's overrides overlaid, the whole thing re-validated against floor, cap
- * and budget. With no overrides this is just the baseline.
+ * and budget. The full budget is always spent (no free points), so older cards
+ * that left points unassigned are topped up automatically. With no overrides
+ * this is just the baseline.
  */
 export function resolveAttributes(
   derived: Attributes,
@@ -293,7 +332,7 @@ export function resolveAttributes(
     const v = custom![k];
     if (typeof v === "number" && Number.isFinite(v)) merged[k] = v;
   }
-  return clampToBudget(
+  return fillToBudget(
     merged,
     levelStatBudget(level),
     levelAttributeCap(level),
