@@ -7,6 +7,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { SiteHeader } from "@/components/layout/site-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { RouteProgress } from "@/components/layout/route-progress";
 import { ServiceWorker } from "@/components/service-worker";
 import { InstallBanner } from "@/components/install-banner";
@@ -88,6 +89,7 @@ export default function RootLayout({
             className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 md:pb-12"
           >
             {children}
+            <SiteFooter />
           </main>
           <BottomNav />
           <InstallBanner />

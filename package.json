@@ -2,6 +2,9 @@
   "name": "stablo",
   "version": "0.1.0",
   "private": true,
+  "description": "sTablo — il campo digitale del tavolino di Rimini. Creato da Andrea Fabbri.",
+  "author": "Andrea Fabbri",
+  "license": "UNLICENSED",
   "scripts": {
     "dev": "next dev",
     "build": "tsx scripts/predeploy.ts && next build",

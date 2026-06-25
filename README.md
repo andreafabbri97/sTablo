@@ -7,6 +7,8 @@ caratteristiche stile carta FIFA, organizza **tornei** in ogni formato.
 PWA mobile-first, tema chiaro/scuro, animazioni. Costruita per girare su **Vercel**
 con **Vercel Postgres** (Neon) — niente Supabase.
 
+> Ideato, progettato e sviluppato da **Andrea Fabbri**.
+
 ---
 
 ## ✨ Funzionalità
@@ -99,3 +101,16 @@ Rating tipo scacchi con moltiplicatore **margine di vittoria** (un 15-2 pesa pi�
 Disciplina nata a Rimini, parente di footvolley/teqball: palla colpita con qualsiasi
 parte del corpo tranne mani/braccia, servizio di testa con rimbalzo sul tavolo. **Si
 vince arrivando a 18 punti** (con scarto, ai vantaggi).
+
+---
+
+## 👤 Autore
+
+**sTablo è ideato, creato e sviluppato da Andrea Fabbri.**
+
+Codice, design e grafiche sono opera sua e di sua proprietà.
+
+## 📄 Licenza
+
+Software proprietario — **© 2026 Andrea Fabbri, tutti i diritti riservati**.
+Vedi [LICENSE](./LICENSE).
