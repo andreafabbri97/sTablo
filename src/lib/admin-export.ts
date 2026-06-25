@@ -9,7 +9,7 @@ import {
   tournamentEntrants,
   users,
 } from "./db/schema";
-import { shapeMatch } from "./queries";
+import { shapeMatch, matchWith } from "./queries";
 import { toCsv, type CsvColumn } from "./export";
 
 /**
@@ -68,7 +68,7 @@ async function playersCsv(): Promise<string> {
 async function matchesCsv(): Promise<string> {
   const rows = await db.query.matches.findMany({
     orderBy: [desc(matches.playedAt)],
-    with: { participants: { with: { player: true, team: true } } },
+    with: matchWith,
   });
   const shaped = rows.map(shapeMatch);
   const cols: CsvColumn<(typeof shaped)[number]>[] = [

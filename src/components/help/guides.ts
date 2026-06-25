@@ -115,6 +115,15 @@ export const GUIDES: Record<string, Guide> = {
         ],
       },
       {
+        heading: "La card di una partita",
+        points: [
+          "Ogni card mostra data e ora, il nome e lo @username di chi ha giocato, se è 🏆 Classificata o 🤝 Amichevole.",
+          "Se la partita fa parte di un torneo, vedi il suo nome (con ⚔️): tocchi e vai al torneo.",
+          "Tocca un punto qualsiasi della card per aprire il dettaglio della partita con reazioni e commenti.",
+          "Tocca invece un nome per andare al profilo di quel giocatore.",
+        ],
+      },
+      {
         heading: "Reazioni e commenti",
         points: [
           "Apri una partita e tocca un'emoji (🔥 👏 😂 💪 🎯 😱) per reagire: ritocca per togliere la reazione.",
@@ -127,7 +136,7 @@ export const GUIDES: Record<string, Guide> = {
         heading: "Cercare e filtrare",
         points: [
           "Filtra per tipo: Tutte, 1 vs 1 o 2 vs 2.",
-          "Cerca per nome di un giocatore.",
+          "Cerca per nome, soprannome, username o nome del torneo.",
           "Restringi per data con i campi «Dal» e «Al».",
           "Tocca «Azzera filtri» per tornare all'elenco completo.",
           "In fondo, «Carica altre» mostra lo storico più vecchio a blocchi.",

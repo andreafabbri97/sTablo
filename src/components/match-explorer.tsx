@@ -87,8 +87,12 @@ export function MatchExplorer({
 
       if (q) {
         const names = [...m.sideA.players, ...m.sideB.players]
-          .flatMap((p) => [p.name, p.slug])
-          .concat([m.sideA.teamName ?? "", m.sideB.teamName ?? ""])
+          .flatMap((p) => [p.name, p.slug, p.username ?? ""])
+          .concat([
+            m.sideA.teamName ?? "",
+            m.sideB.teamName ?? "",
+            m.tournamentName ?? "",
+          ])
           .join(" ")
           .toLowerCase();
         if (!names.includes(q)) return false;
@@ -124,7 +128,7 @@ export function MatchExplorer({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cerca giocatore…"
+            placeholder="Cerca nome, username o torneo…"
             className="pl-9"
           />
         </div>

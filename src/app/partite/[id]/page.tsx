@@ -88,7 +88,7 @@ export default async function MatchPage({
         <ArrowLeft className="h-4 w-4" /> Partite
       </Link>
 
-      <MatchCard match={match} />
+      <MatchCard match={match} linkable={false} />
 
       {isScheduled && (
         <Card className="space-y-4">

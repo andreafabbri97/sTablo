@@ -1,7 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { db } from "./db";
 import { matches, matchParticipants } from "./db/schema";
-import { shapeMatch, type ShapedMatch } from "./queries";
+import { shapeMatch, matchWith, type ShapedMatch } from "./queries";
 import { sideOf } from "./h2h";
 import { cachedQuery } from "./cache";
 
@@ -216,7 +216,7 @@ async function getPlayerInsightsImpl(playerId: string): Promise<PlayerInsights> 
 
   const rows = await db.query.matches.findMany({
     where: inArray(matches.id, ids),
-    with: { participants: { with: { player: true, team: true } } },
+    with: matchWith,
   });
 
   return computeInsights(playerId, rows.map(shapeMatch));

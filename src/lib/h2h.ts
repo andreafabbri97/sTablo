@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "./db";
 import { matches, matchParticipants, players } from "./db/schema";
-import { shapeMatch, type ShapedMatch } from "./queries";
+import { shapeMatch, matchWith, type ShapedMatch } from "./queries";
 import { cachedQuery } from "./cache";
 
 export type H2HPlayer = {
@@ -151,7 +151,7 @@ async function getHeadToHeadImpl(
   const rows = await db.query.matches.findMany({
     where: and(inArray(matches.id, sharedIds), eq(matches.status, "completed")),
     orderBy: [desc(matches.playedAt)],
-    with: { participants: { with: { player: true, team: true } } },
+    with: matchWith,
   });
 
   return tallyHeadToHead(aLite, bLite, rows.map(shapeMatch));

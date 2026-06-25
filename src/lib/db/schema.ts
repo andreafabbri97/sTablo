@@ -560,8 +560,14 @@ export const usersRelations = relations(users, ({ one }) => ({
   }),
 }));
 
-export const playersRelations = relations(players, ({ many }) => ({
+export const playersRelations = relations(players, ({ many, one }) => ({
   participations: many(matchParticipants),
+  // Reverse of users.playerId — lets match queries surface a player's account
+  // username (1:1 by app logic). Metadata only; no DB column.
+  user: one(users, {
+    fields: [players.id],
+    references: [users.playerId],
+  }),
 }));
 
 export const teamsRelations = relations(teams, ({ one }) => ({

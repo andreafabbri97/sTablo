@@ -1,17 +1,44 @@
 import Link from "next/link";
+import { CalendarClock, Swords } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn, timeAgo, timeUntil, formatDateTime } from "@/lib/utils";
 import type { ShapedMatch, ShapedSide } from "@/lib/queries";
 import { TEAMS_ENABLED } from "@/lib/features";
 
-export function MatchCard({ match }: { match: ShapedMatch }) {
+/**
+ * A match as a feed card. The whole card links to the match detail page
+ * (`linkable`, on by default) via a stretched overlay link; inner links —
+ * player profiles and the tournament chip — sit above it so they stay
+ * clickable. Pass `linkable={false}` on the detail page itself so the card
+ * doesn't link to the page it's already on.
+ */
+export function MatchCard({
+  match,
+  linkable = true,
+}: {
+  match: ShapedMatch;
+  linkable?: boolean;
+}) {
   const isScheduled = match.status === "scheduled";
   const aWon = match.winner === "A";
   const bWon = match.winner === "B";
 
   return (
-    <div className="card-surface overflow-hidden p-0">
+    <div
+      className={cn(
+        "card-surface relative overflow-hidden p-0",
+        linkable && "transition hover:border-brand/40",
+      )}
+    >
+      {linkable && (
+        <Link
+          href={`/partite/${match.id}`}
+          aria-label="Apri il dettaglio della partita"
+          className="absolute inset-0 z-[1] focus-visible:ring-2 focus-visible:ring-brand/40"
+        />
+      )}
+
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge tone={match.format === "singles" ? "sea" : "brand"}>
@@ -59,6 +86,25 @@ export function MatchCard({ match }: { match: ShapedMatch }) {
         <SideView side={match.sideB} won={bWon} align="end" />
       </div>
 
+      {/* Meta row: when it was played + which tournament it belongs to, so the
+          match is unmistakable when commenting on it. */}
+      <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-2 text-xs">
+        <span className="flex items-center gap-1.5 text-muted">
+          <CalendarClock className="h-3.5 w-3.5 shrink-0" />
+          {formatDateTime(match.playedAt)}
+        </span>
+        {match.tournamentName && match.tournamentSlug && (
+          <Link
+            href={`/tornei/${match.tournamentSlug}`}
+            className="relative z-[2] inline-flex max-w-[55%] items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 font-bold text-brand hover:underline"
+            title={`Torneo: ${match.tournamentName}`}
+          >
+            <Swords className="h-3 w-3 shrink-0" />
+            <span className="truncate">{match.tournamentName}</span>
+          </Link>
+        )}
+      </div>
+
       {match.note && (
         <p className="border-t border-border px-4 py-2 text-xs italic text-muted">
           “{match.note}”
@@ -99,16 +145,22 @@ function SideView({
       </div>
       <div className={cn("w-full min-w-0", align === "end" && "text-right")}>
         {side.players.map((p) => (
-          <Link
-            key={p.slug}
-            href={`/giocatori/${p.slug}`}
-            className={cn(
-              "block truncate text-sm font-semibold hover:text-brand",
-              won ? "text-foreground" : "text-muted",
+          <div key={p.slug} className="min-w-0">
+            <Link
+              href={`/giocatori/${p.slug}`}
+              className={cn(
+                "relative z-[2] block truncate text-sm font-semibold hover:text-brand",
+                won ? "text-foreground" : "text-muted",
+              )}
+            >
+              {p.name}
+            </Link>
+            {p.username && (
+              <span className="block truncate text-[11px] leading-tight text-muted">
+                @{p.username}
+              </span>
             )}
-          >
-            {p.name}
-          </Link>
+          </div>
         ))}
         {TEAMS_ENABLED && side.teamName && (
           <span className="text-[11px] font-bold uppercase tracking-wide text-brand">

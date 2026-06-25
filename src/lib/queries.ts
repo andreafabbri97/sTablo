@@ -10,6 +10,21 @@ import {
 } from "./db/schema";
 import { cachedQuery } from "./cache";
 
+/**
+ * Relational `with` shared by every match loader so a ShapedMatch always carries
+ * each participant's account username and the linked tournament (name + slug).
+ * Keeping it in one place means the loaders can't drift apart.
+ */
+export const matchWith = {
+  participants: {
+    with: {
+      player: { with: { user: { columns: { username: true } } } },
+      team: true,
+    },
+  },
+  tournament: { columns: { name: true, slug: true } },
+} as const;
+
 export type ShapedSide = {
   label: string;
   teamName: string | null;
@@ -17,6 +32,7 @@ export type ShapedSide = {
     id: string;
     name: string;
     slug: string;
+    username: string | null;
     colorIndex: number;
     imageUrl: string | null;
   }[];
@@ -33,6 +49,8 @@ export type ShapedMatch = {
   playedAt: Date;
   note: string | null;
   tournamentId: string | null;
+  tournamentName: string | null;
+  tournamentSlug: string | null;
   proposedById: string | null;
   proposedSide: "A" | "B" | null;
   confirmDeadline: Date | null;
@@ -54,6 +72,7 @@ function shapeSide(parts: MatchRow["participants"], side: "A" | "B"): ShapedSide
       id: r.player!.id,
       name: r.player!.name,
       slug: r.player!.slug,
+      username: r.player!.user?.username ?? null,
       colorIndex: r.player!.avatarColor,
       imageUrl: r.player!.avatarUrl,
     }));
@@ -76,6 +95,8 @@ export function shapeMatch(row: MatchRow): ShapedMatch {
     playedAt: row.playedAt,
     note: row.note,
     tournamentId: row.tournamentId,
+    tournamentName: row.tournament?.name ?? null,
+    tournamentSlug: row.tournament?.slug ?? null,
     proposedById: row.proposedById,
     proposedSide: row.proposedSide,
     confirmDeadline: row.confirmDeadline,
@@ -98,9 +119,7 @@ function loadMatches(opts: {
     orderBy: [desc(matches.playedAt)],
     limit: opts.limit,
     offset: opts.offset,
-    with: {
-      participants: { with: { player: true, team: true } },
-    },
+    with: matchWith,
   });
 }
 
@@ -156,7 +175,7 @@ export const getScheduledMatches = cachedQuery(async (): Promise<ShapedMatch[]> 
   const rows = await db.query.matches.findMany({
     where: eq(matches.status, "scheduled"),
     orderBy: [asc(matches.playedAt)],
-    with: { participants: { with: { player: true, team: true } } },
+    with: matchWith,
   });
   return rows.map(shapeMatch);
 }, ["scheduled-matches"]);
@@ -166,7 +185,7 @@ export const getPendingMatches = cachedQuery(async (): Promise<ShapedMatch[]> =>
   const rows = await db.query.matches.findMany({
     where: eq(matches.status, "pending"),
     orderBy: [desc(matches.createdAt)],
-    with: { participants: { with: { player: true, team: true } } },
+    with: matchWith,
   });
   return rows.map(shapeMatch);
 }, ["pending-matches"]);
@@ -193,7 +212,7 @@ export async function getDisputedMatches(): Promise<DisputedMatchView[]> {
   const rows = await db.query.matches.findMany({
     where: and(eq(matches.status, "pending"), isNotNull(matches.disputedAt)),
     orderBy: [asc(matches.disputedAt)],
-    with: { participants: { with: { player: true, team: true } } },
+    with: matchWith,
   });
   if (rows.length === 0) return [];
 
@@ -233,7 +252,7 @@ export async function getDisputedMatches(): Promise<DisputedMatchView[]> {
 export async function getMatchById(id: string): Promise<ShapedMatch | null> {
   const row = await db.query.matches.findFirst({
     where: eq(matches.id, id),
-    with: { participants: { with: { player: true, team: true } } },
+    with: matchWith,
   });
   return row ? shapeMatch(row) : null;
 }
@@ -256,7 +275,7 @@ export const getMatchesForPlayer = cachedQuery(
       ),
       orderBy: [desc(matches.playedAt)],
       limit,
-      with: { participants: { with: { player: true, team: true } } },
+      with: matchWith,
     });
     return rows.map(shapeMatch);
   },
