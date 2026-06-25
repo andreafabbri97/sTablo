@@ -11,6 +11,7 @@ import { ChangePasswordForm } from "@/components/player/change-password-form";
 import { BadgeShelf } from "@/components/player/badge-shelf";
 import { EloChart } from "@/components/player/elo-chart";
 import { PushToggle } from "@/components/push-toggle";
+import { InstallAppCard } from "@/components/install-app-card";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { getPlayerWithStats } from "@/lib/stats";
 import { getEloSeries } from "@/lib/queries";
@@ -105,6 +106,7 @@ export default async function ProfiloPage() {
             <CardTitle className="mb-4">Sicurezza</CardTitle>
             <ChangePasswordForm />
           </Card>
+          <InstallAppCard />
           <PushToggle />
         </div>
       </div>

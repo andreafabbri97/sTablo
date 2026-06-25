@@ -342,9 +342,10 @@ export const GUIDES: Record<string, Guide> = {
         points: [
           "Cambia la password dalla sezione Sicurezza.",
           "Se dimentichi la password, chiedi a un amministratore: può generarti una password temporanea da cambiare poi qui.",
+          "Con «Installa l'app» aggiungi sTablo alla schermata Home (se non l'hai già fatto): si apre a tutto schermo come un'app vera. Se sei già nell'app installata, il riquadro sparisce.",
           "Le notifiche push si attivano con un tocco quando l'app te lo propone; da qui puoi gestirle o disattivarle in qualsiasi momento.",
           "Servono per avvisi su conferme, amici e inviti — anche con l'app chiusa.",
-          "Su iPhone, installa prima l'app dalla schermata Home, poi consenti le notifiche.",
+          "Su iPhone l'ordine conta: prima installa l'app dalla schermata Home, poi consenti le notifiche (le notifiche push su iPhone funzionano solo dentro l'app installata).",
         ],
       },
     ],
