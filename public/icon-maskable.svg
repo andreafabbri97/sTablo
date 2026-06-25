@@ -13,11 +13,17 @@
       <stop stop-color="#ffffff"/>
       <stop offset="1" stop-color="#ffe3d3"/>
     </linearGradient>
-    <radialGradient id="ballm" cx="316" cy="184" r="60" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#eaff8a"/>
-      <stop offset="0.5" stop-color="#d7ff3e"/>
-      <stop offset="1" stop-color="#acd424"/>
+    <!-- Footvolley ball (Mikasa FT-5 style): yellow sphere + black soccer panels. -->
+    <radialGradient id="ballY" cx="0.36" cy="0.30" r="0.82">
+      <stop offset="0" stop-color="#fff27a"/>
+      <stop offset="0.5" stop-color="#ffd21a"/>
+      <stop offset="1" stop-color="#b88900"/>
     </radialGradient>
+    <radialGradient id="ballGloss" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="ballClip"><circle r="100"/></clipPath>
   </defs>
 
   <rect width="512" height="512" fill="url(#bgm)"/>
@@ -29,7 +35,19 @@
   <path d="M186 330l-16 40M326 330l16 40" stroke="url(#tablem)" stroke-width="24" stroke-linecap="round"/>
   <path d="M256 244v122" stroke="#3a1402" stroke-width="22" stroke-linecap="round" opacity="0.9"/>
 
-  <circle cx="328" cy="196" r="40" fill="url(#ballm)"/>
-  <path d="M306 186l22 11 22-11M328 164v22" stroke="#2a3300" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="314" cy="182" r="9" fill="#ffffff" opacity="0.5"/>
+  <g transform="translate(328,196) scale(0.4)" clip-path="url(#ballClip)">
+    <circle r="100" fill="url(#ballY)"/>
+    <path d="M0,-33.3L0,-108" stroke="#10131a" stroke-width="6" stroke-linecap="round"/>
+    <path d="M31.67,-10.29L102.71,-33.37" stroke="#10131a" stroke-width="6" stroke-linecap="round"/>
+    <path d="M19.57,26.94L63.48,87.37" stroke="#10131a" stroke-width="6" stroke-linecap="round"/>
+    <path d="M-19.57,26.94L-63.48,87.37" stroke="#10131a" stroke-width="6" stroke-linecap="round"/>
+    <path d="M-31.67,-10.29L-102.71,-33.37" stroke="#10131a" stroke-width="6" stroke-linecap="round"/>
+    <path d="M0,-37L35.19,-11.43L21.75,29.93L-21.75,29.93L-35.19,-11.43Z" fill="#10131a"/>
+    <path d="M33.5,-46.11L21.52,-83.01L52.9,-105.81L84.29,-83.01L72.3,-46.11Z" fill="#10131a"/>
+    <path d="M54.21,17.61L85.6,-5.19L116.98,17.61L104.99,54.51L66.2,54.51Z" fill="#10131a"/>
+    <path d="M0,57L31.38,79.8L19.4,116.7L-19.4,116.7L-31.38,79.8Z" fill="#10131a"/>
+    <path d="M-54.21,17.61L-66.2,54.51L-104.99,54.51L-116.98,17.61L-85.6,-5.19Z" fill="#10131a"/>
+    <path d="M-33.5,-46.11L-72.3,-46.11L-84.29,-83.01L-52.9,-105.81L-21.52,-83.01Z" fill="#10131a"/>
+    <circle cx="-30" cy="-36" r="42" fill="url(#ballGloss)"/>
+  </g>
 </svg>
