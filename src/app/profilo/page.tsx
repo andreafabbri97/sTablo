@@ -72,7 +72,8 @@ export default async function ProfiloPage() {
           </span>
           <p className="text-sm">
             <span className="font-bold">Aggiungi la tua email</span> qui sotto: serve
-            per recuperare l&apos;account se dimentichi la password.
+            per ricontattarti. Se dimentichi la password, un amministratore può
+            reimpostartela con una password temporanea.
           </p>
         </div>
       )}

@@ -248,6 +248,7 @@ export const GUIDES: Record<string, Guide> = {
         heading: "Account e notifiche",
         points: [
           "Cambia la password dalla sezione Sicurezza.",
+          "Se dimentichi la password, chiedi a un amministratore: può generarti una password temporanea da cambiare poi qui.",
           "Le notifiche push si attivano con un tocco quando l'app te lo propone; da qui puoi gestirle o disattivarle in qualsiasi momento.",
           "Servono per avvisi su conferme, amici e inviti — anche con l'app chiusa.",
           "Su iPhone, installa prima l'app dalla schermata Home, poi consenti le notifiche.",
