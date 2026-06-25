@@ -51,12 +51,21 @@ export const GUIDES: Record<string, Guide> = {
         ],
       },
       {
-        heading: "Generale, Singolo, Doppio e Team",
+        heading: "Stagione, Generale, Singolo, Doppio e Team",
         points: [
-          "Quattro schede: «Generale» unisce tutto, poi Singolo (1v1), Doppio (2v2) e Team.",
+          "Cinque schede: «Stagione» è il mese in corso, poi «Generale» (tutto), Singolo (1v1), Doppio (2v2) e Team.",
           "La scheda «Team» mostra l'Elo delle coppie registrate.",
           "Solo le partite «Classificate» 🏆 muovono l'Elo: le «Amichevoli» 🤝 danno solo XP.",
           "Il picco (peak) è l'Elo più alto che hai mai raggiunto.",
+        ],
+      },
+      {
+        heading: "Stagioni e MVP",
+        points: [
+          "Ogni mese è una stagione a sé: la scheda «Stagione» riparte da zero il primo del mese.",
+          "In stagione conta chi vince di più: 3 punti a vittoria, solo partite classificate.",
+          "Chi guida la stagione è l'MVP del mese, in evidenza in cima alla scheda.",
+          "All'inizio di ogni mese ricevi un push con il recap e l'MVP della stagione appena chiusa.",
         ],
       },
     ],

@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/match-reminders",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/season-recap",
+      "schedule": "0 9 1 * *"
     }
   ]
 }
