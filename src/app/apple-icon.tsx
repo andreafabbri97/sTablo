@@ -32,17 +32,8 @@ const MARK = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" v
       <stop offset="1" stop-color="#f0510f"/>
     </linearGradient>
     <radialGradient id="ballHalo" cx="360" cy="150" r="100" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#ffd21a" stop-opacity="0.5"/>
-      <stop offset="1" stop-color="#ffd21a" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="ballY" cx="0.36" cy="0.30" r="0.82">
-      <stop offset="0" stop-color="#fff27a"/>
-      <stop offset="0.5" stop-color="#ffd21a"/>
-      <stop offset="1" stop-color="#b88900"/>
-    </radialGradient>
-    <radialGradient id="ballGloss" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/>
-      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+      <stop stop-color="#d7ff3e" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#d7ff3e" stop-opacity="0"/>
     </radialGradient>
     <clipPath id="ballClip"><circle r="100"/></clipPath>
     <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
@@ -61,7 +52,7 @@ const MARK = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" v
   <path d="M256 244v66" stroke="#bff4ff" stroke-width="10" stroke-linecap="round" opacity="0.55"/>
   <circle cx="360" cy="150" r="100" fill="url(#ballHalo)"/>
   <g transform="translate(360,150) scale(0.54)" clip-path="url(#ballClip)">
-    <circle r="100" fill="url(#ballY)"/>
+    <circle r="100" fill="#d7ff3e"/>
     <path d="M0,-33.3L0,-108" stroke="#10131a" stroke-width="6" stroke-linecap="round"/>
     <path d="M31.67,-10.29L102.71,-33.37" stroke="#10131a" stroke-width="6" stroke-linecap="round"/>
     <path d="M19.57,26.94L63.48,87.37" stroke="#10131a" stroke-width="6" stroke-linecap="round"/>
@@ -73,7 +64,6 @@ const MARK = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" v
     <path d="M0,57L31.38,79.8L19.4,116.7L-19.4,116.7L-31.38,79.8Z" fill="#10131a"/>
     <path d="M-54.21,17.61L-66.2,54.51L-104.99,54.51L-116.98,17.61L-85.6,-5.19Z" fill="#10131a"/>
     <path d="M-33.5,-46.11L-72.3,-46.11L-84.29,-83.01L-52.9,-105.81L-21.52,-83.01Z" fill="#10131a"/>
-    <circle cx="-30" cy="-36" r="42" fill="url(#ballGloss)"/>
   </g>
 </svg>`;
 
