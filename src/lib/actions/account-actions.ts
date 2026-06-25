@@ -2,13 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { randomInt } from "crypto";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { hash } from "bcryptjs";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { assertAdmin } from "@/lib/auth-helpers";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import type { ActionResult } from "./auth-actions";
+
+/** A user id always comes from our own admin list, but validate it anyway so a
+ *  malformed value can't reach Postgres as a bad uuid cast. */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Admin-mediated password recovery returns the new temp password ONCE so the
  *  admin can read it out to the user (we never email it — no domain to send from). */
@@ -51,7 +56,24 @@ export async function setUserRole(
   if (userId === me.id) {
     return { ok: false, error: "Non puoi cambiare il tuo ruolo" };
   }
+  if (!UUID_RE.test(userId)) {
+    return { ok: false, error: "ID non valido" };
+  }
   try {
+    if (makeAdmin) {
+      // Never promote a blocked account: it would create an admin who can't log
+      // in (getCurrentUser bounces blocked users). The admin must unblock first.
+      const target = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+        columns: { blocked: true },
+      });
+      if (target?.blocked) {
+        return {
+          ok: false,
+          error: "Sblocca l'account prima di renderlo amministratore",
+        };
+      }
+    }
     await db
       .update(users)
       .set({ role: makeAdmin ? "admin" : "player" })
@@ -61,6 +83,59 @@ export async function setUserRole(
   } catch (error) {
     console.error("[setUserRole]", error);
     return { ok: false, error: "Errore nel cambio ruolo" };
+  }
+}
+
+/**
+ * Admin blocks/unblocks an account ("blocca / sblocca profilo"). A blocked user
+ * can't log in and is bounced from any live session on the next request. Two
+ * hard guards, enforced server-side even though the UI hides the button for
+ * these rows: you can never block yourself, and admins can't be blocked (so the
+ * panel can't be used to lock every admin out of the app).
+ */
+export async function setUserBlocked(
+  userId: string,
+  blocked: boolean,
+): Promise<ActionResult> {
+  let me;
+  try {
+    me = await assertAdmin();
+  } catch {
+    return { ok: false, error: "Azione riservata all'amministratore" };
+  }
+  if (!UUID_RE.test(userId)) {
+    return { ok: false, error: "ID non valido" };
+  }
+  if (userId === me.id) {
+    return { ok: false, error: "Non puoi bloccare il tuo account" };
+  }
+  try {
+    if (blocked) {
+      // Block atomically: the "is not an admin" check lives in the WHERE clause,
+      // so an admin can NEVER be locked out — even if the target's role changed
+      // between a separate read and this write. 0 rows updated ⇒ the row is an
+      // admin (or no longer exists) ⇒ refuse.
+      const updated = await db
+        .update(users)
+        .set({ blocked: true })
+        .where(and(eq(users.id, userId), ne(users.role, "admin")))
+        .returning({ id: users.id });
+      if (updated.length === 0) {
+        return { ok: false, error: "Non puoi bloccare un amministratore" };
+      }
+    } else {
+      // Unblocking is always a safe recovery (even for an edge-case admin who
+      // ended up blocked), so there's no role guard on this direction.
+      await db
+        .update(users)
+        .set({ blocked: false })
+        .where(eq(users.id, userId));
+    }
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (error) {
+    console.error("[setUserBlocked]", error);
+    return { ok: false, error: "Errore nel blocco dell'account" };
   }
 }
 

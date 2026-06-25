@@ -88,6 +88,13 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   passwordHash: text("password_hash").notNull(),
   role: userRole("role").notNull().default("player"),
+  /**
+   * Admin "blocca profilo" switch — a banned account. When true the user cannot
+   * log in (enforced in `authorize`) and any live session is bounced on the next
+   * request (enforced in `getCurrentUser`). This is distinct from the chat-level
+   * `userBlocks` table, which is a pairwise mute between two players.
+   */
+  blocked: boolean("blocked").notNull().default(false),
   playerId: uuid("player_id").references(() => players.id, {
     onDelete: "set null",
   }),

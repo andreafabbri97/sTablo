@@ -399,6 +399,7 @@ export async function getAllAccounts() {
       name: users.name,
       username: users.username,
       role: users.role,
+      blocked: users.blocked,
       slug: players.slug,
       avatarColor: players.avatarColor,
       avatarUrl: players.avatarUrl,

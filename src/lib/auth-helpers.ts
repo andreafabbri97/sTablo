@@ -1,4 +1,8 @@
+import { cache } from "react";
+import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
 
 export type SessionUser = {
   id: string;
@@ -9,10 +13,35 @@ export type SessionUser = {
   playerId: string | null;
 };
 
+/**
+ * Has an admin blocked this account ("blocca profilo")? One indexed primary-key
+ * lookup, deduped per request via React `cache` so the many getCurrentUser()
+ * calls in a single render (layout + page + actions) share a single query.
+ * Fails OPEN (returns false) on any DB error: a transient DB blip must never
+ * lock the whole group out of the app.
+ */
+const isAccountBlocked = cache(async (userId: string): Promise<boolean> => {
+  try {
+    const row = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: { blocked: true },
+    });
+    return row?.blocked ?? false;
+  } catch (error) {
+    console.error("[isAccountBlocked]", error);
+    return false;
+  }
+});
+
 export async function getCurrentUser(): Promise<SessionUser | null> {
   const session = await auth();
   if (!session?.user) return null;
-  return session.user as SessionUser;
+  const user = session.user as SessionUser;
+  // The JWT is stateless, so a session created before the block stays valid
+  // until it expires. Re-check on every read to bounce a just-blocked user on
+  // their next request — treated exactly like being logged out.
+  if (await isAccountBlocked(user.id)) return null;
+  return user;
 }
 
 export async function isAdmin(): Promise<boolean> {

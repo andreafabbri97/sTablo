@@ -129,7 +129,9 @@ export default async function AdminPage() {
         </CardTitle>
         <p className="mb-3 text-sm text-muted">
           Se un giocatore dimentica la password, qui ne generi una temporanea da
-          comunicargli: la cambierà poi dal suo profilo.
+          comunicargli: la cambierà poi dal suo profilo. Puoi anche bloccare un
+          profilo: chi è bloccato non può più accedere finché non lo sblocchi (gli
+          amministratori non si possono bloccare).
         </p>
         <AccountManager accounts={accounts} currentUserId={user.id} />
       </Card>

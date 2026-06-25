@@ -96,6 +96,13 @@ const ENSURE_SCHEMA_SQL = [
   `CREATE TABLE IF NOT EXISTS "user_blocks" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "blocker_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE, "blocked_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE, "created_at" timestamp with time zone DEFAULT now() NOT NULL);`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "user_block_pair_idx" ON "user_blocks" ("blocker_id","blocked_id");`,
   `CREATE INDEX IF NOT EXISTS "user_block_blocked_idx" ON "user_blocks" ("blocked_id");`,
+  // Admin "blocca profilo" account ban (migration 0019). authorize() blocks the
+  // login and getCurrentUser() bounces any live session when true, so guarantee
+  // the column exists regardless of migrate()'s journal bookkeeping. Defaults to
+  // false so every existing account stays active. NOTE: this is the account-level
+  // ban on users; the pairwise chat block above lives in the separate user_blocks
+  // table.
+  `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "blocked" boolean DEFAULT false NOT NULL;`,
 ];
 
 async function main() {

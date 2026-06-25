@@ -8,12 +8,16 @@ import {
   Copy,
   Check,
   Loader2,
+  Ban,
+  LockOpen,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   resetUserPasswordToTemp,
   setUserRole,
+  setUserBlocked,
 } from "@/lib/actions/account-actions";
 
 export type Account = {
@@ -21,6 +25,7 @@ export type Account = {
   name: string | null;
   username: string | null;
   role: "admin" | "player";
+  blocked: boolean;
   slug: string | null;
   avatarColor: number | null;
   avatarUrl: string | null;
@@ -74,6 +79,14 @@ function AccountRow({ account, isSelf }: { account: Account; isSelf: boolean }) 
     });
   }
 
+  function onToggleBlock() {
+    setError(null);
+    startTransition(async () => {
+      const res = await setUserBlocked(account.userId, !account.blocked);
+      if (!res.ok) setError(res.error);
+    });
+  }
+
   async function copy() {
     if (!temp) return;
     try {
@@ -86,25 +99,37 @@ function AccountRow({ account, isSelf }: { account: Account; isSelf: boolean }) 
   }
 
   return (
-    <li className="rounded-xl border border-border bg-surface p-3">
+    <li
+      className={cn(
+        "rounded-xl border p-3",
+        account.blocked ? "border-loss/40 bg-loss/5" : "border-border bg-surface",
+      )}
+    >
       <div className="flex items-center gap-2">
-        <Avatar
-          name={label}
-          colorIndex={account.avatarColor ?? 0}
-          imageUrl={account.avatarUrl}
-          size="xs"
-        />
-        <div className="min-w-0 flex-1">
+        <div className={cn(account.blocked && "opacity-60")}>
+          <Avatar
+            name={label}
+            colorIndex={account.avatarColor ?? 0}
+            imageUrl={account.avatarUrl}
+            size="xs"
+          />
+        </div>
+        <div className={cn("min-w-0 flex-1", account.blocked && "opacity-60")}>
           <p className="truncate text-sm font-semibold">{label}</p>
           {account.username && (
             <p className="truncate text-xs text-muted">@{account.username}</p>
           )}
         </div>
+        {account.blocked && (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-loss/15 px-2 py-0.5 text-[11px] font-bold text-loss">
+            <Ban className="h-3 w-3" /> Bloccato
+          </span>
+        )}
         <span
           className={
             account.role === "admin"
-              ? "rounded-full bg-brand/15 px-2 py-0.5 text-[11px] font-bold text-brand"
-              : "rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-muted"
+              ? "shrink-0 rounded-full bg-brand/15 px-2 py-0.5 text-[11px] font-bold text-brand"
+              : "shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-muted"
           }
         >
           {account.role === "admin" ? "Admin" : "Giocatore"}
@@ -126,7 +151,7 @@ function AccountRow({ account, isSelf }: { account: Account; isSelf: boolean }) 
           )}
           Reset password
         </Button>
-        {!isSelf && (
+        {!isSelf && !account.blocked && (
           <Button
             type="button"
             variant="ghost"
@@ -144,6 +169,35 @@ function AccountRow({ account, isSelf }: { account: Account; isSelf: boolean }) 
               </>
             )}
           </Button>
+        )}
+        {/* A blocked row shows only Reset + Sblocca: hiding the role toggle keeps
+            anyone from promoting a blocked account into an admin who can't log
+            in. Unblock is offered for ANY blocked account (even an edge-case
+            blocked admin) so nobody can get permanently stuck; Block is offered
+            only for a non-admin, not-already-blocked row. */}
+        {!isSelf && account.blocked ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onToggleBlock}
+            disabled={pending}
+          >
+            <LockOpen className="h-3.5 w-3.5" /> Sblocca profilo
+          </Button>
+        ) : (
+          !isSelf &&
+          account.role !== "admin" && (
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              onClick={onToggleBlock}
+              disabled={pending}
+            >
+              <Ban className="h-3.5 w-3.5" /> Blocca profilo
+            </Button>
+          )
         )}
       </div>
 

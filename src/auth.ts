@@ -38,6 +38,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const ok = await compare(password, user.passwordHash);
         if (!ok) return null;
 
+        // Blocked by an admin ("blocca profilo"): no login. We fail the same way
+        // as bad credentials (null) so we don't leak that the account exists or
+        // that it's specifically blocked.
+        if (user.blocked) return null;
+
         return {
           id: user.id,
           name: user.name,
