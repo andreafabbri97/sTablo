@@ -13,15 +13,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label, Input, FieldError } from "@/components/ui/field";
-import { PlayerCombobox } from "@/components/ui/player-combobox";
+import { PlayerCombobox, type PlayerOption } from "@/components/ui/player-combobox";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { proposeMatch, undoMatch } from "@/lib/actions/match-actions";
 import { computeElo, sideRating } from "@/lib/elo";
 
-type Option = {
-  id: string;
-  name: string;
+type Option = PlayerOption & {
   eloSingles: number;
   eloDoubles: number;
 };

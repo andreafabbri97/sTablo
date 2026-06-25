@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { CalendarPlus, Swords } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label, Input, FieldError } from "@/components/ui/field";
-import { PlayerCombobox } from "@/components/ui/player-combobox";
+import { PlayerCombobox, type PlayerOption } from "@/components/ui/player-combobox";
 import { cn } from "@/lib/utils";
 import { scheduleMatch } from "@/lib/actions/match-actions";
 
-type Option = { id: string; name: string };
+type Option = PlayerOption;
 
 /**
  * Local wall-clock `YYYY-MM-DDTHH:mm` two hours from now — a sensible default

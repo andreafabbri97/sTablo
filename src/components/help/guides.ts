@@ -173,7 +173,7 @@ export const GUIDES: Record<string, Guide> = {
         points: [
           "Scegli 1 vs 1 o 2 vs 2.",
           "Scegli «Classificata» 🏆 (muove l'Elo) o «Amichevole» 🤝 (solo XP): per le partite non esiste pubblico/privato, questa è l'unica distinzione.",
-          "Tocca una casella giocatore e cerca per nome: puoi inserire chiunque sia registrato.",
+          "Tocca una casella giocatore: si apre un elenco cercabile per nome o username, con foto e soprannome per scegliere la persona giusta.",
           "Imposta i punteggi (puoi digitarli o usare + / −).",
           "Data e ora si compilano da sole con l'istante del salvataggio, se le lasci vuote.",
         ],
@@ -284,8 +284,8 @@ export const GUIDES: Record<string, Guide> = {
         heading: "Scegliere i partecipanti",
         points: [
           "Nel singolo selezioni i giocatori: l'ordine di scelta dà le teste di serie.",
-          "Nel doppio tocchi due giocatori per formare una coppia.",
-          "Con tanti iscritti usa la barra «Cerca giocatore» per trovarli al volo.",
+          "Nel doppio tocchi un giocatore e poi il suo compagno per formare la coppia.",
+          "Si apre un elenco cercabile per nome o username, con foto e soprannome: comodo quando siete in tanti.",
         ],
       },
     ],

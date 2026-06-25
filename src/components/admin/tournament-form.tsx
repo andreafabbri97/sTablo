@@ -1,14 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Swords, Check, X, Users, Search } from "lucide-react";
+import { Swords, Check, X, Users, Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label, Input, Textarea, FieldError } from "@/components/ui/field";
+import { Modal } from "@/components/ui/modal";
+import {
+  PlayerOptionLabel,
+  type PlayerOption,
+} from "@/components/ui/player-option-row";
 import { cn } from "@/lib/utils";
 import { createTournament } from "@/lib/actions/tournament-actions";
 
-type Option = { id: string; name: string };
+type Option = PlayerOption;
 type Format = "league" | "round_robin" | "single_elim" | "groups_knockout" | "swiss" | "americano";
 type Discipline = "singles" | "doubles";
 type Pair = { playerId: string; partnerId: string };
@@ -315,52 +320,115 @@ function SinglesPicker({
   selected: string[];
   onToggle: (id: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const byId = useMemo(
+    () => new Map(players.map((p) => [p.id, p])),
+    [players],
+  );
+
   const q = query.trim().toLowerCase();
-  const shown = q ? players.filter((p) => p.name.toLowerCase().includes(q)) : players;
+  const shown = q
+    ? players.filter((p) =>
+        [p.name, p.nickname, p.username]
+          .filter(Boolean)
+          .some((s) => (s as string).toLowerCase().includes(q)),
+      )
+    : players;
+
+  function close() {
+    setQuery("");
+    setOpen(false);
+  }
 
   return (
     <div>
-      <Label>Partecipanti ({selected.length} selezionati)</Label>
-      <p className="mb-2 text-xs text-muted">L&apos;ordine di selezione determina le teste di serie.</p>
-      {players.length === 0 ? (
-        <p className="text-sm text-muted">Nessun giocatore disponibile.</p>
-      ) : (
-        <>
-          {players.length > 8 && <PickerSearch value={query} onChange={setQuery} />}
-          {shown.length === 0 ? (
-            <p className="rounded-xl border border-border p-3 text-sm text-muted">Nessun giocatore trovato.</p>
-          ) : (
-            <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-border p-2 sm:grid-cols-3">
-              {shown.map((o) => {
-            const idx = selected.indexOf(o.id);
-            const isSel = idx >= 0;
-            return (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => onToggle(o.id)}
-                className={cn(
-                  "flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition",
-                  isSel ? "bg-brand text-white" : "bg-surface-2 text-foreground hover:bg-surface",
-                )}
-              >
-                <span
-                  className={cn(
-                    "grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-bold",
-                    isSel ? "bg-white/25" : "bg-border",
-                  )}
-                >
-                  {isSel ? idx + 1 : ""}
-                </span>
-                <span className="truncate">{o.name}</span>
-              </button>
-            );
-              })}
-            </div>
-          )}
-        </>
+      <Label>Partecipanti ({selected.length})</Label>
+      <p className="mb-2 text-xs text-muted">
+        L&apos;ordine di selezione determina le teste di serie.
+      </p>
+
+      {/* Chosen players, in seed order — tap to remove */}
+      {selected.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {selected.map((id, i) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onToggle(id)}
+              className="group inline-flex items-center gap-1.5 rounded-full bg-brand py-1 pl-1.5 pr-2.5 text-sm font-semibold text-white"
+            >
+              <span className="grid h-5 w-5 place-items-center rounded-full bg-white/25 text-[10px] font-bold">
+                {i + 1}
+              </span>
+              <span className="max-w-[10rem] truncate">
+                {byId.get(id)?.name ?? "?"}
+              </span>
+              <X className="h-3.5 w-3.5 opacity-80 transition group-hover:opacity-100" />
+            </button>
+          ))}
+        </div>
       )}
+
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        disabled={players.length === 0}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface py-3 text-sm font-semibold text-brand transition hover:bg-surface-2 disabled:opacity-50"
+      >
+        <Plus className="h-4 w-4" />
+        {players.length === 0
+          ? "Nessun giocatore disponibile"
+          : selected.length
+            ? "Aggiungi o togli giocatori"
+            : "Scegli i partecipanti"}
+      </button>
+
+      <Modal
+        open={open}
+        onClose={close}
+        title="Partecipanti"
+        icon={<Users className="h-5 w-5 text-brand" />}
+      >
+        <div className="space-y-3">
+          <PickerSearch value={query} onChange={setQuery} />
+          <div className="-mx-1 max-h-[50vh] space-y-1 overflow-y-auto px-1">
+            {shown.length === 0 ? (
+              <p className="px-2 py-8 text-center text-sm text-muted">
+                Nessun giocatore trovato
+              </p>
+            ) : (
+              shown.map((p) => {
+                const idx = selected.indexOf(p.id);
+                const isSel = idx >= 0;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => onToggle(p.id)}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition",
+                      isSel ? "bg-brand-soft" : "hover:bg-surface-2",
+                    )}
+                  >
+                    <PlayerOptionLabel player={p} />
+                    {isSel ? (
+                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand text-[11px] font-bold text-white">
+                        {idx + 1}
+                      </span>
+                    ) : (
+                      <Plus className="h-4 w-4 shrink-0 text-muted" />
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+          <Button type="button" className="w-full" onClick={close}>
+            Fatto ({selected.length})
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -382,21 +450,32 @@ function DoublesPicker({
   onPick: (id: string) => void;
   onRemovePair: (idx: number) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const available = players.filter((p) => !usedInPairs.has(p.id));
   const q = query.trim().toLowerCase();
   const shownAvail = q
-    ? available.filter((p) => p.name.toLowerCase().includes(q))
+    ? available.filter((p) =>
+        [p.name, p.nickname, p.username]
+          .filter(Boolean)
+          .some((s) => (s as string).toLowerCase().includes(q)),
+      )
     : available;
+
+  const pairWord = (n: number) => (n === 1 ? "coppia" : "coppie");
+
+  function close() {
+    setQuery("");
+    setOpen(false);
+  }
 
   return (
     <div className="space-y-3">
       <div>
         <Label>Coppie ({pairs.length})</Label>
         <p className="mb-2 text-xs text-muted">
-          {pending
-            ? `Scegli il compagno di ${nameById.get(pending) ?? "…"}`
-            : "Tocca un giocatore, poi il suo compagno. L'ordine determina le teste di serie."}
+          Tocca un giocatore, poi il suo compagno. L&apos;ordine determina le
+          teste di serie.
         </p>
       </div>
 
@@ -429,42 +508,73 @@ function DoublesPicker({
         </div>
       )}
 
-      {/* Available players */}
-      {available.length === 0 ? (
-        <p className="text-sm text-muted">
-          {players.length === 0
-            ? "Nessun giocatore disponibile."
-            : "Tutti i giocatori sono in coppia."}
-        </p>
-      ) : (
-        <>
-          {available.length > 8 && <PickerSearch value={query} onChange={setQuery} />}
-          {shownAvail.length === 0 ? (
-            <p className="rounded-xl border border-border p-3 text-sm text-muted">Nessun giocatore trovato.</p>
-          ) : (
-            <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-border p-2 sm:grid-cols-3">
-              {shownAvail.map((o) => {
-                const isPending = pending === o.id;
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        disabled={players.length === 0}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface py-3 text-sm font-semibold text-brand transition hover:bg-surface-2 disabled:opacity-50"
+      >
+        <Plus className="h-4 w-4" />
+        {players.length === 0
+          ? "Nessun giocatore disponibile"
+          : pairs.length
+            ? "Forma altre coppie"
+            : "Forma le coppie"}
+      </button>
+
+      <Modal
+        open={open}
+        onClose={close}
+        title="Forma le coppie"
+        icon={<Users className="h-5 w-5 text-brand" />}
+      >
+        <div className="space-y-3">
+          <p className="rounded-xl bg-surface px-3 py-2 text-xs text-muted">
+            {pending
+              ? `Scegli il compagno di ${nameById.get(pending) ?? "…"}`
+              : "Tocca un giocatore, poi il suo compagno per formare una coppia."}
+          </p>
+          <PickerSearch value={query} onChange={setQuery} />
+          <div className="-mx-1 max-h-[45vh] space-y-1 overflow-y-auto px-1">
+            {available.length === 0 ? (
+              <p className="px-2 py-8 text-center text-sm text-muted">
+                Tutti i giocatori sono in coppia 🎉
+              </p>
+            ) : shownAvail.length === 0 ? (
+              <p className="px-2 py-8 text-center text-sm text-muted">
+                Nessun giocatore trovato
+              </p>
+            ) : (
+              shownAvail.map((p) => {
+                const isPending = pending === p.id;
                 return (
                   <button
-                    key={o.id}
+                    key={p.id}
                     type="button"
-                    onClick={() => onPick(o.id)}
+                    onClick={() => onPick(p.id)}
                     className={cn(
-                      "flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition",
+                      "flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition",
                       isPending
-                        ? "bg-brand text-white ring-2 ring-brand"
-                        : "bg-surface-2 text-foreground hover:bg-surface",
+                        ? "bg-brand-soft ring-2 ring-brand"
+                        : "hover:bg-surface-2",
                     )}
                   >
-                    <span className="truncate">{o.name}</span>
+                    <PlayerOptionLabel player={p} />
+                    {isPending && (
+                      <span className="shrink-0 text-xs font-bold text-brand">
+                        in attesa…
+                      </span>
+                    )}
                   </button>
                 );
-              })}
-            </div>
-          )}
-        </>
-      )}
+              })
+            )}
+          </div>
+          <Button type="button" className="w-full" onClick={close}>
+            Fatto ({pairs.length} {pairWord(pairs.length)})
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, FieldError } from "@/components/ui/field";
-import { PlayerCombobox } from "@/components/ui/player-combobox";
+import { PlayerCombobox, type PlayerOption } from "@/components/ui/player-combobox";
 import { createTeam } from "@/lib/actions/player-actions";
 
-type Option = { id: string; name: string };
+type Option = PlayerOption;
 
 export function CreateTeamForm({ players }: { players: Option[] }) {
   const router = useRouter();

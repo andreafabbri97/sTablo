@@ -289,10 +289,29 @@ export const getEloSeries = cachedQuery(
   ["elo-series"],
 );
 
+/**
+ * Username of the account linked to a player, as a scalar subquery so the
+ * picker queries stay one-row-per-player (a LEFT JOIN could duplicate a player
+ * if two accounts ever pointed at it). Null for players with no account.
+ */
+const linkedUsername = sql<string | null>`(
+  select ${users.username} from ${users}
+  where ${users.playerId} = ${players.id}
+  limit 1
+)`;
+
 export const getPlayerOptions = cachedQuery(
   async () =>
     db
-      .select({ id: players.id, name: players.name, slug: players.slug })
+      .select({
+        id: players.id,
+        name: players.name,
+        slug: players.slug,
+        nickname: players.nickname,
+        avatarColor: players.avatarColor,
+        avatarUrl: players.avatarUrl,
+        username: linkedUsername,
+      })
       .from(players)
       .where(eq(players.active, true))
       .orderBy(players.name),
@@ -301,8 +320,8 @@ export const getPlayerOptions = cachedQuery(
 
 /**
  * Players plus their current ratings, used by the match form to preview the
- * live Elo swing before a result is saved. Kept separate from
- * getPlayerOptions so the tournament/admin selects keep their lean shape.
+ * live Elo swing before a result is saved. Same avatar/handle enrichment as
+ * getPlayerOptions so the picker modal can show a rich row.
  */
 export const getPlayerMatchOptions = cachedQuery(
   async () =>
@@ -312,6 +331,10 @@ export const getPlayerMatchOptions = cachedQuery(
         name: players.name,
         eloSingles: players.eloSingles,
         eloDoubles: players.eloDoubles,
+        nickname: players.nickname,
+        avatarColor: players.avatarColor,
+        avatarUrl: players.avatarUrl,
+        username: linkedUsername,
       })
       .from(players)
       .where(eq(players.active, true))
