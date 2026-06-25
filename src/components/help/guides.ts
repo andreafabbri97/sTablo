@@ -221,6 +221,7 @@ export const GUIDES: Record<string, Guide> = {
         points: [
           "🌍 Pubblico: compare nella lista tornei e chiunque può vederlo e iscriversi col link.",
           "🔒 Privato: nascosto dalla lista; lo vedono ed entrano solo le persone che inviti tu o con cui condividi il link.",
+          "Un torneo privato può essere solo amichevole 🤝: i tornei classificati 🏆 muovono l'Elo e la classifica generale, quindi sono sempre pubblici.",
           "Lo decidi quando crei un torneo a «invito aperto».",
         ],
       },
@@ -261,6 +262,7 @@ export const GUIDES: Record<string, Guide> = {
         points: [
           "🌍 Pubblico: compare nella lista tornei, chiunque può vederlo e iscriversi col link.",
           "🔒 Privato: nascosto dalla lista; lo vedono ed entrano solo le persone che inviti tu o con cui condividi il link.",
+          "Un privato può essere solo amichevole 🤝: se vuoi un torneo classificato 🏆 (che muove l'Elo) dev'essere pubblico.",
         ],
       },
       {

@@ -1020,6 +1020,17 @@ export async function createOpenTournament(
     return { ok: false, error: "Disciplina non valida" };
   }
 
+  // Invariante: un torneo classificato muove l'Elo — e quindi la classifica
+  // generale — perciò deve restare visibile a tutti. Un torneo privato può
+  // essere solo amichevole. L'UI lo impedisce già; questo è il presidio server.
+  if (input.visibility === "private" && input.ranked) {
+    return {
+      ok: false,
+      error:
+        "Un torneo privato può essere solo amichevole: i tornei classificati muovono l'Elo, quindi devono essere pubblici",
+    };
+  }
+
   const token = crypto.randomUUID();
   const slug = await uniqueTournamentSlug(input.name);
   const config: TournamentConfig = {

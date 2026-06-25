@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Swords } from "lucide-react";
+import { Swords, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label, Input, Textarea, FieldError } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
@@ -38,6 +38,24 @@ export function TournamentOpenForm() {
   const [loading, setLoading] = useState(false);
 
   const isAmericano = format === "americano";
+
+  // Un torneo classificato muove l'Elo (e la classifica generale), quindi deve
+  // restare pubblico; un privato può essere solo amichevole. I due interruttori
+  // sono perciò mutuamente esclusivi: accenderne uno spegne l'altro.
+  function toggleRanked() {
+    setRanked((v) => {
+      const next = !v;
+      if (next) setIsPrivate(false);
+      return next;
+    });
+  }
+  function togglePrivate() {
+    setIsPrivate((v) => {
+      const next = !v;
+      if (next) setRanked(false);
+      return next;
+    });
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -189,7 +207,7 @@ export function TournamentOpenForm() {
           type="button"
           role="switch"
           aria-checked={ranked}
-          onClick={() => setRanked((v) => !v)}
+          onClick={toggleRanked}
           className={cn(
             "relative h-6 w-11 rounded-full transition",
             ranked ? "bg-brand" : "bg-border",
@@ -209,7 +227,7 @@ export function TournamentOpenForm() {
           type="button"
           role="switch"
           aria-checked={isPrivate}
-          onClick={() => setIsPrivate((v) => !v)}
+          onClick={togglePrivate}
           className={cn(
             "relative h-6 w-11 rounded-full transition",
             isPrivate ? "bg-brand" : "bg-border",
@@ -226,6 +244,21 @@ export function TournamentOpenForm() {
           </p>
         </div>
       </div>
+
+      {/* Regola: classificato ⇒ pubblico, privato ⇒ amichevole */}
+      <p className="flex items-start gap-2 px-1 text-xs text-muted">
+        <Info className="mt-0.5 h-4 w-4 shrink-0" />
+        <span>
+          Un torneo{" "}
+          <strong className="font-semibold text-foreground">classificato</strong>{" "}
+          muove l&apos;Elo e la classifica generale, quindi resta sempre{" "}
+          <strong className="font-semibold text-foreground">pubblico</strong>. Un
+          torneo{" "}
+          <strong className="font-semibold text-foreground">privato</strong> può
+          essere solo{" "}
+          <strong className="font-semibold text-foreground">amichevole</strong>.
+        </span>
+      </p>
 
       <div>
         <Label htmlFor="desc">Descrizione (opzionale)</Label>
