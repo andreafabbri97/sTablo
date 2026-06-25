@@ -18,95 +18,15 @@ import {
   type Attributes,
   type LevelInfo,
 } from "./gamification";
+import {
+  foldResults,
+  xpFromResults,
+  type ResultRow,
+  type StatLine,
+} from "./stats-fold";
 
-export type StatLine = {
-  played: number;
-  won: number;
-  lost: number;
-  pointsFor: number;
-  pointsAgainst: number;
-  pointDiff: number;
-  winRate: number;
-  bestStreak: number;
-  currentStreak: number;
-  singlesPlayed: number;
-  singlesWon: number;
-  doublesPlayed: number;
-  doublesWon: number;
-};
-
-const EMPTY: StatLine = {
-  played: 0,
-  won: 0,
-  lost: 0,
-  pointsFor: 0,
-  pointsAgainst: 0,
-  pointDiff: 0,
-  winRate: 0,
-  bestStreak: 0,
-  currentStreak: 0,
-  singlesPlayed: 0,
-  singlesWon: 0,
-  doublesPlayed: 0,
-  doublesWon: 0,
-};
-
-type ResultRow = {
-  format: "singles" | "doubles";
-  won: boolean;
-  pointsFor: number;
-  pointsAgainst: number;
-  playedAt: Date;
-  ranked: boolean;
-};
-
-/** Fold an ordered (newest-first) list of results into a stat line. */
-export function foldResults(rows: ResultRow[]): StatLine {
-  if (rows.length === 0) return { ...EMPTY };
-  const oldestFirst = [...rows].sort(
-    (a, b) => a.playedAt.getTime() - b.playedAt.getTime(),
-  );
-
-  const line: StatLine = { ...EMPTY };
-  let streak = 0;
-  let best = 0;
-
-  for (const r of oldestFirst) {
-    line.played++;
-    line.pointsFor += r.pointsFor;
-    line.pointsAgainst += r.pointsAgainst;
-    if (r.format === "singles") {
-      line.singlesPlayed++;
-      if (r.won) line.singlesWon++;
-    } else {
-      line.doublesPlayed++;
-      if (r.won) line.doublesWon++;
-    }
-    if (r.won) {
-      line.won++;
-      streak = streak >= 0 ? streak + 1 : 1;
-      best = Math.max(best, streak);
-    } else {
-      line.lost++;
-      streak = streak <= 0 ? streak - 1 : -1;
-    }
-  }
-
-  line.pointDiff = line.pointsFor - line.pointsAgainst;
-  line.winRate = line.played > 0 ? line.won / line.played : 0;
-  line.bestStreak = best;
-  line.currentStreak = streak;
-  return line;
-}
-
-/** Total XP from a stat line plus tournament wins. */
-export function xpFromResults(rows: ResultRow[], tournamentsWon: number) {
-  const matchXpTotal = rows.reduce(
-    (sum, r) => sum + matchXp(r.won, r.pointsFor, r.pointsAgainst),
-    0,
-  );
-  return matchXpTotal + tournamentsWon * 250;
-}
+export type { StatLine, ResultRow };
+export { foldResults, xpFromResults };
 
 async function loadResultRows(playerId: string): Promise<ResultRow[]> {
   const rows = await db
