@@ -45,7 +45,7 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · Drizzle ORM · Vercel Po
 4. **Crea le tabelle**: da locale, con `POSTGRES_URL` nel `.env`, esegui:
    ```bash
    npm run db:push       # crea lo schema sul database
-   npm run db:seed       # (opzionale) 7 giocatori + superadmin + partite demo
+   npm run db:seed       # (opzionale) 7 giocatori + superadmin + squadre
    ```
 5. **Deploy**. Fatto. 🎉
 
@@ -85,7 +85,7 @@ I 7 giocatori iniziali: mesh, bernu, edo, toro, dadda, pau, jaco.
 | `npm run db:push` | Applica lo schema al database |
 | `npm run db:migrate` | Esegue le migrazioni |
 | `npm run db:studio` | Drizzle Studio (GUI del DB) |
-| `npm run db:seed` | Popola giocatori, admin e partite demo |
+| `npm run db:seed` | Popola giocatori, admin e squadre (le partite demo si gestiscono dal pannello admin) |
 
 ---
 

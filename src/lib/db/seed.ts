@@ -1,10 +1,9 @@
 import "dotenv/config";
 import { pathToFileURL } from "node:url";
 import { hash } from "bcryptjs";
-import { eq, sql, and, or } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 import { db } from "./index";
-import { players, users, teams, matches, friendships } from "./schema";
-import { insertDemoMatches } from "../demo";
+import { players, users, teams, friendships } from "./schema";
 import { slugify, colorFromString } from "../utils";
 
 /* The founding crew of the tavolino — names from Rimini. */
@@ -156,12 +155,13 @@ export async function seed() {
   }
   if (friendsAdded > 0) console.log(`  + ${friendsAdded} amicizie tra i giocatori`);
 
-  // --- demo matches (only on a brand-new empty db) ---
-  const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(matches);
-  if (count === 0) {
-    const n = await insertDemoMatches();
-    console.log(`  + ${n} partite demo (10 singolo + 10 doppio)`);
-  }
+  // Demo matches are intentionally NOT auto-seeded here. They used to be created
+  // whenever the matches table was empty — but this seed re-runs on every deploy
+  // (see scripts/predeploy.ts), so removing them (admin → "Rimuovi demo") only
+  // stuck until the next deploy saw an empty table, looked "brand new" again, and
+  // recreated them: the zombie-demo bug. Demo data is now purely admin-managed
+  // from the admin panel (Genera / Rimuovi demo), so a deletion is permanent.
+  // This seed only ensures the core accounts/teams/friendships exist.
 
   console.log("✅ Seed completato.");
 }
