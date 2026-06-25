@@ -13,8 +13,8 @@ export function SiteHeader() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border glass shadow-[0_8px_30px_-18px_rgba(2,8,23,0.45)]">
-      <div className="mx-auto flex h-16 max-w-5xl items-center gap-2 px-4">
+    <header className="sticky top-0 z-40 border-b border-border glass shadow-[0_8px_30px_-18px_rgba(2,8,23,0.45)] pt-[env(safe-area-inset-top)]">
+      <div className="mx-auto flex h-16 max-w-5xl items-center gap-2 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
         <Link href="/" className="mr-2 transition-transform hover:scale-105">
           <Logo withWordmark />
         </Link>

@@ -8,13 +8,13 @@ export function SiteFooter() {
 
   return (
     <footer className="mt-14 border-t border-border pt-6 text-center">
-      <p className="text-sm text-muted">
+      <p className="text-xs text-muted">
         Creato da{" "}
         <span className="font-display font-semibold text-foreground">
           Andrea Fabbri
         </span>
       </p>
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-0.5 text-[11px] text-muted">
         © {year} sTablo · Tutti i diritti riservati
       </p>
     </footer>

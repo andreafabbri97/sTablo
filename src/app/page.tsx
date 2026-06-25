@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { MatchCard } from "@/components/match-card";
+import { FootvolleyBall } from "@/components/footvolley-ball";
 import { EmptyState } from "@/components/ui/page";
 import { getRanking } from "@/lib/stats";
 import { getRecentMatches } from "@/lib/queries";
@@ -106,7 +107,7 @@ function Hero({ loggedIn }: { loggedIn: boolean }) {
         className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full opacity-30 blur-3xl"
         style={{ background: "radial-gradient(circle, var(--brand), transparent 70%)" }}
       />
-      <div className="pointer-events-none absolute right-8 top-8 text-5xl animate-float">⚽</div>
+      <FootvolleyBall className="pointer-events-none absolute right-6 top-6 h-16 w-16 animate-float drop-shadow-[0_10px_20px_rgba(2,8,23,0.45)] sm:right-8 sm:h-20 sm:w-20" />
       <div className="relative max-w-lg">
         <Badge tone="ball" className="mb-3">🏖️ Rimini Beach Sport</Badge>
         <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
