@@ -2,11 +2,19 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Minus, Plus, TrendingUp } from "lucide-react";
+import {
+  Save,
+  Minus,
+  Plus,
+  TrendingUp,
+  CheckCircle2,
+  Undo2,
+  ArrowRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label, Select, Input, FieldError } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
-import { proposeMatch } from "@/lib/actions/match-actions";
+import { proposeMatch, undoMatch } from "@/lib/actions/match-actions";
 import { computeElo, sideRating } from "@/lib/elo";
 
 type Option = {
@@ -35,6 +43,11 @@ export function MatchForm({
   );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // After a successful save we keep the user here with an inline "undo" instead
+  // of bouncing straight to /partite — gives a short window to fix a mistake.
+  const [done, setDone] = useState<string | null>(null);
+  const [undoing, setUndoing] = useState(false);
+  const [undoError, setUndoError] = useState<string | null>(null);
 
   const set = (k: string, v: string) => setSel((s) => ({ ...s, [k]: v }));
 
@@ -101,8 +114,81 @@ export function MatchForm({
       setError(res.error);
       return;
     }
-    router.push("/partite");
+    setDone(res.matchId);
+    router.refresh(); // refresh the feed in the background
+  }
+
+  function resetForm() {
+    setDone(null);
+    setError(null);
+    setUndoError(null);
+    setScoreA(0);
+    setScoreB(0);
+    setSel(currentPlayerId ? { playerA: currentPlayerId } : {});
     router.refresh();
+  }
+
+  async function handleUndo() {
+    if (!done) return;
+    setUndoError(null);
+    setUndoing(true);
+    const res = await undoMatch(done);
+    setUndoing(false);
+    if (!res.ok) {
+      setUndoError(res.error);
+      return;
+    }
+    resetForm(); // back to a clean form to re-enter the corrected result
+  }
+
+  if (done) {
+    return (
+      <div className="space-y-5 py-2 text-center">
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-win/15 text-win">
+          <CheckCircle2 className="h-7 w-7" />
+        </div>
+        <div>
+          <p className="font-display text-lg font-extrabold">
+            {isAdmin ? "Risultato registrato!" : "Proposta inviata!"}
+          </p>
+          <p className="mx-auto mt-1 max-w-xs text-sm text-muted">
+            {isAdmin
+              ? "L'Elo è stato aggiornato."
+              : "L'avversario riceverà la richiesta di conferma."}
+          </p>
+        </div>
+
+        {undoError && <FieldError>{undoError}</FieldError>}
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <Button
+            type="button"
+            variant="danger"
+            onClick={handleUndo}
+            disabled={undoing}
+          >
+            <Undo2 className="h-4 w-4" />
+            {undoing ? "Annullamento…" : "Annulla inserimento"}
+          </Button>
+          <Button type="button" variant="secondary" onClick={resetForm}>
+            <Plus className="h-4 w-4" /> Inserisci un&apos;altra
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              router.push("/partite");
+              router.refresh();
+            }}
+          >
+            Vai alle partite <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <p className="text-xs text-muted">
+          Hai qualche minuto per annullare se hai sbagliato qualcosa.
+        </p>
+      </div>
+    );
   }
 
   return (

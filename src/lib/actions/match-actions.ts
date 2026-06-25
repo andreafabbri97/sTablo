@@ -16,6 +16,13 @@ import { sendPushToUsers } from "@/lib/push";
 import type { ActionResult } from "./auth-actions";
 
 const CONFIRM_WINDOW_MS = 24 * 60 * 60 * 1000;
+/** How long the player who entered a result can still undo it themselves. */
+const UNDO_WINDOW_MS = 10 * 60 * 1000;
+
+/** proposeMatch returns the new match id so the form can offer an inline undo. */
+export type ProposeResult =
+  | { ok: true; matchId: string }
+  | { ok: false; error: string; field?: string };
 
 async function resolveDoublesSide(
   teamId: string | undefined,
@@ -42,7 +49,7 @@ function refresh() {
  * - any participant can propose → status 'pending' until the opponent confirms
  * - the admin records directly → status 'completed' (override)
  */
-export async function proposeMatch(input: unknown): Promise<ActionResult> {
+export async function proposeMatch(input: unknown): Promise<ProposeResult> {
   let user;
   try {
     user = await assertAuth();
@@ -94,7 +101,7 @@ export async function proposeMatch(input: unknown): Promise<ActionResult> {
   const status = finalize ? "completed" : "pending";
 
   try {
-    await db.transaction(async (tx) => {
+    const matchId = await db.transaction(async (tx) => {
       const [match] = await tx
         .insert(matches)
         .values({
@@ -116,6 +123,7 @@ export async function proposeMatch(input: unknown): Promise<ActionResult> {
         .returning({ id: matches.id });
 
       await insertParticipants(tx, match.id, sideA!, sideB!);
+      return match.id;
     });
 
     if (finalize) await recomputeAllElo();
@@ -126,7 +134,7 @@ export async function proposeMatch(input: unknown): Promise<ActionResult> {
       const opponents = (proposerSide === "A" ? sideB! : sideA!).playerIds;
       await notifyConfirmNeeded(opponents, user.name);
     }
-    return { ok: true };
+    return { ok: true, matchId };
   } catch (error) {
     console.error("[proposeMatch]", error);
     return { ok: false, error: "Errore nel salvataggio della partita" };
@@ -240,6 +248,51 @@ export async function rejectMatch(matchId: string): Promise<ActionResult> {
   } catch (error) {
     console.error("[rejectMatch]", error);
     return { ok: false, error: "Errore nel rifiuto" };
+  }
+}
+
+/**
+ * Self-service undo for the player who entered a result. Within a short window
+ * after creation they can delete it — to fix a wrong score or opponent right
+ * after saving, without bothering an admin. Works whether the match is still
+ * pending or already completed (auto/confirmed); admins keep deleteMatch.
+ */
+export async function undoMatch(matchId: string): Promise<ActionResult> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere" };
+  }
+
+  const match = await db.query.matches.findFirst({
+    where: eq(matches.id, matchId),
+  });
+  if (!match) return { ok: true }; // already gone — nothing to undo
+
+  if (match.createdById !== user.id) {
+    return {
+      ok: false,
+      error: "Puoi annullare solo le partite che hai inserito tu",
+    };
+  }
+  const age = Date.now() - new Date(match.createdAt).getTime();
+  if (age > UNDO_WINDOW_MS) {
+    return {
+      ok: false,
+      error: "Tempo scaduto per annullare: chiedi a un amministratore",
+    };
+  }
+
+  try {
+    const wasCompleted = match.status === "completed";
+    await db.delete(matches).where(eq(matches.id, matchId));
+    if (wasCompleted) await recomputeAllElo();
+    refresh();
+    return { ok: true };
+  } catch (error) {
+    console.error("[undoMatch]", error);
+    return { ok: false, error: "Errore nell'annullamento della partita" };
   }
 }
 
