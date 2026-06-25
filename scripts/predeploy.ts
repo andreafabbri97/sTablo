@@ -59,6 +59,12 @@ const ENSURE_SCHEMA_SQL = [
   `CREATE TABLE IF NOT EXISTS "notifications" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE, "kind" text DEFAULT 'generic' NOT NULL, "title" text NOT NULL, "body" text NOT NULL, "url" text, "read_at" timestamp with time zone, "created_at" timestamp with time zone DEFAULT now() NOT NULL);`,
   `CREATE INDEX IF NOT EXISTS "notification_user_idx" ON "notifications" ("user_id","created_at");`,
   `CREATE INDEX IF NOT EXISTS "notification_unread_idx" ON "notifications" ("user_id","read_at");`,
+  // Dispute / "conteso" flow (migration 0014). confirmMatch/disputeMatch and the
+  // auto-confirm cron read/write these on the hot result-confirmation path, so
+  // guarantee they exist regardless of migrate()'s journal bookkeeping.
+  `ALTER TABLE "matches" ADD COLUMN IF NOT EXISTS "disputed_at" timestamp with time zone;`,
+  `ALTER TABLE "matches" ADD COLUMN IF NOT EXISTS "disputed_by_id" uuid REFERENCES "users"("id") ON DELETE SET NULL;`,
+  `ALTER TABLE "matches" ADD COLUMN IF NOT EXISTS "dispute_reason" text;`,
 ];
 
 async function main() {

@@ -10,6 +10,7 @@ import {
   FlaskConical,
   KeyRound,
   Download,
+  ShieldAlert,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -20,11 +21,13 @@ import { CreateTeamForm } from "@/components/admin/create-team-form";
 import { DemoControls } from "@/components/admin/demo-controls";
 import { AccountManager } from "@/components/admin/account-manager";
 import { ExportData } from "@/components/admin/export-data";
+import { DisputeQueue } from "@/components/admin/dispute-queue";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import {
   getPlayerOptions,
   getPlayersList,
   getAllAccounts,
+  getDisputedMatches,
 } from "@/lib/queries";
 import { getTeamRanking } from "@/lib/stats";
 import { countDemoMatches } from "@/lib/demo";
@@ -37,13 +40,15 @@ export default async function AdminPage() {
   if (!user) redirect("/login?callbackUrl=/admin");
   if (user.role !== "admin") redirect("/");
 
-  const [players, playerOpts, teams, demoCount, accounts] = await Promise.all([
-    getPlayersList(),
-    getPlayerOptions(),
-    getTeamRanking(),
-    countDemoMatches(),
-    getAllAccounts(),
-  ]);
+  const [players, playerOpts, teams, demoCount, accounts, disputes] =
+    await Promise.all([
+      getPlayersList(),
+      getPlayerOptions(),
+      getTeamRanking(),
+      countDemoMatches(),
+      getAllAccounts(),
+      getDisputedMatches(),
+    ]);
 
   return (
     <div className="space-y-6">
@@ -65,6 +70,23 @@ export default async function AdminPage() {
           </Link>
         </Button>
       </div>
+
+      <Card>
+        <CardTitle className="mb-3 flex items-center gap-2">
+          <ShieldAlert className="h-5 w-5 text-gold" /> Contestazioni
+          {disputes.length > 0 && (
+            <span className="grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1 text-[10px] font-bold text-white">
+              {disputes.length}
+            </span>
+          )}
+        </CardTitle>
+        <p className="mb-3 text-sm text-muted">
+          Risultati che un avversario ha contestato: l&apos;auto-conferma è in
+          pausa finché non decidi. Conferma il punteggio proposto (conta in
+          classifica) oppure annulla la partita.
+        </p>
+        <DisputeQueue items={disputes} />
+      </Card>
 
       <Card>
         <CardTitle className="mb-3 flex items-center gap-2">

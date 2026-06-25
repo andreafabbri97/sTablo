@@ -83,6 +83,17 @@ export const GUIDES: Record<string, Guide> = {
           "Tocca «Nuova partita» per inserire un risultato (1v1 o 2v2).",
           "Quando proponi un risultato, l'avversario riceve una notifica e deve confermarlo.",
           "Se non conferma entro 24 ore, il risultato viene confermato automaticamente e ricevi una notifica.",
+          "Eccezione: la vostra primissima partita classificata insieme non si auto-conferma mai — serve una conferma esplicita. Così nessuno può inventarsi una partita per salire di Elo.",
+        ],
+      },
+      {
+        heading: "Contestare un risultato",
+        points: [
+          "Se il punteggio è sbagliato — o la partita non l'hai mai giocata — tocca «Contesta» invece di confermare.",
+          "Scegli un motivo (es. «Il punteggio non è corretto» o «Non ho giocato questa partita») e invia.",
+          "La partita diventa «conteso»: l'auto-conferma si ferma e chi ha proposto riceve una notifica.",
+          "Un admin verifica e decide: conferma il risultato oppure annulla la partita. Finché non decide, l'Elo non si muove.",
+          "Chi ha proposto può anche annullare la propria proposta e rifarla corretta.",
         ],
       },
       {
@@ -99,8 +110,9 @@ export const GUIDES: Record<string, Guide> = {
         points: [
           "📅 In programma: sfida fissata, ancora da giocare.",
           "⏳ Da confermare: proposta inserita, manca la conferma dell'avversario.",
+          "⚠️ Conteso: l'avversario ha contestato — in attesa che un admin verifichi.",
           "✓ Confermata: conteggiata in classifica (se «Classificata») e nello storico mostra il punteggio.",
-          "Puoi rifiutare una proposta sbagliata o annullare una sfida in programma.",
+          "Puoi contestare una proposta sbagliata o annullare una sfida in programma.",
         ],
       },
       {

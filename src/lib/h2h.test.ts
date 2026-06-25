@@ -54,6 +54,8 @@ function match(opts: {
     proposedById: null,
     proposedSide: null,
     confirmDeadline: null,
+    disputedAt: null,
+    disputeReason: null,
     sideA: side(...opts.sideA),
     sideB: side(...opts.sideB),
   };

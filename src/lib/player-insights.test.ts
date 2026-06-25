@@ -35,6 +35,8 @@ function singles(
     proposedById: null,
     proposedSide: null,
     confirmDeadline: null,
+    disputedAt: null,
+    disputeReason: null,
     sideA: { label: a, teamName: null, players: [player(a)] },
     sideB: { label: b, teamName: null, players: [player(b)] },
   };
@@ -63,6 +65,8 @@ function doubles(
     proposedById: null,
     proposedSide: null,
     confirmDeadline: null,
+    disputedAt: null,
+    disputeReason: null,
     sideA: { label: "A", teamName: null, players: a.map(player) },
     sideB: { label: "B", teamName: null, players: b.map(player) },
   };

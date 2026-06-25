@@ -82,7 +82,8 @@ export async function fetchNotifications(): Promise<Notifications> {
 
     const viewer = { playerId: user.playerId, role: user.role };
     const pendingMatches = pending
-      .filter((m) => canConfirmMatch(m, viewer))
+      // contested results wait for an admin — don't keep nudging the opponent
+      .filter((m) => canConfirmMatch(m, viewer) && !m.disputedAt)
       .map((m) => ({ id: m.id, label: `${m.sideA.label} vs ${m.sideB.label}` }));
 
     return { friendRequests, pendingMatches, tournamentInvites, feedUnread };

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ListChecks, Plus, Clock, QrCode, Swords, CalendarClock } from "lucide-react";
+import { ListChecks, Plus, Clock, QrCode, Swords, CalendarClock, ShieldAlert } from "lucide-react";
 import { PageHeader, EmptyState } from "@/components/ui/page";
 import { Button } from "@/components/ui/button";
 import { MatchCard } from "@/components/match-card";
@@ -89,7 +89,18 @@ export default async function PartitePage() {
               <div key={m.id} className="space-y-2">
                 <MatchCard match={m} />
                 {canConfirmMatch(m, viewer) ? (
-                  <MatchConfirmActions matchId={m.id} />
+                  <MatchConfirmActions
+                    matchId={m.id}
+                    disputed={!!m.disputedAt}
+                    disputeReason={m.disputeReason}
+                  />
+                ) : m.disputedAt ? (
+                  <Link
+                    href={`/partite/${m.id}`}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-gold/40 bg-gold/10 py-2 text-xs font-semibold text-gold"
+                  >
+                    <ShieldAlert className="h-3.5 w-3.5" /> Conteso · in verifica
+                  </Link>
                 ) : (
                   <Link
                     href={`/partite/${m.id}`}

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq, and, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bustDataCache } from "@/lib/cache";
-import { matches, teams, users } from "@/lib/db/schema";
+import { matches, matchParticipants, teams, users } from "@/lib/db/schema";
 import { matchSchema, scheduleSchema, scheduledResultSchema } from "@/lib/validation";
 import { assertAuth, assertAdmin } from "@/lib/auth-helpers";
 import {
@@ -13,6 +13,7 @@ import {
   type SideInput,
 } from "@/lib/match-engine";
 import { notify } from "@/lib/notifications";
+import { normalizeDisputeReason } from "@/lib/dispute-rules";
 import { rateLimit, retryAfterSeconds, RATE_LIMITS } from "@/lib/rate-limit";
 import { formatDateTime } from "@/lib/utils";
 import type { ActionResult } from "./auth-actions";
@@ -467,9 +468,17 @@ export async function confirmMatch(matchId: string): Promise<ActionResult> {
 
   try {
     // Conditional update: only ONE confirmation (or auto-confirm) can win.
+    // Confirming also clears any contestation — the two sides settled it.
     const updated = await db
       .update(matches)
-      .set({ status: "completed", confirmedById: user.id, autoConfirmed: false })
+      .set({
+        status: "completed",
+        confirmedById: user.id,
+        autoConfirmed: false,
+        disputedAt: null,
+        disputedById: null,
+        disputeReason: null,
+      })
       .where(and(eq(matches.id, matchId), eq(matches.status, "pending")))
       .returning({ id: matches.id });
 
@@ -538,6 +547,159 @@ export async function rejectMatch(matchId: string): Promise<ActionResult> {
   } catch (error) {
     console.error("[rejectMatch]", error);
     return { ok: false, error: "Errore nel rifiuto" };
+  }
+}
+
+/** Collect the user accounts behind every participant of a match (for notify). */
+async function participantUserIds(matchId: string): Promise<string[]> {
+  const parts = await db
+    .select({ playerId: matchParticipants.playerId })
+    .from(matchParticipants)
+    .where(eq(matchParticipants.matchId, matchId));
+  const playerIds = [...new Set(parts.map((p) => p.playerId))];
+  if (playerIds.length === 0) return [];
+  const rows = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(inArray(users.playerId, playerIds));
+  return rows.map((r) => r.id);
+}
+
+/**
+ * Contest ("conteso") a pending result instead of confirming it. The opponent
+ * (or an admin) uses this when the proposed score is wrong — or, crucially, when
+ * the match never happened (fabricated to farm Elo). It does NOT delete the
+ * match: it flags it disputed, which blocks auto-confirm and routes it to the
+ * admin dispute queue, and notifies the proposer. The proposer can then re-do
+ * the result or let an admin arbitrate.
+ */
+export async function disputeMatch(
+  matchId: string,
+  reasonRaw: string,
+): Promise<ActionResult> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere" };
+  }
+
+  const match = await db.query.matches.findFirst({
+    where: eq(matches.id, matchId),
+    with: { participants: true },
+  });
+  if (!match) return { ok: false, error: "Partita non trovata" };
+  if (match.status !== "pending") {
+    return { ok: false, error: "Solo un risultato in attesa si può contestare" };
+  }
+
+  const isAdmin = user.role === "admin";
+  const opposite = match.proposedSide === "A" ? "B" : "A";
+  const isOpponent =
+    !!user.playerId &&
+    match.participants.some(
+      (p) => p.side === opposite && p.playerId === user.playerId,
+    );
+  if (!isAdmin && !isOpponent) {
+    return { ok: false, error: "Solo l'avversario può contestare il risultato" };
+  }
+
+  const reason = normalizeDisputeReason(reasonRaw);
+  try {
+    const updated = await db
+      .update(matches)
+      .set({ disputedAt: new Date(), disputedById: user.id, disputeReason: reason })
+      .where(and(eq(matches.id, matchId), eq(matches.status, "pending")))
+      .returning({ id: matches.id });
+    if (updated.length === 0) return { ok: true }; // settled meanwhile
+    refresh();
+
+    // Tell the proposer their result is contested (best-effort).
+    if (match.proposedById && match.proposedById !== user.id) {
+      await notify({
+        userIds: [match.proposedById],
+        kind: "result_disputed",
+        title: "Risultato contestato ⚠️",
+        body: `${user.name?.trim() || "L'avversario"} ha contestato il risultato: «${reason}». Un admin verificherà.`,
+        url: `/partite/${matchId}`,
+        tag: "match-disputed",
+      });
+    }
+    return { ok: true };
+  } catch (error) {
+    console.error("[disputeMatch]", error);
+    return { ok: false, error: "Errore nella contestazione" };
+  }
+}
+
+/**
+ * Admin arbitration for a contested ("conteso") result. `confirm` completes it
+ * with the proposed score (clearing the dispute) and applies Elo; `void` deletes
+ * it. Both sides are notified of the outcome.
+ */
+export async function resolveDispute(
+  matchId: string,
+  decision: "confirm" | "void",
+): Promise<ActionResult> {
+  let user;
+  try {
+    user = await assertAdmin();
+  } catch {
+    return { ok: false, error: "Solo gli admin possono risolvere le contestazioni" };
+  }
+
+  const match = await db.query.matches.findFirst({
+    where: eq(matches.id, matchId),
+  });
+  if (!match) return { ok: true };
+  if (match.status !== "pending") {
+    return { ok: false, error: "La partita non è più in attesa" };
+  }
+
+  const recipients = await participantUserIds(matchId);
+  try {
+    if (decision === "confirm") {
+      const updated = await db
+        .update(matches)
+        .set({
+          status: "completed",
+          confirmedById: user.id,
+          autoConfirmed: false,
+          disputedAt: null,
+          disputedById: null,
+          disputeReason: null,
+        })
+        .where(and(eq(matches.id, matchId), eq(matches.status, "pending")))
+        .returning({ id: matches.id });
+      if (updated.length === 0) return { ok: true };
+      await recomputeAllElo();
+      refresh();
+      await notify({
+        userIds: recipients,
+        kind: "match_confirmed",
+        title: "Contestazione risolta ✅",
+        body: "Un admin ha confermato il risultato dopo la contestazione: ora conta in classifica.",
+        url: `/partite/${matchId}`,
+        tag: `match-${matchId}`,
+      });
+    } else {
+      await db
+        .delete(matches)
+        .where(and(eq(matches.id, matchId), eq(matches.status, "pending")));
+      refresh();
+      await notify({
+        userIds: recipients,
+        kind: "result_disputed",
+        title: "Partita annullata ✖️",
+        body: "Un admin ha annullato la partita contestata. Se serve, registratela di nuovo.",
+        url: "/partite",
+        tag: `match-${matchId}`,
+      });
+    }
+    return { ok: true };
+  } catch (error) {
+    console.error("[resolveDispute]", error);
+    return { ok: false, error: "Errore nella risoluzione della contestazione" };
   }
 }
 

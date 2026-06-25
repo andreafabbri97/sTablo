@@ -1,4 +1,5 @@
-import { inArray, eq, asc, and, lte, sql } from "drizzle-orm";
+import { inArray, eq, ne, asc, and, lte, isNull, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "./db";
 import {
   players as playersTable,
@@ -12,6 +13,7 @@ import {
 import { computeElo, sideRating } from "./elo";
 import { replayElo, type ParticipantRating } from "./elo-replay";
 import { notify } from "./notifications";
+import { canAutoConfirm } from "./dispute-rules";
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -216,15 +218,56 @@ async function applyTeamElo(
  * Auto-confirm pending results past their 24h deadline. Race-safe: the
  * conditional UPDATE only flips rows still 'pending', so a manual confirm
  * happening at the same instant can't double-apply. Returns how many flipped.
+ *
+ * Two anti-abuse guards (see dispute-rules.ts) gate which expired results may
+ * settle on their own: contested ("conteso") results are skipped entirely (an
+ * admin arbitrates), and a ranked result between two sides that have never
+ * completed a match together before requires an explicit human confirm — so a
+ * fabricated first encounter can't silently settle against an inactive victim.
  */
 export async function autoConfirmExpired(): Promise<number> {
+  // Candidates: expired, still pending, and NOT contested (the disputed skip is
+  // a cheap SQL filter; the first-meeting guard needs per-match data, below).
+  const candidates = await db.query.matches.findMany({
+    where: and(
+      eq(matchesTable.status, "pending"),
+      lte(matchesTable.confirmDeadline, sql`now()`),
+      isNull(matchesTable.disputedAt),
+    ),
+    columns: { id: true, ranked: true },
+    with: { participants: { columns: { side: true, playerId: true } } },
+  });
+  if (candidates.length === 0) return 0;
+
+  const eligibleIds: string[] = [];
+  for (const m of candidates) {
+    const aIds = m.participants
+      .filter((p) => p.side === "A")
+      .map((p) => p.playerId);
+    const bIds = m.participants
+      .filter((p) => p.side === "B")
+      .map((p) => p.playerId);
+    // Degenerate participant data → don't strand the match on the guard.
+    const hasPriorMeeting =
+      aIds.length === 0 || bIds.length === 0
+        ? true
+        : await havePriorCompletedMeeting(aIds, bIds, m.id);
+    if (canAutoConfirm({ ranked: m.ranked, disputed: false, hasPriorMeeting })) {
+      eligibleIds.push(m.id);
+    }
+  }
+  if (eligibleIds.length === 0) return 0;
+
+  // Race-safe: only rows still 'pending', un-contested, and in our eligible set
+  // flip — a manual confirm or a contestation landing this instant wins instead.
   const flipped = await db
     .update(matchesTable)
     .set({ status: "completed", autoConfirmed: true })
     .where(
       and(
         eq(matchesTable.status, "pending"),
-        lte(matchesTable.confirmDeadline, sql`now()`),
+        isNull(matchesTable.disputedAt),
+        inArray(matchesTable.id, eligibleIds),
       ),
     )
     .returning({ id: matchesTable.id });
@@ -237,6 +280,36 @@ export async function autoConfirmExpired(): Promise<number> {
     );
   }
   return flipped.length;
+}
+
+/**
+ * True if side-A and side-B players already share a HUMAN-acknowledged completed
+ * match (auto-confirmed ones don't count, so a relationship can't be bootstrapped
+ * purely through earlier auto-confirms). Used by the first-meeting guard.
+ */
+async function havePriorCompletedMeeting(
+  aIds: string[],
+  bIds: string[],
+  excludeMatchId: string,
+): Promise<boolean> {
+  const pa = alias(matchParticipants, "pa");
+  const pb = alias(matchParticipants, "pb");
+  const rows = await db
+    .select({ matchId: pa.matchId })
+    .from(pa)
+    .innerJoin(pb, eq(pb.matchId, pa.matchId))
+    .innerJoin(matchesTable, eq(matchesTable.id, pa.matchId))
+    .where(
+      and(
+        inArray(pa.playerId, aIds),
+        inArray(pb.playerId, bIds),
+        eq(matchesTable.status, "completed"),
+        eq(matchesTable.autoConfirmed, false),
+        ne(matchesTable.id, excludeMatchId),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
 }
 
 /** Best-effort push to everyone who played in the just auto-confirmed matches. */

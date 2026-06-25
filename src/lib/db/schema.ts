@@ -200,6 +200,15 @@ export const matches = pgTable(
     }),
     autoConfirmed: boolean("auto_confirmed").notNull().default(false),
 
+    // Dispute / "conteso" flow (Livello 2). A pending result the opponent
+    // disagrees with: set these and the match is "conteso" — auto-confirm is
+    // blocked and it lands in the admin dispute queue. Cleared when resolved.
+    disputedAt: timestamp("disputed_at", { withTimezone: true }),
+    disputedById: uuid("disputed_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    disputeReason: text("dispute_reason"),
+
     // Tournament wiring (all nullable for casual matches)
     tournamentId: uuid("tournament_id").references(() => tournaments.id, {
       onDelete: "cascade",

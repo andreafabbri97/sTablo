@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { ArrowLeft, QrCode, Clock, CalendarClock, MessageCircle } from "lucide-react";
+import { ArrowLeft, QrCode, Clock, CalendarClock, MessageCircle, ShieldAlert } from "lucide-react";
 import { MatchCard } from "@/components/match-card";
 import { MatchConfirmActions } from "@/components/match-confirm-actions";
+import { MatchWithdrawButton } from "@/components/match-withdraw-button";
 import { ScheduledMatchPanel } from "@/components/scheduled-match-panel";
 import { MatchSocial } from "@/components/match-social";
 import { ProfileQr } from "@/components/friends/profile-qr";
@@ -61,6 +62,7 @@ export default async function MatchPage({
     ? { playerId: user.playerId, role: user.role, userId: user.id }
     : null;
   const isPending = match.status === "pending";
+  const isDisputed = isPending && !!match.disputedAt;
   const isScheduled = match.status === "scheduled";
   const canConfirm = canConfirmMatch(match, viewer);
   const isProposer = !!user && match.proposedById === user.id;
@@ -121,36 +123,67 @@ export default async function MatchPage({
         <Card className="space-y-4 text-center">
           <div>
             <CardTitle className="flex items-center justify-center gap-2">
-              <Clock className="h-5 w-5 text-brand" /> In attesa di conferma
+              {isDisputed ? (
+                <>
+                  <ShieldAlert className="h-5 w-5 text-gold" /> Risultato conteso
+                </>
+              ) : (
+                <>
+                  <Clock className="h-5 w-5 text-brand" /> In attesa di conferma
+                </>
+              )}
             </CardTitle>
-            {match.confirmDeadline && (
+            {isDisputed ? (
               <p className="mt-1 text-xs text-muted">
-                Si conferma da solo {timeAgo(match.confirmDeadline)} se nessuno
-                risponde.
+                {match.disputeReason && <>Motivo: «{match.disputeReason}». </>}
+                Un admin verificherà — l&apos;auto-conferma è in pausa.
               </p>
+            ) : (
+              match.confirmDeadline && (
+                <p className="mt-1 text-xs text-muted">
+                  Si conferma da solo {timeAgo(match.confirmDeadline)} se nessuno
+                  risponde.
+                </p>
+              )
             )}
           </div>
 
           {canConfirm ? (
-            <MatchConfirmActions matchId={match.id} />
+            <MatchConfirmActions
+              matchId={match.id}
+              disputed={isDisputed}
+              disputeReason={match.disputeReason}
+            />
           ) : isProposer ? (
-            <div className="flex flex-col items-center gap-3">
-              <p className="text-sm text-muted">
-                Fai scansionare questo QR all&apos;avversario per confermare:
-              </p>
-              <ProfileQr url={url} />
-              <p className="flex items-center gap-1 text-xs text-muted">
-                <QrCode className="h-3.5 w-3.5" /> oppure condividi il link:
-              </p>
-              <ShareButton
-                url={url}
-                title="Conferma risultato — sTablo"
-                text="Conferma il risultato della nostra partita di tavolino 👇"
-              />
-            </div>
+            isDisputed ? (
+              <div className="flex flex-col items-center gap-3">
+                <p className="text-sm text-muted">
+                  L&apos;avversario ha contestato il risultato. Puoi annullare la
+                  proposta e rifarla, oppure aspettare che un admin verifichi.
+                </p>
+                <MatchWithdrawButton matchId={match.id} />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-3">
+                <p className="text-sm text-muted">
+                  Fai scansionare questo QR all&apos;avversario per confermare:
+                </p>
+                <ProfileQr url={url} />
+                <p className="flex items-center gap-1 text-xs text-muted">
+                  <QrCode className="h-3.5 w-3.5" /> oppure condividi il link:
+                </p>
+                <ShareButton
+                  url={url}
+                  title="Conferma risultato — sTablo"
+                  text="Conferma il risultato della nostra partita di tavolino 👇"
+                />
+              </div>
+            )
           ) : (
             <p className="text-sm text-muted">
-              Solo l&apos;avversario può confermare questo risultato.
+              {isDisputed
+                ? "Questo risultato è conteso: un admin verificherà."
+                : "Solo l'avversario può confermare questo risultato."}
             </p>
           )}
         </Card>

@@ -36,6 +36,8 @@ function makeMatch(over: Partial<ShapedMatch> = {}): ShapedMatch {
     proposedById: "user-proposer",
     proposedSide: "A",
     confirmDeadline: new Date("2024-01-02T00:00:00Z"),
+    disputedAt: null,
+    disputeReason: null,
     sideA: side(["pA"]),
     sideB: side(["pB"]),
     ...over,

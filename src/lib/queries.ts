@@ -1,4 +1,4 @@
-import { desc, eq, isNull, and, asc, inArray, sql } from "drizzle-orm";
+import { desc, eq, isNull, isNotNull, and, asc, inArray, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
   matches,
@@ -36,6 +36,9 @@ export type ShapedMatch = {
   proposedById: string | null;
   proposedSide: "A" | "B" | null;
   confirmDeadline: Date | null;
+  /** set when the opponent contested the result → "conteso" / admin queue */
+  disputedAt: Date | null;
+  disputeReason: string | null;
   sideA: ShapedSide;
   sideB: ShapedSide;
 };
@@ -76,6 +79,8 @@ export function shapeMatch(row: MatchRow): ShapedMatch {
     proposedById: row.proposedById,
     proposedSide: row.proposedSide,
     confirmDeadline: row.confirmDeadline,
+    disputedAt: row.disputedAt,
+    disputeReason: row.disputeReason,
     sideA: shapeSide(row.participants, "A"),
     sideB: shapeSide(row.participants, "B"),
   };
@@ -165,6 +170,64 @@ export const getPendingMatches = cachedQuery(async (): Promise<ShapedMatch[]> =>
   });
   return rows.map(shapeMatch);
 }, ["pending-matches"]);
+
+export type DisputedMatchView = {
+  id: string;
+  labelA: string;
+  labelB: string;
+  scoreA: number | null;
+  scoreB: number | null;
+  ranked: boolean;
+  reason: string | null;
+  disputedAt: Date | null;
+  contestedBy: string | null;
+  proposedBy: string | null;
+};
+
+/**
+ * Contested ("conteso") results awaiting an admin decision, oldest first. Powers
+ * the admin dispute queue. Uncached — admins need the live state. Resolves the
+ * proposer/contester user names in one extra round-trip.
+ */
+export async function getDisputedMatches(): Promise<DisputedMatchView[]> {
+  const rows = await db.query.matches.findMany({
+    where: and(eq(matches.status, "pending"), isNotNull(matches.disputedAt)),
+    orderBy: [asc(matches.disputedAt)],
+    with: { participants: { with: { player: true, team: true } } },
+  });
+  if (rows.length === 0) return [];
+
+  const userIds = [
+    ...new Set(
+      rows
+        .flatMap((r) => [r.proposedById, r.disputedById])
+        .filter((x): x is string => !!x),
+    ),
+  ];
+  const us = userIds.length
+    ? await db
+        .select({ id: users.id, name: users.name })
+        .from(users)
+        .where(inArray(users.id, userIds))
+    : [];
+  const nameById = new Map(us.map((u) => [u.id, u.name]));
+
+  return rows.map((row) => {
+    const shaped = shapeMatch(row);
+    return {
+      id: row.id,
+      labelA: shaped.sideA.label || "Squadra A",
+      labelB: shaped.sideB.label || "Squadra B",
+      scoreA: row.scoreA,
+      scoreB: row.scoreB,
+      ranked: row.ranked,
+      reason: row.disputeReason,
+      disputedAt: row.disputedAt,
+      contestedBy: row.disputedById ? nameById.get(row.disputedById) ?? null : null,
+      proposedBy: row.proposedById ? nameById.get(row.proposedById) ?? null : null,
+    };
+  });
+}
 
 /** Single match (uncached — used on the confirmation page). */
 export async function getMatchById(id: string): Promise<ShapedMatch | null> {
