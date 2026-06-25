@@ -25,27 +25,25 @@ export function PageHeader({
         className,
       )}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         {icon && (
-          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-soft text-brand">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand">
             {icon}
           </span>
         )}
-        <div>
-          <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
-            {title}
-          </h1>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
+              {title}
+            </h1>
+            {help && <HelpButton topic={help} className="shrink-0" />}
+          </div>
           {subtitle && (
             <p className="mt-0.5 text-sm text-muted">{subtitle}</p>
           )}
         </div>
       </div>
-      {(action || help) && (
-        <div className="flex items-center gap-2">
-          {action}
-          {help && <HelpButton topic={help} />}
-        </div>
-      )}
+      {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
     </div>
   );
 }
