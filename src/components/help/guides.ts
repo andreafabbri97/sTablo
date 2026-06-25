@@ -146,7 +146,7 @@ export const GUIDES: Record<string, Guide> = {
         heading: "Come funziona",
         points: [
           "Scegli 1 vs 1 o 2 vs 2 e se la sfida sarà «Classificata» 🏆 o «Amichevole» 🤝.",
-          "Indica chi sfidi (e i compagni, nel doppio) e imposta data e ora.",
+          "Indica chi sfidi (e i compagni, nel doppio): tocca la casella e cerca per nome. Poi imposta data e ora.",
           "Al volo del «Lancia la sfida», l'avversario riceve una notifica.",
           "La sfida appare in «Prossime sfide» nella pagina Partite.",
         ],
@@ -172,8 +172,9 @@ export const GUIDES: Record<string, Guide> = {
         heading: "Passo per passo",
         points: [
           "Scegli 1 vs 1 o 2 vs 2.",
-          "Scegli «Classificata» 🏆 (muove l'Elo) o «Amichevole» 🤝 (solo XP).",
-          "Seleziona i giocatori e imposta i punteggi (puoi digitarli o usare + / −).",
+          "Scegli «Classificata» 🏆 (muove l'Elo) o «Amichevole» 🤝 (solo XP): per le partite non esiste pubblico/privato, questa è l'unica distinzione.",
+          "Tocca una casella giocatore e cerca per nome: puoi inserire chiunque sia registrato.",
+          "Imposta i punteggi (puoi digitarli o usare + / −).",
           "Data e ora si compilano da sole con l'istante del salvataggio, se le lasci vuote.",
         ],
       },
@@ -189,6 +190,7 @@ export const GUIDES: Record<string, Guide> = {
         heading: "Buono a sapersi",
         points: [
           "Nel doppio scegli i due giocatori della coppia.",
+          "Lo stesso giocatore non può stare in due caselle: chi è già scelto sparisce dalle altre.",
           "Il punteggio non può finire in parità.",
           "Se non sei admin, il risultato va confermato dall'avversario.",
           "Per le classificate vedi in anteprima quanti punti Elo sposta il risultato.",
@@ -207,12 +209,19 @@ export const GUIDES: Record<string, Guide> = {
       {
         heading: "Formati disponibili",
         points: [
-          "🏆 Campionato: tutti contro tutti, classifica a punti.",
-          "🔄 Girone all'italiana: round robin a girone unico.",
+          "🏆 Campionato: tutti contro tutti, classifica a punti. Puoi giocarlo con andata e ritorno (ogni sfida due volte) o solo andata.",
           "⚔️ Eliminazione diretta: tabellone a eliminazione.",
           "🌍 Gironi + eliminazione: gironi e poi fase finale.",
           "🇨🇭 Svizzero: accoppiamenti per punteggio, turno dopo turno.",
           "🟡 Americano: coppie a rotazione, classifica individuale a punti (min. 4 giocatori).",
+        ],
+      },
+      {
+        heading: "Pubblico o privato",
+        points: [
+          "🌍 Pubblico: compare nella lista tornei e chiunque può vederlo e iscriversi col link.",
+          "🔒 Privato: nascosto dalla lista; lo vedono ed entrano solo le persone che inviti tu o con cui condividi il link.",
+          "Lo decidi quando crei un torneo a «invito aperto».",
         ],
       },
       {
@@ -238,22 +247,37 @@ export const GUIDES: Record<string, Guide> = {
   "nuovo-torneo": {
     title: "Creare un torneo",
     emoji: "🆕",
-    intro: "Imposta formato, disciplina e partecipanti.",
+    intro: "Due modi per creare: invito aperto col link, oppure scegli subito i partecipanti.",
     sections: [
       {
-        heading: "Le scelte principali",
+        heading: "Due modalità",
         points: [
-          "Formato: campionato, girone all'italiana, eliminazione diretta, gironi + eliminazione, svizzero o americano.",
+          "🔗 Invito aperto: crei il torneo e ottieni un link/QR da condividere. Ognuno si iscrive da solo e parte quando lo avvii.",
+          "👥 Scegli i partecipanti (admin): selezioni tu chi gioca (o le coppie) e il torneo parte subito.",
+        ],
+      },
+      {
+        heading: "Pubblico o privato (invito aperto)",
+        points: [
+          "🌍 Pubblico: compare nella lista tornei, chiunque può vederlo e iscriversi col link.",
+          "🔒 Privato: nascosto dalla lista; lo vedono ed entrano solo le persone che inviti tu o con cui condividi il link.",
+        ],
+      },
+      {
+        heading: "Formato e disciplina",
+        points: [
+          "Formato: campionato, eliminazione diretta, gironi + eliminazione, svizzero o americano.",
+          "Nel campionato puoi attivare «Andata e ritorno» per far giocare ogni sfida due volte.",
           "Disciplina: Singolo (1v1) o Doppio (2v2). Nel doppio formi le coppie al volo.",
           "Classificato 🏆 muove l'Elo, Amichevole 🤝 dà solo XP.",
         ],
       },
       {
-        heading: "Partecipanti",
+        heading: "Scegliere i partecipanti",
         points: [
           "Nel singolo selezioni i giocatori: l'ordine di scelta dà le teste di serie.",
           "Nel doppio tocchi due giocatori per formare una coppia.",
-          "Se crei un torneo aperto, ricevi un link/QR da condividere per le iscrizioni.",
+          "Con tanti iscritti usa la barra «Cerca giocatore» per trovarli al volo.",
         ],
       },
     ],
@@ -362,7 +386,7 @@ export const GUIDES: Record<string, Guide> = {
         points: [
           "Invia una richiesta di amicizia: l'altra persona riceve una notifica.",
           "Quando accetta, diventate amici.",
-          "Gli amici si possono invitare direttamente ai tornei privati.",
+          "Dai tuoi tornei puoi invitare gli amici con un tocco, anche senza condividere il link (utile soprattutto per i tornei privati).",
         ],
       },
     ],

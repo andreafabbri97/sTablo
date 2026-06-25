@@ -17,8 +17,7 @@ type Format =
   | "americano";
 
 const FORMATS: { id: Format; emoji: string; label: string; blurb: string }[] = [
-  { id: "league",          emoji: "🏆", label: "Campionato",         blurb: "Tutti contro tutti a punti" },
-  { id: "round_robin",     emoji: "🔄", label: "Girone all'italiana", blurb: "Round robin a girone unico" },
+  { id: "league",          emoji: "🏆", label: "Campionato",         blurb: "Tutti contro tutti a punti (con o senza ritorno)" },
   { id: "single_elim",     emoji: "⚔️", label: "Eliminazione diretta", blurb: "Tabellone a eliminazione" },
   { id: "groups_knockout", emoji: "🌍", label: "Gironi + eliminazione", blurb: "Gironi poi tabellone finale" },
   { id: "swiss",           emoji: "🇨🇭", label: "Svizzero",           blurb: "Accoppiamenti per punteggio" },
@@ -30,6 +29,7 @@ export function TournamentOpenForm() {
   const [name, setName] = useState("");
   const [format, setFormat] = useState<Format>("single_elim");
   const [ranked, setRanked] = useState(false);
+  const [doubleRound, setDoubleRound] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [description, setDescription] = useState("");
   const [targetScore, setTargetScore] = useState(15);
@@ -48,6 +48,7 @@ export function TournamentOpenForm() {
       format,
       discipline: "singles",
       ranked,
+      doubleRound: format === "league" ? doubleRound : undefined,
       description,
       visibility: isPrivate ? "private" : "public",
       ...(isAmericano
@@ -100,6 +101,32 @@ export function TournamentOpenForm() {
           ))}
         </div>
       </div>
+
+      {/* Andata e ritorno — only for the league (campionato) format */}
+      {format === "league" && (
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={doubleRound}
+            onClick={() => setDoubleRound((v) => !v)}
+            className={cn(
+              "relative h-6 w-11 rounded-full transition",
+              doubleRound ? "bg-brand" : "bg-border",
+            )}
+          >
+            <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all", doubleRound ? "left-5" : "left-0.5")} />
+          </button>
+          <div>
+            <p className="font-semibold">🔄 Andata e ritorno</p>
+            <p className="text-xs text-muted">
+              {doubleRound
+                ? "Ogni sfida si gioca due volte (in casa e fuori)"
+                : "Ogni coppia di giocatori si sfida una volta sola"}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Americano settings */}
       {isAmericano && (

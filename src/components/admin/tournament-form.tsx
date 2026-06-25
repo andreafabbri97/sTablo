@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Swords, Check, X, Users } from "lucide-react";
+import { Swords, Check, X, Users, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label, Input, Textarea, FieldError } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
@@ -14,8 +14,7 @@ type Discipline = "singles" | "doubles";
 type Pair = { playerId: string; partnerId: string };
 
 const FORMATS: { id: Format; emoji: string; label: string; blurb: string }[] = [
-  { id: "league", emoji: "🏆", label: "Campionato", blurb: "Tutti contro tutti a punti (Serie A)" },
-  { id: "round_robin", emoji: "🔄", label: "Girone all'italiana", blurb: "Round robin a girone unico" },
+  { id: "league", emoji: "🏆", label: "Campionato", blurb: "Tutti contro tutti a punti (con o senza ritorno)" },
   { id: "single_elim", emoji: "⚔️", label: "Eliminazione diretta", blurb: "Tabellone a eliminazione" },
   { id: "groups_knockout", emoji: "🌍", label: "Gironi + eliminazione", blurb: "Gironi poi tabellone finale" },
   { id: "swiss", emoji: "🇨🇭", label: "Svizzero", blurb: "Accoppiamenti per punteggio" },
@@ -305,6 +304,10 @@ function SinglesPicker({
   selected: string[];
   onToggle: (id: string) => void;
 }) {
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const shown = q ? players.filter((p) => p.name.toLowerCase().includes(q)) : players;
+
   return (
     <div>
       <Label>Partecipanti ({selected.length} selezionati)</Label>
@@ -312,8 +315,13 @@ function SinglesPicker({
       {players.length === 0 ? (
         <p className="text-sm text-muted">Nessun giocatore disponibile.</p>
       ) : (
-        <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-border p-2 sm:grid-cols-3">
-          {players.map((o) => {
+        <>
+          {players.length > 8 && <PickerSearch value={query} onChange={setQuery} />}
+          {shown.length === 0 ? (
+            <p className="rounded-xl border border-border p-3 text-sm text-muted">Nessun giocatore trovato.</p>
+          ) : (
+            <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-border p-2 sm:grid-cols-3">
+              {shown.map((o) => {
             const idx = selected.indexOf(o.id);
             const isSel = idx >= 0;
             return (
@@ -337,8 +345,10 @@ function SinglesPicker({
                 <span className="truncate">{o.name}</span>
               </button>
             );
-          })}
-        </div>
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -361,7 +371,12 @@ function DoublesPicker({
   onPick: (id: string) => void;
   onRemovePair: (idx: number) => void;
 }) {
+  const [query, setQuery] = useState("");
   const available = players.filter((p) => !usedInPairs.has(p.id));
+  const q = query.trim().toLowerCase();
+  const shownAvail = q
+    ? available.filter((p) => p.name.toLowerCase().includes(q))
+    : available;
 
   return (
     <div className="space-y-3">
@@ -411,27 +426,54 @@ function DoublesPicker({
             : "Tutti i giocatori sono in coppia."}
         </p>
       ) : (
-        <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-border p-2 sm:grid-cols-3">
-          {available.map((o) => {
-            const isPending = pending === o.id;
-            return (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => onPick(o.id)}
-                className={cn(
-                  "flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition",
-                  isPending
-                    ? "bg-brand text-white ring-2 ring-brand"
-                    : "bg-surface-2 text-foreground hover:bg-surface",
-                )}
-              >
-                <span className="truncate">{o.name}</span>
-              </button>
-            );
-          })}
-        </div>
+        <>
+          {available.length > 8 && <PickerSearch value={query} onChange={setQuery} />}
+          {shownAvail.length === 0 ? (
+            <p className="rounded-xl border border-border p-3 text-sm text-muted">Nessun giocatore trovato.</p>
+          ) : (
+            <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-border p-2 sm:grid-cols-3">
+              {shownAvail.map((o) => {
+                const isPending = pending === o.id;
+                return (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => onPick(o.id)}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition",
+                      isPending
+                        ? "bg-brand text-white ring-2 ring-brand"
+                        : "bg-surface-2 text-foreground hover:bg-surface",
+                    )}
+                  >
+                    <span className="truncate">{o.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
+    </div>
+  );
+}
+
+function PickerSearch({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="relative mb-2">
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Cerca giocatore…"
+        className="w-full rounded-xl border border-border bg-surface py-2 pl-9 pr-3 text-sm outline-none focus:border-brand"
+      />
     </div>
   );
 }

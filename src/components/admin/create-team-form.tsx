@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input, Select, FieldError } from "@/components/ui/field";
+import { Input, FieldError } from "@/components/ui/field";
+import { PlayerCombobox } from "@/components/ui/player-combobox";
 import { createTeam } from "@/lib/actions/player-actions";
 
 type Option = { id: string; name: string };
@@ -19,6 +20,10 @@ export function CreateTeamForm({ players }: { players: Option[] }) {
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!p1 || !p2) {
+      setError("Scegli entrambi i giocatori");
+      return;
+    }
     startTransition(async () => {
       setError(null);
       const res = await createTeam({ name, player1Id: p1, player2Id: p2 });
@@ -42,28 +47,20 @@ export function CreateTeamForm({ players }: { players: Option[] }) {
         placeholder="Nome team (alias)"
       />
       <div className="grid gap-3 sm:grid-cols-2">
-        <Select
+        <PlayerCombobox
+          players={players}
           value={p1}
-          onChange={(e) => setP1(e.target.value)}
-          required
-          aria-label="Giocatore 1"
-        >
-          <option value="">Giocatore 1…</option>
-          {players.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </Select>
-        <Select
+          excludeIds={p2 ? new Set([p2]) : undefined}
+          placeholder="Giocatore 1…"
+          onChange={setP1}
+        />
+        <PlayerCombobox
+          players={players}
           value={p2}
-          onChange={(e) => setP2(e.target.value)}
-          required
-          aria-label="Giocatore 2"
-        >
-          <option value="">Giocatore 2…</option>
-          {players.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </Select>
+          excludeIds={p1 ? new Set([p1]) : undefined}
+          placeholder="Giocatore 2…"
+          onChange={setP2}
+        />
       </div>
       <FieldError>{error}</FieldError>
       <Button type="submit" size="sm" disabled={pending}>

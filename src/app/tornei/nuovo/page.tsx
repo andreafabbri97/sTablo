@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Swords } from "lucide-react";
 import { PageHeader } from "@/components/ui/page";
 import { Card } from "@/components/ui/card";
-import { TournamentForm } from "@/components/admin/tournament-form";
+import { TournamentCreateSwitch } from "@/components/admin/tournament-create-switch";
 import { TournamentOpenForm } from "@/components/tournament-open-form";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { getPlayerOptions } from "@/lib/queries";
@@ -24,11 +24,11 @@ export default async function NuovoTorneoPage() {
         <PageHeader
           icon={<Swords className="h-6 w-6" />}
           title="Nuovo torneo"
-          subtitle="Scegli formato, disciplina e partecipanti"
+          subtitle="Invito aperto con link/QR, oppure scegli tu i partecipanti"
           help="nuovo-torneo"
         />
         <Card>
-          <TournamentForm players={playerOptions} />
+          <TournamentCreateSwitch players={playerOptions} />
         </Card>
       </div>
     );

@@ -12,7 +12,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label, Select, Input, FieldError } from "@/components/ui/field";
+import { Label, Input, FieldError } from "@/components/ui/field";
+import { PlayerCombobox } from "@/components/ui/player-combobox";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { proposeMatch, undoMatch } from "@/lib/actions/match-actions";
@@ -69,6 +70,20 @@ export function MatchForm({
   const [undoError, setUndoError] = useState<string | null>(null);
 
   const set = (k: string, v: string) => setSel((s) => ({ ...s, [k]: v }));
+
+  // The ids picked in the *other* slots, so a player can't be selected twice in
+  // the same match. The current slot keeps its own value selectable.
+  const slotKeys =
+    format === "singles"
+      ? ["playerA", "playerB"]
+      : ["playerA", "playerA2", "playerB", "playerB2"];
+  const pickedExcept = (slot: string) =>
+    new Set(
+      slotKeys
+        .filter((k) => k !== slot)
+        .map((k) => sel[k])
+        .filter((id): id is string => Boolean(id)),
+    );
 
   const byId = useMemo(() => {
     const m = new Map<string, Option>();
@@ -258,11 +273,11 @@ export function MatchForm({
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3">
         <SideColumn tone="brand" label="Squadra A">
           {format === "singles" ? (
-            <PlayerSelect players={players} value={sel.playerA} onChange={(v) => set("playerA", v)} />
+            <PlayerSelect players={players} value={sel.playerA} excludeIds={pickedExcept("playerA")} onChange={(v) => set("playerA", v)} />
           ) : (
             <>
-              <PlayerSelect players={players} value={sel.playerA} onChange={(v) => set("playerA", v)} />
-              <PlayerSelect players={players} value={sel.playerA2} onChange={(v) => set("playerA2", v)} />
+              <PlayerSelect players={players} value={sel.playerA} excludeIds={pickedExcept("playerA")} onChange={(v) => set("playerA", v)} />
+              <PlayerSelect players={players} value={sel.playerA2} excludeIds={pickedExcept("playerA2")} onChange={(v) => set("playerA2", v)} />
             </>
           )}
           <Stepper value={scoreA} onChange={setScoreA} />
@@ -272,11 +287,11 @@ export function MatchForm({
 
         <SideColumn tone="sea" label="Squadra B">
           {format === "singles" ? (
-            <PlayerSelect players={players} value={sel.playerB} onChange={(v) => set("playerB", v)} />
+            <PlayerSelect players={players} value={sel.playerB} excludeIds={pickedExcept("playerB")} onChange={(v) => set("playerB", v)} />
           ) : (
             <>
-              <PlayerSelect players={players} value={sel.playerB} onChange={(v) => set("playerB", v)} />
-              <PlayerSelect players={players} value={sel.playerB2} onChange={(v) => set("playerB2", v)} />
+              <PlayerSelect players={players} value={sel.playerB} excludeIds={pickedExcept("playerB")} onChange={(v) => set("playerB", v)} />
+              <PlayerSelect players={players} value={sel.playerB2} excludeIds={pickedExcept("playerB2")} onChange={(v) => set("playerB2", v)} />
             </>
           )}
           <Stepper value={scoreB} onChange={setScoreB} />
@@ -386,21 +401,21 @@ function SideColumn({
 function PlayerSelect({
   players,
   value,
+  excludeIds,
   onChange,
 }: {
   players: Option[];
   value?: string;
+  excludeIds?: Set<string>;
   onChange: (v: string) => void;
 }) {
   return (
-    <Select value={value ?? ""} onChange={(e) => onChange(e.target.value)}>
-      <option value="">Giocatore…</option>
-      {players.map((p) => (
-        <option key={p.id} value={p.id}>
-          {p.name}
-        </option>
-      ))}
-    </Select>
+    <PlayerCombobox
+      players={players}
+      value={value}
+      excludeIds={excludeIds}
+      onChange={onChange}
+    />
   );
 }
 

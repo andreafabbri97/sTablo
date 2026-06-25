@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarPlus, Swords } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label, Select, Input, FieldError } from "@/components/ui/field";
+import { Label, Input, FieldError } from "@/components/ui/field";
+import { PlayerCombobox } from "@/components/ui/player-combobox";
 import { cn } from "@/lib/utils";
 import { scheduleMatch } from "@/lib/actions/match-actions";
 
@@ -42,6 +43,19 @@ export function ChallengeForm({
   const [loading, setLoading] = useState(false);
 
   const set = (k: string, v: string) => setSel((s) => ({ ...s, [k]: v }));
+
+  // Ids picked in the other slots, so the same player can't be on both sides.
+  const slotKeys =
+    format === "singles"
+      ? ["playerA", "playerB"]
+      : ["playerA", "playerA2", "playerB", "playerB2"];
+  const pickedExcept = (slot: string) =>
+    new Set(
+      slotKeys
+        .filter((k) => k !== slot)
+        .map((k) => sel[k])
+        .filter((id): id is string => Boolean(id)),
+    );
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -119,6 +133,7 @@ export function ChallengeForm({
           <PlayerSelect
             players={players}
             value={sel.playerA}
+            excludeIds={pickedExcept("playerA")}
             placeholder={isAdmin ? "Giocatore A…" : "Tu"}
             onChange={(v) => set("playerA", v)}
           />
@@ -126,6 +141,7 @@ export function ChallengeForm({
             <PlayerSelect
               players={players}
               value={sel.playerA2}
+              excludeIds={pickedExcept("playerA2")}
               placeholder="Compagno…"
               onChange={(v) => set("playerA2", v)}
             />
@@ -140,6 +156,7 @@ export function ChallengeForm({
           <PlayerSelect
             players={players}
             value={sel.playerB}
+            excludeIds={pickedExcept("playerB")}
             placeholder="Avversario…"
             onChange={(v) => set("playerB", v)}
           />
@@ -147,6 +164,7 @@ export function ChallengeForm({
             <PlayerSelect
               players={players}
               value={sel.playerB2}
+              excludeIds={pickedExcept("playerB2")}
               placeholder="Compagno…"
               onChange={(v) => set("playerB2", v)}
             />
@@ -219,22 +237,23 @@ function SideColumn({
 function PlayerSelect({
   players,
   value,
+  excludeIds,
   placeholder,
   onChange,
 }: {
   players: Option[];
   value?: string;
+  excludeIds?: Set<string>;
   placeholder: string;
   onChange: (v: string) => void;
 }) {
   return (
-    <Select value={value ?? ""} onChange={(e) => onChange(e.target.value)}>
-      <option value="">{placeholder}</option>
-      {players.map((p) => (
-        <option key={p.id} value={p.id}>
-          {p.name}
-        </option>
-      ))}
-    </Select>
+    <PlayerCombobox
+      players={players}
+      value={value}
+      excludeIds={excludeIds}
+      placeholder={placeholder}
+      onChange={onChange}
+    />
   );
 }
