@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/page";
+import { AdminBadge } from "@/components/player/admin-badge";
 import { getPlayStyle } from "@/lib/gamification";
 
 export type PlayerCardData = {
@@ -22,6 +23,7 @@ export type PlayerCardData = {
   level: number;
   won: number;
   lost: number;
+  isAdmin?: boolean;
 };
 
 /** Accent- and case-insensitive normalization so "andrè" matches "andre". */
@@ -99,6 +101,7 @@ export function PlayersGrid({ players }: { players: PlayerCardData[] }) {
                     <p className="text-xs text-muted">{p.played} partite</p>
                   )}
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    {p.isAdmin && <AdminBadge />}
                     <Badge tone="brand">{p.elo} Elo</Badge>
                     <Badge tone="ball">Lv {p.level}</Badge>
                     <span className="text-xs text-muted">

@@ -19,6 +19,8 @@ import { getEloSeries, getMatchesForPlayer, getPlayerSlugById } from "@/lib/quer
 import { computeBadges } from "@/lib/badges";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { userIdForPlayer, getFriendState } from "@/lib/friends";
+import { isPlayerAdmin } from "@/lib/roles";
+import { AdminBadge } from "@/components/player/admin-badge";
 import { AddFriendButton } from "@/components/friends/add-friend-button";
 import { getPlayStyle, FOOT_LABELS } from "@/lib/gamification";
 import { pct } from "@/lib/utils";
@@ -66,7 +68,7 @@ export default async function PlayerPage({
     tournamentsWon,
     level: level.level,
   });
-  const [user, series, recent, insights] = await Promise.all([
+  const [user, series, recent, insights, playerIsAdmin] = await Promise.all([
     getCurrentUser(),
     safe(() => getEloSeries(player.id, "player_singles"), []),
     safe(() => getMatchesForPlayer(player.id, 8), []),
@@ -76,6 +78,7 @@ export default async function PlayerPage({
       victim: null,
       bestPartner: null,
     }),
+    safe(() => isPlayerAdmin(player.id), false),
   ]);
 
   const isOwner = user?.playerId === player.id;
@@ -104,6 +107,11 @@ export default async function PlayerPage({
           </h1>
           {player.nickname && (
             <p className="text-sm font-semibold text-brand">“{player.nickname}”</p>
+          )}
+          {playerIsAdmin && (
+            <div className="mt-1.5 flex justify-center sm:justify-start">
+              <AdminBadge />
+            </div>
           )}
           {player.motto && (
             <p className="mt-1 flex items-center justify-center gap-1 text-sm italic text-muted sm:justify-start">

@@ -332,6 +332,7 @@ export const GUIDES: Record<string, Guide> = {
           "Vedi Elo, statistiche, stile di gioco e i trofei sbloccati.",
           "Dal profilo di un altro giocatore, tocca «Testa a testa» per vedere il vostro storico di sfide dirette.",
           "Aggiungi un giocatore agli amici per seguirlo più da vicino.",
+          "Il badge 🛡️ Admin segnala gli amministratori della community, nella lista e sul profilo.",
         ],
       },
       {

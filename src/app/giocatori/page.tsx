@@ -3,13 +3,17 @@ import { Users } from "lucide-react";
 import { PageHeader, EmptyState } from "@/components/ui/page";
 import { PlayersGrid, type PlayerCardData } from "@/components/player/players-grid";
 import { getRanking } from "@/lib/stats";
+import { getAdminPlayerIds } from "@/lib/roles";
 import { safe } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Giocatori" };
 
 export default async function GiocatoriPage() {
-  const rows = await safe(() => getRanking("overall"), []);
+  const [rows, adminIds] = await Promise.all([
+    safe(() => getRanking("overall"), []),
+    safe(() => getAdminPlayerIds(), new Set<string>()),
+  ]);
 
   const players: PlayerCardData[] = rows.map((row) => ({
     id: row.player.id,
@@ -24,6 +28,7 @@ export default async function GiocatoriPage() {
     level: row.level,
     won: row.won,
     lost: row.lost,
+    isAdmin: adminIds.has(row.player.id),
   }));
 
   return (
