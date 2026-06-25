@@ -13,6 +13,7 @@ import {
   type SideInput,
 } from "@/lib/match-engine";
 import { sendPushToUsers } from "@/lib/push";
+import { rateLimit, retryAfterSeconds, RATE_LIMITS } from "@/lib/rate-limit";
 import type { ActionResult } from "./auth-actions";
 
 const CONFIRM_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -55,6 +56,17 @@ export async function proposeMatch(input: unknown): Promise<ProposeResult> {
     user = await assertAuth();
   } catch {
     return { ok: false, error: "Devi accedere per inserire una partita" };
+  }
+
+  // Per-user guard against a stuck client looping or spamming proposals.
+  const limit = rateLimit(`propose:${user.id}`, RATE_LIMITS.proposeMatch);
+  if (!limit.ok) {
+    return {
+      ok: false,
+      error: `Troppe partite inserite di fila. Aspetta ${retryAfterSeconds(
+        limit.retryAfterMs,
+      )} secondi.`,
+    };
   }
 
   const parsed = matchSchema.safeParse(input);

@@ -1,11 +1,18 @@
 "use server";
 
+import { headers } from "next/headers";
 import { hash } from "bcryptjs";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users, players } from "@/lib/db/schema";
 import { registerSchema } from "@/lib/validation";
 import { slugify, colorFromString } from "@/lib/utils";
+import {
+  rateLimit,
+  clientKeyFromHeaders,
+  retryAfterSeconds,
+  RATE_LIMITS,
+} from "@/lib/rate-limit";
 
 export type ActionResult =
   | { ok: true }
@@ -28,6 +35,17 @@ async function uniqueSlug(base: string): Promise<string> {
 export async function registerUser(
   input: unknown,
 ): Promise<ActionResult> {
+  const ip = clientKeyFromHeaders(await headers());
+  const limit = rateLimit(`register:${ip}`, RATE_LIMITS.register);
+  if (!limit.ok) {
+    return {
+      ok: false,
+      error: `Troppe registrazioni da questo dispositivo. Riprova tra ${retryAfterSeconds(
+        limit.retryAfterMs,
+      )} secondi.`,
+    };
+  }
+
   const parsed = registerSchema.safeParse(input);
   if (!parsed.success) {
     const first = parsed.error.issues[0];

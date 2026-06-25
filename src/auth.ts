@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { loginSchema } from "@/lib/validation";
+import { rateLimit, clientKeyFromHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -17,7 +18,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(raw) {
+      async authorize(raw, request) {
+        // Throttle brute-force attempts per client IP. This is the real auth
+        // boundary, so the limit lives here (not just in the form). When tripped
+        // we fail like a normal bad-credentials attempt — no info leak about
+        // whether the username exists or that a limit was hit.
+        const ip = clientKeyFromHeaders(request.headers);
+        if (!rateLimit(`login:${ip}`, RATE_LIMITS.login).ok) return null;
+
         const parsed = loginSchema.safeParse(raw);
         if (!parsed.success) return null;
         const { username, password } = parsed.data;

@@ -7,6 +7,7 @@ import { hash } from "bcryptjs";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { assertAdmin } from "@/lib/auth-helpers";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import type { ActionResult } from "./auth-actions";
 
 /** Admin-mediated password recovery returns the new temp password ONCE so the
@@ -68,10 +69,14 @@ export async function resetUserPassword(
   userId: string,
   newPassword: string,
 ): Promise<ActionResult> {
+  let admin;
   try {
-    await assertAdmin();
+    admin = await assertAdmin();
   } catch {
     return { ok: false, error: "Azione riservata all'amministratore" };
+  }
+  if (!rateLimit(`reset:${admin.id}`, RATE_LIMITS.adminReset).ok) {
+    return { ok: false, error: "Troppi reset di fila. Riprova tra poco." };
   }
   if (!newPassword || newPassword.length < 8) {
     return { ok: false, error: "La password deve avere almeno 8 caratteri" };
@@ -97,10 +102,14 @@ export async function resetUserPassword(
 export async function resetUserPasswordToTemp(
   userId: string,
 ): Promise<ResetResult> {
+  let admin;
   try {
-    await assertAdmin();
+    admin = await assertAdmin();
   } catch {
     return { ok: false, error: "Azione riservata all'amministratore" };
+  }
+  if (!rateLimit(`reset:${admin.id}`, RATE_LIMITS.adminReset).ok) {
+    return { ok: false, error: "Troppi reset di fila. Riprova tra poco." };
   }
   const password = makeTempPassword();
   try {
