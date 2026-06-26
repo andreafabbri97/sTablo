@@ -37,8 +37,10 @@ export function NewChatPicker({ people }: { people: MessageablePerson[] }) {
     () => people.filter((p) => p.isFriend).length,
     [people],
   );
-  // The filter only earns its space when both groups are non-empty.
-  const showTabs = friendCount > 0 && friendCount < people.length;
+  // Show the split whenever you have friends among the people you can message
+  // and there's more than one — even if they're ALL friends (then «Altri» is
+  // simply empty). Keeps it consistent and visible like the other lists.
+  const showTabs = friendCount > 0 && people.length > 1;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
