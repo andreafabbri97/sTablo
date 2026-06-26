@@ -10,6 +10,13 @@ import {
   PlayerOptionLabel,
   type PlayerOption,
 } from "@/components/ui/player-option-row";
+import {
+  ScopeTabs,
+  FRIEND_SCOPE_OPTIONS,
+  shouldShowScope,
+  filterByScope,
+  type FriendScope,
+} from "@/components/scope-tabs";
 import { cn } from "@/lib/utils";
 import { createTournament } from "@/lib/actions/tournament-actions";
 
@@ -322,22 +329,27 @@ function SinglesPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [scope, setScope] = useState<FriendScope>("all");
   const byId = useMemo(
     () => new Map(players.map((p) => [p.id, p])),
     [players],
   );
 
+  const showScope = shouldShowScope(players);
+  const activeScope = showScope ? scope : "all";
+  const scoped = filterByScope(players, activeScope);
   const q = query.trim().toLowerCase();
   const shown = q
-    ? players.filter((p) =>
+    ? scoped.filter((p) =>
         [p.name, p.username]
           .filter(Boolean)
           .some((s) => (s as string).toLowerCase().includes(q)),
       )
-    : players;
+    : scoped;
 
   function close() {
     setQuery("");
+    setScope("all");
     setOpen(false);
   }
 
@@ -392,6 +404,14 @@ function SinglesPicker({
       >
         <div className="space-y-3">
           <PickerSearch value={query} onChange={setQuery} />
+          {showScope && (
+            <ScopeTabs
+              options={FRIEND_SCOPE_OPTIONS}
+              value={scope}
+              onChange={setScope}
+              ariaLabel="Filtra giocatori"
+            />
+          )}
           <div className="-mx-1 max-h-[50vh] space-y-1 overflow-y-auto px-1">
             {shown.length === 0 ? (
               <p className="px-2 py-8 text-center text-sm text-muted">
@@ -452,6 +472,7 @@ function DoublesPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [scope, setScope] = useState<FriendScope>("all");
   const usernameById = useMemo(
     () => new Map(players.map((p) => [p.id, p.username ?? null])),
     [players],
@@ -464,19 +485,23 @@ function DoublesPicker({
     return handles.length ? handles.join(" & ") : null;
   }
   const available = players.filter((p) => !usedInPairs.has(p.id));
+  const showScope = shouldShowScope(available);
+  const activeScope = showScope ? scope : "all";
+  const scopedAvail = filterByScope(available, activeScope);
   const q = query.trim().toLowerCase();
   const shownAvail = q
-    ? available.filter((p) =>
+    ? scopedAvail.filter((p) =>
         [p.name, p.username]
           .filter(Boolean)
           .some((s) => (s as string).toLowerCase().includes(q)),
       )
-    : available;
+    : scopedAvail;
 
   const pairWord = (n: number) => (n === 1 ? "coppia" : "coppie");
 
   function close() {
     setQuery("");
+    setScope("all");
     setOpen(false);
   }
 
@@ -554,6 +579,14 @@ function DoublesPicker({
               : "Tocca un giocatore, poi il suo compagno per formare una coppia."}
           </p>
           <PickerSearch value={query} onChange={setQuery} />
+          {showScope && (
+            <ScopeTabs
+              options={FRIEND_SCOPE_OPTIONS}
+              value={scope}
+              onChange={setScope}
+              ariaLabel="Filtra giocatori"
+            />
+          )}
           <div className="-mx-1 max-h-[45vh] space-y-1 overflow-y-auto px-1">
             {available.length === 0 ? (
               <p className="px-2 py-8 text-center text-sm text-muted">

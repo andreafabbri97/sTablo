@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { MatchForm } from "@/components/admin/match-form";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { getPlayerMatchOptions } from "@/lib/queries";
+import { getFriends } from "@/lib/friends";
+import { safe } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Nuova partita" };
@@ -15,7 +17,19 @@ export default async function NuovaPartitaPage() {
   if (!user) redirect("/login?callbackUrl=/partite/nuova");
 
   const isAdmin = user.role === "admin";
-  const players = await getPlayerMatchOptions();
+  const [rawPlayers, friends] = await Promise.all([
+    getPlayerMatchOptions(),
+    safe(() => getFriends(user.id), []),
+  ]);
+  // Flag accepted friends so the picker can offer the «Tutti / Amici / Altri»
+  // split (matched by slug, like every other friend-aware list).
+  const friendSlugs = new Set(
+    friends.map((f) => f.slug).filter((s): s is string => Boolean(s)),
+  );
+  const players = rawPlayers.map((p) => ({
+    ...p,
+    isFriend: friendSlugs.has(p.slug),
+  }));
 
   return (
     <div className="mx-auto max-w-2xl">

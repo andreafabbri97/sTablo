@@ -11,6 +11,31 @@ export type FriendScope = "all" | "friends" | "others";
 
 export type ScopeOption<T extends string> = { key: T; label: string };
 
+/** The standard «Tutti / Amici / Altri» options, ready to spread into ScopeTabs. */
+export const FRIEND_SCOPE_OPTIONS: readonly ScopeOption<FriendScope>[] = [
+  { key: "all", label: "Tutti" },
+  { key: "friends", label: "Amici" },
+  { key: "others", label: "Altri" },
+];
+
+/**
+ * The split only earns its space when both groups are non-empty — an
+ * all-friends or no-friends list would just show a dead control.
+ */
+export function shouldShowScope(items: readonly { isFriend?: boolean }[]): boolean {
+  const friends = items.filter((i) => i.isFriend).length;
+  return friends > 0 && friends < items.length;
+}
+
+/** Narrow a list to the active friend scope. "all" is a no-op passthrough. */
+export function filterByScope<T extends { isFriend?: boolean }>(
+  items: T[],
+  scope: FriendScope,
+): T[] {
+  if (scope === "all") return items;
+  return items.filter((i) => (scope === "friends" ? !!i.isFriend : !i.isFriend));
+}
+
 /**
  * App-wide segmented control behind the «Tutti / Amici / Altri» scope filter,
  * rendered identically on every list (giocatori, nuova chat, partite, tornei).

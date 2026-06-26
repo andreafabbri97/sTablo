@@ -11,6 +11,9 @@ export type PlayerOption = {
   username?: string | null;
   avatarColor?: number;
   avatarUrl?: string | null;
+  /** Whether this player is an accepted friend of the viewer, when known.
+   * Powers the «Tutti / Amici / Altri» split in the pickers. */
+  isFriend?: boolean;
 };
 
 /** Secondary line for a player: the @username, when present. */

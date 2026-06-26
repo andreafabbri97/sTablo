@@ -7,6 +7,8 @@ import { TournamentCreateSwitch } from "@/components/admin/tournament-create-swi
 import { TournamentOpenForm } from "@/components/tournament-open-form";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { getPlayerOptions } from "@/lib/queries";
+import { getFriends } from "@/lib/friends";
+import { safe } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Nuovo torneo" };
@@ -18,7 +20,19 @@ export default async function NuovoTorneoPage() {
   const isAdmin = user.role === "admin";
 
   if (isAdmin) {
-    const playerOptions = await getPlayerOptions();
+    const [rawOptions, friends] = await Promise.all([
+      getPlayerOptions(),
+      safe(() => getFriends(user.id), []),
+    ]);
+    // Flag accepted friends so the participant/pair pickers can offer the
+    // «Tutti / Amici / Altri» split (matched by slug, like every other list).
+    const friendSlugs = new Set(
+      friends.map((f) => f.slug).filter((s): s is string => Boolean(s)),
+    );
+    const playerOptions = rawOptions.map((p) => ({
+      ...p,
+      isFriend: friendSlugs.has(p.slug),
+    }));
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <PageHeader

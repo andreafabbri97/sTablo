@@ -5,8 +5,9 @@ import { Link2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TournamentForm } from "@/components/admin/tournament-form";
 import { TournamentOpenForm } from "@/components/tournament-open-form";
+import type { PlayerOption } from "@/components/ui/player-option-row";
 
-type Option = { id: string; name: string };
+type Option = PlayerOption;
 type Mode = "open" | "manual";
 
 /**

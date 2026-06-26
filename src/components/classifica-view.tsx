@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { PlayerName } from "@/components/player/player-name";
 import { EmptyState } from "@/components/ui/page";
+import { ScopeTabs, type FriendScope } from "@/components/scope-tabs";
 import { cn, pct } from "@/lib/utils";
 import type { RankRow } from "@/lib/stats";
 import type { SeasonStanding } from "@/lib/seasons";
@@ -35,6 +36,7 @@ export function ClassificaView({
   teams,
   season,
   seasonLabel,
+  friendSlugs = [],
 }: {
   overall: RankRow[];
   singles: RankRow[];
@@ -42,10 +44,37 @@ export function ClassificaView({
   teams: TeamRow[];
   season: SeasonStanding[];
   seasonLabel: string;
+  friendSlugs?: string[];
 }) {
   const [tab, setTab] = useState<Tab>("season");
+  const [scope, setScope] = useState<FriendScope>("all");
+
+  const friendSet = useMemo(() => new Set(friendSlugs), [friendSlugs]);
   const rows = tab === "singles" ? singles : tab === "doubles" ? doubles : overall;
   const players = rows.filter((r) => r.played > 0);
+
+  // The slugs visible in the active player-based tab — drives whether the
+  // friend split is worth showing (only when both groups are non-empty).
+  const activeSlugs =
+    tab === "season"
+      ? season.map((r) => r.player.slug)
+      : tab === "teams"
+        ? []
+        : players.map((r) => r.player.slug);
+  const friendCount = activeSlugs.filter((s) => friendSet.has(s)).length;
+  const showScope =
+    tab !== "teams" && friendCount > 0 && friendCount < activeSlugs.length;
+  const activeScope = showScope ? scope : "all";
+
+  const keep = (slug: string) =>
+    activeScope === "all"
+      ? true
+      : activeScope === "friends"
+        ? friendSet.has(slug)
+        : !friendSet.has(slug);
+
+  const shownSeason = season.filter((r) => keep(r.player.slug));
+  const shownPlayers = players.filter((r) => keep(r.player.slug));
 
   return (
     <div>
@@ -66,8 +95,27 @@ export function ClassificaView({
         ))}
       </div>
 
+      {showScope && (
+        <div className="mb-4">
+          <ScopeTabs
+            options={[
+              { key: "all", label: "Tutti" },
+              { key: "friends", label: "Amici" },
+              { key: "others", label: "Altri" },
+            ]}
+            value={scope}
+            onChange={setScope}
+            ariaLabel="Filtra classifica"
+          />
+        </div>
+      )}
+
       {tab === "season" ? (
-        <SeasonBoard season={season} seasonLabel={seasonLabel} />
+        <SeasonBoard
+          season={shownSeason}
+          seasonLabel={seasonLabel}
+          filtered={activeScope !== "all"}
+        />
       ) : TEAMS_ENABLED && tab === "teams" ? (
         teams.length === 0 ? (
           <EmptyState
@@ -90,15 +138,19 @@ export function ClassificaView({
             ))}
           </div>
         )
-      ) : players.length === 0 ? (
+      ) : shownPlayers.length === 0 ? (
         <EmptyState
           icon={<Trophy className="h-6 w-6" />}
-          title="Classifica vuota"
-          description="Servono partite giocate per popolare il ranking."
+          title={activeScope === "friends" ? "Nessun amico in classifica" : "Classifica vuota"}
+          description={
+            activeScope === "friends"
+              ? "Nessuno dei tuoi amici ha ancora giocato partite di classifica."
+              : "Servono partite giocate per popolare il ranking."
+          }
         />
       ) : (
         <div className="space-y-2 animate-fade-up">
-          {players.map((row, i) => (
+          {shownPlayers.map((row, i) => (
             <Link
               key={row.player.id}
               href={`/giocatori/${row.player.slug}`}
@@ -141,16 +193,22 @@ function RankBadge({ rank }: { rank: number }) {
 function SeasonBoard({
   season,
   seasonLabel,
+  filtered = false,
 }: {
   season: SeasonStanding[];
   seasonLabel: string;
+  filtered?: boolean;
 }) {
   if (season.length === 0) {
     return (
       <EmptyState
         icon={<Trophy className="h-6 w-6" />}
-        title="Stagione ancora a secco"
-        description={`Nessuna partita di classifica giocata a ${seasonLabel}. Scendi in campo!`}
+        title={filtered ? "Nessun amico in classifica" : "Stagione ancora a secco"}
+        description={
+          filtered
+            ? `Nessuno dei tuoi amici ha giocato partite di classifica a ${seasonLabel}.`
+            : `Nessuna partita di classifica giocata a ${seasonLabel}. Scendi in campo!`
+        }
       />
     );
   }

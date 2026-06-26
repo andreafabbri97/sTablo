@@ -8,6 +8,13 @@ import {
   PlayerOptionLabel,
   type PlayerOption,
 } from "@/components/ui/player-option-row";
+import {
+  ScopeTabs,
+  FRIEND_SCOPE_OPTIONS,
+  shouldShowScope,
+  filterByScope,
+  type FriendScope,
+} from "@/components/scope-tabs";
 import { cn } from "@/lib/utils";
 
 export type { PlayerOption };
@@ -35,24 +42,31 @@ export function PlayerCombobox({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [scope, setScope] = useState<FriendScope>("all");
 
   const selected = players.find((p) => p.id === value);
 
+  // The pool the picker can actually choose from (current selection stays
+  // visible even if it's excluded by another slot).
+  const selectable = useMemo(
+    () => players.filter((p) => p.id === value || !excludeIds?.has(p.id)),
+    [players, value, excludeIds],
+  );
+  const showScope = useMemo(() => shouldShowScope(selectable), [selectable]);
+  const activeScope = showScope ? scope : "all";
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = players.filter(
-      // keep the current selection visible even if excluded elsewhere
-      (p) => p.id === value || !excludeIds?.has(p.id),
-    );
+    const scoped = filterByScope(selectable, activeScope);
     const matched = q
-      ? list.filter((p) =>
+      ? scoped.filter((p) =>
           [p.name, p.username]
             .filter(Boolean)
             .some((s) => (s as string).toLowerCase().includes(q)),
         )
-      : list;
+      : scoped;
     return matched.slice(0, 100);
-  }, [players, query, value, excludeIds]);
+  }, [selectable, query, activeScope]);
 
   function choose(id: string) {
     onChange(id);
@@ -62,6 +76,7 @@ export function PlayerCombobox({
 
   function close() {
     setQuery("");
+    setScope("all");
     setOpen(false);
   }
 
@@ -109,6 +124,14 @@ export function PlayerCombobox({
               className="w-full rounded-xl border border-border bg-surface py-2.5 pl-9 pr-3 text-sm outline-none focus:border-brand"
             />
           </div>
+          {showScope && (
+            <ScopeTabs
+              options={FRIEND_SCOPE_OPTIONS}
+              value={scope}
+              onChange={setScope}
+              ariaLabel="Filtra giocatori"
+            />
+          )}
           <div className="-mx-1 max-h-[55vh] space-y-1 overflow-y-auto px-1">
             {filtered.length === 0 ? (
               <p className="px-2 py-8 text-center text-sm text-muted">

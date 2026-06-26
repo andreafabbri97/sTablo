@@ -67,6 +67,13 @@ export const GUIDES: Record<string, Guide> = {
           "All'inizio di ogni mese ricevi un push con il recap e l'MVP della stagione appena chiusa.",
         ],
       },
+      {
+        heading: "Tutti / Amici / Altri",
+        points: [
+          "Quando hai almeno un amico in classifica, compare il selettore «Tutti / Amici / Altri».",
+          "«Amici» mostra solo la classifica della tua cerchia; «Altri» tutti gli altri. Vale su ogni scheda (Stagione, Generale, Singolo, Doppio).",
+        ],
+      },
     ],
   },
 
@@ -184,7 +191,7 @@ export const GUIDES: Record<string, Guide> = {
         points: [
           "Scegli 1 vs 1 o 2 vs 2.",
           "Scegli «Classificata» 🏆 (muove l'Elo) o «Amichevole» 🤝 (solo XP): per le partite non esiste pubblico/privato, questa è l'unica distinzione.",
-          "Tocca una casella giocatore: si apre un elenco cercabile per nome o username, con foto e soprannome per scegliere la persona giusta.",
+          "Tocca una casella giocatore: si apre un elenco cercabile per nome o username, con foto e soprannome per scegliere la persona giusta. Se hai amici, il filtro «Tutti / Amici / Altri» ti aiuta a trovarli più in fretta.",
           "Imposta i punteggi (puoi digitarli o usare + / −).",
           "Data e ora si compilano da sole con l'istante del salvataggio, se le lasci vuote.",
         ],
@@ -307,6 +314,7 @@ export const GUIDES: Record<string, Guide> = {
           "Nel singolo selezioni i giocatori: l'ordine di scelta dà le teste di serie.",
           "Nel doppio tocchi un giocatore e poi il suo compagno per formare la coppia.",
           "Si apre un elenco cercabile per nome o username, con foto e soprannome: comodo quando siete in tanti.",
+          "Se hai amici, il filtro «Tutti / Amici / Altri» nell'elenco li separa dal resto.",
         ],
       },
     ],

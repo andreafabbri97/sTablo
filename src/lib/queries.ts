@@ -375,6 +375,7 @@ export const getPlayerMatchOptions = cachedQuery(
       .select({
         id: players.id,
         name: players.name,
+        slug: players.slug,
         eloSingles: players.eloSingles,
         eloDoubles: players.eloDoubles,
         avatarColor: players.avatarColor,
