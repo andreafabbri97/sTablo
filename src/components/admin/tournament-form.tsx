@@ -452,6 +452,17 @@ function DoublesPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const usernameById = useMemo(
+    () => new Map(players.map((p) => [p.id, p.username ?? null])),
+    [players],
+  );
+  // Compact "@h1 & @h2" line for a formed couple — only the handles that exist.
+  function pairHandles(p: Pair): string | null {
+    const handles = [usernameById.get(p.playerId), usernameById.get(p.partnerId)]
+      .filter((u): u is string => Boolean(u))
+      .map((u) => `@${u}`);
+    return handles.length ? handles.join(" & ") : null;
+  }
   const available = players.filter((p) => !usedInPairs.has(p.id));
   const q = query.trim().toLowerCase();
   const shownAvail = q
@@ -491,9 +502,17 @@ function DoublesPicker({
                 {i + 1}
               </span>
               <Users className="h-4 w-4 shrink-0 text-muted" />
-              <span className="flex-1 truncate font-medium">
-                {nameById.get(p.playerId)} <span className="text-muted">&</span>{" "}
-                {nameById.get(p.partnerId)}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium">
+                  {nameById.get(p.playerId)}{" "}
+                  <span className="text-muted">&</span>{" "}
+                  {nameById.get(p.partnerId)}
+                </span>
+                {pairHandles(p) && (
+                  <span className="block truncate text-xs text-muted">
+                    {pairHandles(p)}
+                  </span>
+                )}
               </span>
               <button
                 type="button"

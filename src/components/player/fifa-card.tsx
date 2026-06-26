@@ -7,12 +7,15 @@ import { cn } from "@/lib/utils";
 /** Collectible-card style hero for a player profile. */
 export function FifaCard({
   player,
+  username,
   overall,
   attributes,
   level,
   backgroundId,
 }: {
   player: Player;
+  /** Account handle shown under the name, so the card always says who it is. */
+  username?: string | null;
   overall: number;
   attributes: Attributes;
   level: LevelInfo;
@@ -52,6 +55,11 @@ export function FifaCard({
           <p className="truncate font-display text-xl font-extrabold uppercase tracking-wide">
             {player.name}
           </p>
+          {username && (
+            <p className="truncate text-xs font-semibold tracking-wide opacity-80">
+              @{username}
+            </p>
+          )}
           {style && (
             <p className="text-xs font-semibold uppercase tracking-widest opacity-90">
               {style.name}

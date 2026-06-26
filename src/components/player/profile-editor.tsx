@@ -43,6 +43,7 @@ export function ProfileEditor({
       <div className="space-y-4">
         <FifaCard
           player={player}
+          username={username}
           overall={overall}
           attributes={attributes}
           level={level}

@@ -101,7 +101,14 @@ export function NotificationsBell() {
                 {data.friendRequests.map((it) => (
                   <li key={it.friendshipId} className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-surface-2">
                     <Avatar name={it.name} colorIndex={it.avatarColor} imageUrl={it.avatarUrl} size="xs" />
-                    <span className="flex-1 truncate text-sm font-medium">{it.name}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium leading-tight">{it.name}</p>
+                      {it.username && (
+                        <p className="truncate text-xs leading-tight text-muted">
+                          @{it.username}
+                        </p>
+                      )}
+                    </div>
                     <button onClick={() => respond(it.friendshipId, true)} className="grid h-7 w-7 place-items-center rounded-lg bg-win text-white" aria-label="Accetta">
                       <Check className="h-4 w-4" />
                     </button>

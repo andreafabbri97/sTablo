@@ -363,6 +363,7 @@ export const GUIDES: Record<string, Guide> = {
         heading: "Cosa puoi fare",
         points: [
           "Usa la barra di ricerca per trovare subito un giocatore per nome o username.",
+          "Sotto ogni nome trovi l'@username: così riconosci sempre chi è, niente più confusione tra omonimi.",
           "Tocca un giocatore per aprire il suo profilo completo.",
           "Vedi Elo, statistiche, stile di gioco e i trofei sbloccati.",
           "Dal profilo di un altro giocatore, tocca «Testa a testa» per vedere il vostro storico di sfide dirette.",
@@ -453,6 +454,7 @@ export const GUIDES: Record<string, Guide> = {
           "Su computer la chat è a due colonne: la lista a sinistra e la conversazione aperta a destra. Su telefono apri una conversazione alla volta.",
           "I messaggi arrivano in tempo reale mentre la conversazione è aperta; con le notifiche push attive ti avvisa anche con l'app chiusa.",
           "Il pallino rosso sull'icona 💬 conta le conversazioni con messaggi non letti.",
+          "Ogni conversazione mostra il nome con l'@username e il badge ✓ Amico oppure «Non amico», così sai sempre con chi stai parlando.",
         ],
       },
       {
@@ -460,8 +462,8 @@ export const GUIDES: Record<string, Guide> = {
         points: [
           "Tocca «Nuova» in alto nella lista e scegli il giocatore: si apre subito la chat con lui.",
           "In alternativa, dal profilo di un giocatore tocca «Messaggio».",
-          "Nella schermata «Nuova chat» cerchi per nome o @username; ogni riga mostra l'@username e, per gli admin, il distintivo 🛡️ Admin.",
-          "Quando hai amici, il filtro «Tutti / Amici / Altri» li separa dal resto e il badge ✓ Amico te li evidenzia.",
+          "Nella schermata «Nuova chat» cerchi per nome o @username; ogni riga mostra l'@username, il badge ✓ Amico / «Non amico» e, per gli admin, il distintivo 🛡️ Admin.",
+          "Quando hai amici, il filtro «Tutti / Amici / Altri» li separa dal resto.",
           "Usa la barra «Cerca» nella lista per filtrare al volo le conversazioni per nome.",
         ],
       },
@@ -470,7 +472,7 @@ export const GUIDES: Record<string, Guide> = {
         points: [
           "Scrivi nel campo in basso e tocca invia (o premi Invio). Per andare a capo usa Maiusc+Invio.",
           "I messaggi che invii tu appaiono a destra, quelli dell'altra persona a sinistra.",
-          "In cima alla conversazione vedi il nome, il livello e — se è un amministratore — il distintivo Admin.",
+          "In cima alla conversazione vedi il nome con l'@username, il badge ✓ Amico / «Non amico», il livello e — se è un amministratore — il distintivo Admin.",
           "Sotto ogni messaggio vedi l'orario; le date dividono i giorni.",
         ],
       },

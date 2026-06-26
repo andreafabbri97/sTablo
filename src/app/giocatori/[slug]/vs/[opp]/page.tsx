@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Swords } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
+import { PlayerName } from "@/components/player/player-name";
 import { Card, CardLabel } from "@/components/ui/card";
 import { MatchCard } from "@/components/match-card";
 import { EmptyState } from "@/components/ui/page";
@@ -130,14 +131,16 @@ function PlayerHead({
         imageUrl={player.avatarUrl}
         size="lg"
       />
-      <p
-        className={
-          "max-w-full truncate text-center text-sm font-bold group-hover:text-brand " +
-          (highlight ? "text-brand" : "")
-        }
-      >
-        {player.name}
-      </p>
+      <div className="min-w-0 max-w-full text-center">
+        <PlayerName
+          name={player.name}
+          username={player.username}
+          nameClassName={
+            "text-sm font-bold group-hover:text-brand " +
+            (highlight ? "text-brand" : "")
+          }
+        />
+      </div>
     </Link>
   );
 }

@@ -36,7 +36,14 @@ export function StandingsTable({
               )}
             >
               <td className="px-3 py-2.5 font-bold text-muted">{i + 1}</td>
-              <td className="px-2 py-2.5 font-semibold break-words">{r.entrant.name}</td>
+              <td className="px-2 py-2.5 break-words">
+                <span className="block font-semibold">{r.entrant.name}</span>
+                {r.entrant.username && (
+                  <span className="block text-xs font-medium text-muted">
+                    @{r.entrant.username}
+                  </span>
+                )}
+              </td>
               <td className="px-2 py-2.5 text-center text-muted">{r.played}</td>
               <td className="px-2 py-2.5 text-center text-win">{r.won}</td>
               <td className="px-2 py-2.5 text-center text-loss">{r.lost}</td>

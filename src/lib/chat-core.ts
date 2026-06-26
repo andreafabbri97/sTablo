@@ -27,6 +27,8 @@ export function canonicalPair(
 export type ChatPartner = {
   userId: string;
   name: string;
+  /** The partner's account handle (@username), null when not set. */
+  username: string | null;
   slug: string | null;
   avatarColor: number;
   avatarUrl: string | null;
@@ -36,6 +38,11 @@ export type ChatPartner = {
    * undefined in lighter contexts (inbox previews, message pushes).
    */
   isAdmin?: boolean;
+  /**
+   * Whether the partner is an accepted friend of the viewer. Drives the
+   * Amico / non-amico badge in the inbox picker and the thread header.
+   */
+  isFriend?: boolean;
   /** The partner's current level, when resolved for the thread header. */
   level?: number | null;
 };

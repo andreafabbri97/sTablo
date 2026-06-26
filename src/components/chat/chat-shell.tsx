@@ -8,8 +8,9 @@ import {
 } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PenSquare, Search } from "lucide-react";
+import { PenSquare, Search, UserCheck } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { HelpButton } from "@/components/help/help-button";
 import { cn, timeAgo } from "@/lib/utils";
 import type { InboxItem } from "@/lib/chat-core";
@@ -110,9 +111,13 @@ export function ChatShell({ initialInbox, children }: Props) {
   }, [pathname]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim().replace(/^@/, "").toLowerCase();
     if (!q) return inbox;
-    return inbox.filter((it) => it.partner.name.toLowerCase().includes(q));
+    return inbox.filter((it) =>
+      `${it.partner.name} ${it.partner.username ?? ""}`
+        .toLowerCase()
+        .includes(q),
+    );
   }, [inbox, query]);
 
   return (
@@ -192,6 +197,25 @@ export function ChatShell({ initialInbox, children }: Props) {
                       <span className="shrink-0 text-xs text-muted">
                         {timeAgo(it.lastMessageAt)}
                       </span>
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-1.5">
+                      {it.partner.username && (
+                        <span className="min-w-0 truncate text-xs font-medium text-muted">
+                          @{it.partner.username}
+                        </span>
+                      )}
+                      <Badge
+                        tone={it.partner.isFriend ? "sea" : "muted"}
+                        className="shrink-0"
+                      >
+                        {it.partner.isFriend ? (
+                          <>
+                            <UserCheck className="h-3 w-3" /> Amico
+                          </>
+                        ) : (
+                          "Non amico"
+                        )}
+                      </Badge>
                     </div>
                     <div className="mt-0.5 flex items-center gap-2">
                       <p

@@ -48,9 +48,14 @@ export function MatchRow({
   return (
     <div className="rounded-xl border border-border bg-surface px-3 py-2.5">
       <div className="flex items-center gap-2">
-        <span className={cn("flex-1 truncate text-sm font-semibold", completed && !aWon && "text-muted")}>
-          {match.aName}
-        </span>
+        <div className={cn("flex min-w-0 flex-1 flex-col", completed && !aWon && "text-muted")}>
+          <span className="truncate text-sm font-semibold">{match.aName}</span>
+          {match.aUsername && (
+            <span className="truncate text-[11px] font-medium leading-tight text-muted">
+              @{match.aUsername}
+            </span>
+          )}
+        </div>
 
         {editing ? (
           <div className="flex items-center gap-1">
@@ -68,9 +73,14 @@ export function MatchRow({
           <span className="text-xs font-medium text-muted">vs</span>
         )}
 
-        <span className={cn("flex-1 truncate text-right text-sm font-semibold", completed && !bWon && "text-muted")}>
-          {match.bName}
-        </span>
+        <div className={cn("flex min-w-0 flex-1 flex-col text-right", completed && !bWon && "text-muted")}>
+          <span className="truncate text-sm font-semibold">{match.bName}</span>
+          {match.bUsername && (
+            <span className="truncate text-[11px] font-medium leading-tight text-muted">
+              @{match.bUsername}
+            </span>
+          )}
+        </div>
 
         {canManage && !completed && ready && !editing && (
           <button

@@ -7,6 +7,7 @@ import { Users, Inbox, Send, QrCode as QrIcon, UserPlus } from "lucide-react";
 import { PageHeader, EmptyState } from "@/components/ui/page";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
+import { PlayerName } from "@/components/player/player-name";
 import { AddFriendButton } from "@/components/friends/add-friend-button";
 import { RequestActions } from "@/components/friends/request-actions";
 import { RemoveFriendButton } from "@/components/friends/remove-friend-button";
@@ -142,7 +143,13 @@ export default async function AmiciPage() {
             {addable.map((a) => (
               <div key={a.userId} className="card-surface flex items-center gap-3 p-3">
                 <Avatar name={a.name} colorIndex={a.avatarColor} imageUrl={a.avatarUrl} size="sm" />
-                <span className="flex-1 truncate text-sm font-semibold">{a.name}</span>
+                <div className="min-w-0 flex-1">
+                  <PlayerName
+                    name={a.name}
+                    username={a.username}
+                    nameClassName="text-sm font-semibold"
+                  />
+                </div>
                 <AddFriendButton targetUserId={a.userId} state="none" />
               </div>
             ))}
@@ -163,7 +170,13 @@ function FriendRow({
   const identity = (
     <>
       <Avatar name={friend.name} colorIndex={friend.avatarColor} imageUrl={friend.avatarUrl} size="sm" />
-      <span className="flex-1 truncate text-sm font-semibold">{friend.name}</span>
+      <div className="min-w-0 flex-1">
+        <PlayerName
+          name={friend.name}
+          username={friend.username}
+          nameClassName="text-sm font-semibold"
+        />
+      </div>
     </>
   );
   return (

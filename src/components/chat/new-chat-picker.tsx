@@ -137,12 +137,19 @@ export function NewChatPicker({ people }: { people: MessageablePerson[] }) {
                   </span>
                 )}
               </div>
-              {p.isFriend && (
-                <Badge tone="sea" className="shrink-0">
-                  <UserCheck className="h-3 w-3" />
-                  Amico
-                </Badge>
-              )}
+              <Badge
+                tone={p.isFriend ? "sea" : "muted"}
+                className="shrink-0"
+              >
+                {p.isFriend ? (
+                  <>
+                    <UserCheck className="h-3 w-3" />
+                    Amico
+                  </>
+                ) : (
+                  "Non amico"
+                )}
+              </Badge>
             </Link>
           ))
         )}

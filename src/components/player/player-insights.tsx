@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { Card, CardLabel } from "@/components/ui/card";
+import { PlayerName } from "@/components/player/player-name";
 import { cn, pct } from "@/lib/utils";
 import type {
   PlayerInsights,
@@ -108,7 +109,11 @@ function RivalCard({
         <p className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-muted">
           <span aria-hidden>{emoji}</span> {label}
         </p>
-        <p className="truncate font-bold">{rec.player.name}</p>
+        <PlayerName
+          name={rec.player.name}
+          username={rec.username}
+          nameClassName="font-bold"
+        />
         <p className="text-xs text-muted">{detail}</p>
       </div>
     </Link>
@@ -137,7 +142,11 @@ function PartnerCardView({
         <p className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-muted">
           <span aria-hidden>🤝</span> Miglior compagno
         </p>
-        <p className="truncate font-bold">{rec.player.name}</p>
+        <PlayerName
+          name={rec.player.name}
+          username={rec.username}
+          nameClassName="font-bold"
+        />
         <p className="text-xs text-muted">{detail}</p>
       </div>
     </Link>

@@ -6,6 +6,7 @@ const A: H2HPlayer = {
   id: "a",
   name: "Andrea",
   slug: "andrea",
+  username: null,
   avatarColor: 0,
   avatarUrl: null,
 };
@@ -13,6 +14,7 @@ const B: H2HPlayer = {
   id: "b",
   name: "Bruno",
   slug: "bruno",
+  username: null,
   avatarColor: 1,
   avatarUrl: null,
 };

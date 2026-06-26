@@ -1,7 +1,12 @@
 import { eq, inArray } from "drizzle-orm";
 import { db } from "./db";
 import { matches, matchParticipants } from "./db/schema";
-import { shapeMatch, matchWith, type ShapedMatch } from "./queries";
+import {
+  shapeMatch,
+  matchWith,
+  getPlayerUsernames,
+  type ShapedMatch,
+} from "./queries";
 import { sideOf } from "./h2h";
 import { cachedQuery } from "./cache";
 
@@ -28,6 +33,8 @@ export type InsightPlayer = {
 
 export type OpponentRecord = {
   player: InsightPlayer;
+  /** Linked account handle of this opponent, or null if account-less. */
+  username: string | null;
   played: number;
   /** Wins by the subject player against this opponent. */
   won: number;
@@ -37,6 +44,8 @@ export type OpponentRecord = {
 
 export type PartnerRecord = {
   player: InsightPlayer;
+  /** Linked account handle of this partner, or null if account-less. */
+  username: string | null;
   played: number;
   won: number;
   winRate: number;
@@ -86,6 +95,7 @@ const EMPTY: PlayerInsights = {
 export function computeInsights(
   playerId: string,
   loaded: ShapedMatch[],
+  usernames: Map<string, string | null> = new Map(),
 ): PlayerInsights {
   const completed = loaded.filter((m) => {
     if (m.status !== "completed") return false;
@@ -179,6 +189,7 @@ export function computeInsights(
     nemesis: nemesisSrc
       ? {
           player: nemesisSrc.p,
+          username: usernames.get(nemesisSrc.p.id) ?? null,
           played: nemesisSrc.played,
           won: nemesisSrc.won,
           lost: nemesisSrc.lost,
@@ -188,6 +199,7 @@ export function computeInsights(
     victim: victimSrc
       ? {
           player: victimSrc.p,
+          username: usernames.get(victimSrc.p.id) ?? null,
           played: victimSrc.played,
           won: victimSrc.won,
           lost: victimSrc.lost,
@@ -197,6 +209,7 @@ export function computeInsights(
     bestPartner: partnerSrc
       ? {
           player: partnerSrc.p,
+          username: usernames.get(partnerSrc.p.id) ?? null,
           played: partnerSrc.played,
           won: partnerSrc.won,
           winRate: partnerSrc.won / partnerSrc.played,
@@ -219,7 +232,14 @@ async function getPlayerInsightsImpl(playerId: string): Promise<PlayerInsights> 
     with: matchWith,
   });
 
-  return computeInsights(playerId, rows.map(shapeMatch));
+  // id → linked account handle for ALL players (active or not), so opponents /
+  // partners who are now inactive still surface their @username.
+  const usernameRows = await getPlayerUsernames();
+  const usernames = new Map<string, string | null>(
+    usernameRows.map((u) => [u.id, u.username]),
+  );
+
+  return computeInsights(playerId, rows.map(shapeMatch), usernames);
 }
 
 export const getPlayerInsights = cachedQuery(getPlayerInsightsImpl, [

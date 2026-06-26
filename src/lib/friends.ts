@@ -12,6 +12,8 @@ export type FriendProfile = {
   friendshipId: string;
   userId: string;
   name: string;
+  /** Account handle, when set. Shown under the name so there's never any omonymy. */
+  username: string | null;
   slug: string | null;
   avatarColor: number;
   avatarUrl: string | null;
@@ -27,6 +29,7 @@ export type FriendState =
 
 type ResolvedProfile = {
   name: string;
+  username: string | null;
   slug: string | null;
   avatarColor: number;
   avatarUrl: string | null;
@@ -38,6 +41,7 @@ async function profilesForUsers(userIds: string[]) {
     .select({
       userId: users.id,
       userName: users.name,
+      username: users.username,
       slug: players.slug,
       avatarColor: players.avatarColor,
       avatarUrl: players.avatarUrl,
@@ -50,6 +54,7 @@ async function profilesForUsers(userIds: string[]) {
       r.userId,
       {
         name: r.userName,
+        username: r.username ?? null,
         slug: r.slug,
         avatarColor: r.avatarColor ?? 0,
         avatarUrl: r.avatarUrl ?? null,
@@ -82,6 +87,7 @@ export async function getFriends(userId: string): Promise<FriendProfile[]> {
       friendshipId: r.id,
       userId: other,
       name: p?.name ?? "Giocatore",
+      username: p?.username ?? null,
       slug: p?.slug ?? null,
       avatarColor: p?.avatarColor ?? 0,
       avatarUrl: p?.avatarUrl ?? null,
@@ -198,6 +204,7 @@ export async function getIncomingRequests(
       friendshipId: r.id,
       userId: r.requesterId,
       name: p?.name ?? "Giocatore",
+      username: p?.username ?? null,
       slug: p?.slug ?? null,
       avatarColor: p?.avatarColor ?? 0,
       avatarUrl: p?.avatarUrl ?? null,
@@ -224,6 +231,7 @@ export async function getOutgoingRequests(
       friendshipId: r.id,
       userId: r.addresseeId,
       name: p?.name ?? "Giocatore",
+      username: p?.username ?? null,
       slug: p?.slug ?? null,
       avatarColor: p?.avatarColor ?? 0,
       avatarUrl: p?.avatarUrl ?? null,

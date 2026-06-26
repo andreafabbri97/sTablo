@@ -122,9 +122,21 @@ export function PlayersGrid({ players }: { players: PlayerCardData[] }) {
                   size="lg"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-bold group-hover:text-brand">
-                    {p.name}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="min-w-0 truncate font-bold group-hover:text-brand">
+                      {p.name}
+                    </p>
+                    {p.isAdmin && (
+                      <span className="shrink-0">
+                        <AdminBadge />
+                      </span>
+                    )}
+                  </div>
+                  {p.username && (
+                    <p className="truncate text-xs font-medium text-muted">
+                      @{p.username}
+                    </p>
+                  )}
                   {style ? (
                     <p className="truncate text-xs text-muted">
                       {style.emoji} {style.name}
@@ -139,7 +151,6 @@ export function PlayersGrid({ players }: { players: PlayerCardData[] }) {
                         Amico
                       </Badge>
                     )}
-                    {p.isAdmin && <AdminBadge />}
                     <Badge tone="brand">{p.elo} Elo</Badge>
                     <Badge tone="ball">Lv {p.level}</Badge>
                     <span className="text-xs text-muted">

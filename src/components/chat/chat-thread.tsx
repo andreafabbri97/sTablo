@@ -9,8 +9,9 @@ import {
   Fragment,
 } from "react";
 import Link from "next/link";
-import { ArrowLeft, Send, MoreVertical, Ban, RotateCcw, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, MoreVertical, Ban, RotateCcw, Loader2, UserCheck } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { AdminBadge } from "@/components/player/admin-badge";
 import { cn, formatTime, formatDate } from "@/lib/utils";
 import {
@@ -254,16 +255,28 @@ export function ChatThread({
           />
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold leading-tight">{partner.name}</p>
-            {(partner.isAdmin || typeof partner.level === "number") && (
-              <div className="mt-0.5 flex items-center gap-1.5">
-                {typeof partner.level === "number" && (
-                  <span className="inline-flex items-center rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">
-                    Lv {partner.level}
-                  </span>
-                )}
-                {partner.isAdmin && <AdminBadge />}
-              </div>
+            {partner.username && (
+              <p className="truncate text-xs font-medium leading-tight text-muted">
+                @{partner.username}
+              </p>
             )}
+            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+              <Badge tone={partner.isFriend ? "sea" : "muted"}>
+                {partner.isFriend ? (
+                  <>
+                    <UserCheck className="h-3 w-3" /> Amico
+                  </>
+                ) : (
+                  "Non amico"
+                )}
+              </Badge>
+              {typeof partner.level === "number" && (
+                <span className="inline-flex items-center rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">
+                  Lv {partner.level}
+                </span>
+              )}
+              {partner.isAdmin && <AdminBadge />}
+            </div>
           </div>
         </Link>
         <div className="relative" ref={menuRef}>

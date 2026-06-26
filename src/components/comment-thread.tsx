@@ -178,6 +178,11 @@ function CommentRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
           {nameNode}
+          {comment.authorUsername && (
+            <span className="text-xs font-medium text-muted">
+              @{comment.authorUsername}
+            </span>
+          )}
           <span className="text-xs text-muted">{timeAgo(comment.createdAt)}</span>
         </div>
         <p className="whitespace-pre-wrap break-words text-sm text-foreground/90">

@@ -31,6 +31,7 @@ import { cachedQuery } from "./cache";
 import { safe } from "./safe";
 import { getPlayerWithStatsBySlug } from "./stats";
 import { getAdminPlayerIds } from "./roles";
+import { getFriends } from "./friends";
 
 /** Newest messages loaded into a thread on first render / full refresh. */
 const THREAD_WINDOW = 500;
@@ -44,6 +45,7 @@ async function partnerBySlugImpl(slug: string): Promise<ChatPartner | null> {
     .select({
       userId: users.id,
       name: players.name,
+      username: users.username,
       slug: players.slug,
       avatarColor: players.avatarColor,
       avatarUrl: players.avatarUrl,
@@ -57,6 +59,7 @@ async function partnerBySlugImpl(slug: string): Promise<ChatPartner | null> {
   return {
     userId: r.userId,
     name: r.name,
+    username: r.username ?? null,
     slug: r.slug,
     avatarColor: r.avatarColor ?? 0,
     avatarUrl: r.avatarUrl ?? null,
@@ -106,6 +109,7 @@ async function partnersForUsers(
     .select({
       userId: users.id,
       userName: users.name,
+      username: users.username,
       playerName: players.name,
       slug: players.slug,
       avatarColor: players.avatarColor,
@@ -120,6 +124,7 @@ async function partnersForUsers(
       {
         userId: r.userId,
         name: r.playerName ?? r.userName,
+        username: r.username ?? null,
         slug: r.slug ?? null,
         avatarColor: r.avatarColor ?? 0,
         avatarUrl: r.avatarUrl ?? null,
@@ -204,11 +209,15 @@ export async function getThread(
   // Independent reads in parallel (previously these were sequential awaits).
   // The conversation lookup, block state and the header extras don't depend on
   // one another; only the message window needs the resolved conversation id.
-  const [convo, block, meta] = await Promise.all([
+  const [convo, block, meta, friends] = await Promise.all([
     findConversation(viewerId, partner.userId),
     getBlockState(viewerId, partner.userId),
     partnerMeta(otherSlug),
+    // Friend list to flag the partner as Amico in the header. Best-effort: a
+    // failure just means no badge, never a broken thread.
+    safe(() => getFriends(viewerId), []),
   ]);
+  const isFriend = friends.some((f) => f.userId === partner.userId);
 
   let messages: ChatMessageView[] = [];
   if (convo) {
@@ -229,7 +238,7 @@ export async function getThread(
   }
 
   return {
-    partner: { ...partner, isAdmin: meta.isAdmin, level: meta.level },
+    partner: { ...partner, isAdmin: meta.isAdmin, isFriend, level: meta.level },
     conversationId: convo?.id ?? null,
     messages,
     block,
@@ -263,7 +272,13 @@ export async function getInbox(viewerId: string): Promise<InboxItem[]> {
   const otherIds = rows.map((r) =>
     r.userAId === viewerId ? r.userBId : r.userAId,
   );
-  const profiles = await partnersForUsers(otherIds);
+  // Resolve display profiles and the viewer's friends together, so each inbox
+  // row can carry an Amico badge. Friends are best-effort (empty on failure).
+  const [profiles, friends] = await Promise.all([
+    partnersForUsers(otherIds),
+    safe(() => getFriends(viewerId), []),
+  ]);
+  const friendIds = new Set(friends.map((f) => f.userId));
 
   return rows.map((r) => {
     const otherId = r.userAId === viewerId ? r.userBId : r.userAId;
@@ -274,14 +289,16 @@ export async function getInbox(viewerId: string): Promise<InboxItem[]> {
       r.lastMessageSenderId != null &&
       (myReadAt == null || r.lastMessageAt > myReadAt);
     const p = profiles.get(otherId);
+    const partner: ChatPartner = p ?? {
+      userId: otherId,
+      name: "Giocatore",
+      username: null,
+      slug: null,
+      avatarColor: 0,
+      avatarUrl: null,
+    };
     return {
-      partner: p ?? {
-        userId: otherId,
-        name: "Giocatore",
-        slug: null,
-        avatarColor: 0,
-        avatarUrl: null,
-      },
+      partner: { ...partner, isFriend: friendIds.has(otherId) },
       lastMessageBody: r.lastMessageBody,
       lastMessageAt: r.lastMessageAt,
       lastFromMe,

@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/ui/page";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
+import { PlayerName } from "@/components/player/player-name";
 import { CreatePlayerForm } from "@/components/admin/create-player-form";
 import { CreateTeamForm } from "@/components/admin/create-team-form";
 import { DemoControls } from "@/components/admin/demo-controls";
@@ -155,7 +156,9 @@ export default async function AdminPage() {
               <li key={p.id}>
                 <Link href={`/giocatori/${p.slug}`} className="flex items-center gap-2 text-sm hover:text-brand">
                   <Avatar name={p.name} colorIndex={p.avatarColor} imageUrl={p.avatarUrl} size="xs" />
-                  <span className="flex-1 truncate">{p.name}</span>
+                  <span className="min-w-0 flex-1">
+                    <PlayerName name={p.name} username={p.username} nameClassName="font-normal" />
+                  </span>
                   <span className="font-mono text-xs text-muted">{p.eloSingles}</span>
                 </Link>
               </li>

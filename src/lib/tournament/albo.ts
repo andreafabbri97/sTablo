@@ -7,6 +7,7 @@ import {
   teams,
 } from "@/lib/db/schema";
 import { cachedQuery } from "@/lib/cache";
+import { getPlayerUsernames } from "@/lib/queries";
 
 /**
  * Albo d'oro — the tournament hall of fame. Champions are derived on read from
@@ -18,6 +19,8 @@ import { cachedQuery } from "@/lib/cache";
 
 export type ChampionWinner = {
   name: string;
+  /** account handle — only set for a single registered player (not pairs/teams) */
+  username: string | null;
   /** profile slug to link to — only set for a single registered player */
   slug: string | null;
   avatarColor: number;
@@ -92,6 +95,12 @@ export const getTournamentChampions = cachedQuery(
       : [];
     const playerById = new Map(playerRows.map((p) => [p.id, p]));
 
+    // Account handle per player id (all players, cached). Only single-player
+    // champions get a meaningful @handle; pairs/teams resolve to null below.
+    const usernameById = new Map(
+      (await getPlayerUsernames()).map((u) => [u.id, u.username]),
+    );
+
     const teamRows = teamIds.size
       ? await db
           .select({
@@ -117,17 +126,21 @@ export const getTournamentChampions = cachedQuery(
 
       let winner: ChampionWinner;
       if (primary && !entrant.partnerId) {
-        // a single registered player → link to the profile
+        // a single registered player → link to the profile + show @handle
         winner = {
           name: entrant.name,
+          username: entrant.playerId
+            ? usernameById.get(entrant.playerId) ?? null
+            : null,
           slug: primary.slug,
           avatarColor: primary.avatarColor,
           avatarUrl: primary.avatarUrl,
         };
       } else if (primary) {
-        // an ad-hoc doubles pair ("A & B"): primary player's avatar, no link
+        // an ad-hoc doubles pair ("A & B"): primary player's avatar, no link/handle
         winner = {
           name: entrant.name,
+          username: null,
           slug: null,
           avatarColor: primary.avatarColor,
           avatarUrl: primary.avatarUrl,
@@ -135,12 +148,19 @@ export const getTournamentChampions = cachedQuery(
       } else if (team) {
         winner = {
           name: entrant.name,
+          username: null,
           slug: null,
           avatarColor: team.avatarColor,
           avatarUrl: null,
         };
       } else {
-        winner = { name: entrant.name, slug: null, avatarColor: 0, avatarUrl: null };
+        winner = {
+          name: entrant.name,
+          username: null,
+          slug: null,
+          avatarColor: 0,
+          avatarUrl: null,
+        };
       }
 
       result.push({

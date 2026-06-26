@@ -5,12 +5,14 @@ import { PageHeader, EmptyState } from "@/components/ui/page";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
+import { PlayerName } from "@/components/player/player-name";
 import { Badge } from "@/components/ui/badge";
 import {
   getTournamentChampions,
   type TournamentChampion,
 } from "@/lib/tournament/albo";
 import { FORMAT_META, DISCIPLINE_LABEL } from "@/lib/tournament/queries";
+import { getPlayerUsernames } from "@/lib/queries";
 import { getSeasonMvps, type SeasonMvp } from "@/lib/seasons";
 import { formatDate } from "@/lib/utils";
 import { safe } from "@/lib/safe";
@@ -19,10 +21,14 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Albo d'oro" };
 
 export default async function AlboPage() {
-  const [champions, mvps] = await Promise.all([
+  const [champions, mvps, usernames] = await Promise.all([
     safe(() => getTournamentChampions(), [] as TournamentChampion[]),
     safe(() => getSeasonMvps(), [] as SeasonMvp[]),
+    safe(() => getPlayerUsernames(), [] as { id: string; username: string | null }[]),
   ]);
+
+  // player id → account handle, to label each season MVP with their @username.
+  const usernameById = new Map(usernames.map((u) => [u.id, u.username]));
 
   const isEmpty = champions.length === 0 && mvps.length === 0;
 
@@ -72,7 +78,12 @@ export default async function AlboPage() {
               </h2>
               <div className="space-y-2.5">
                 {mvps.map((m, i) => (
-                  <MvpRow key={`${m.season.year}-${m.season.month}`} item={m} latest={i === 0} />
+                  <MvpRow
+                    key={`${m.season.year}-${m.season.month}`}
+                    item={m}
+                    username={usernameById.get(m.mvp.player.id) ?? null}
+                    latest={i === 0}
+                  />
                 ))}
               </div>
             </section>
@@ -94,8 +105,12 @@ function ChampionCard({ champion: c }: { champion: TournamentChampion }) {
         size="sm"
         ring
       />
-      <span className="min-w-0 truncate font-display font-extrabold text-[var(--gold)]">
-        {c.winner.name}
+      <span className="min-w-0">
+        <PlayerName
+          name={c.winner.name}
+          username={c.winner.username}
+          nameClassName="font-display font-extrabold text-[var(--gold)]"
+        />
       </span>
     </div>
   );
@@ -129,7 +144,15 @@ function ChampionCard({ champion: c }: { champion: TournamentChampion }) {
   );
 }
 
-function MvpRow({ item, latest }: { item: SeasonMvp; latest: boolean }) {
+function MvpRow({
+  item,
+  username,
+  latest,
+}: {
+  item: SeasonMvp;
+  username: string | null;
+  latest: boolean;
+}) {
   const { mvp, season } = item;
   const name = mvp.player.name;
   const inner = (
@@ -148,9 +171,11 @@ function MvpRow({ item, latest }: { item: SeasonMvp; latest: boolean }) {
       </div>
       <div className="min-w-0">
         <p className="text-xs capitalize text-muted">{season.label}</p>
-        <p className="truncate font-display font-extrabold group-hover:text-brand">
-          {name}
-        </p>
+        <PlayerName
+          name={name}
+          username={username}
+          nameClassName="font-display font-extrabold group-hover:text-brand"
+        />
       </div>
     </div>
   );

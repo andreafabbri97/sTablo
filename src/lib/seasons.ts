@@ -2,6 +2,7 @@ import { and, eq, gte, lt, inArray, asc } from "drizzle-orm";
 import { db } from "./db";
 import { matches, matchParticipants, players } from "./db/schema";
 import { cachedQuery } from "./cache";
+import { getPlayerUsernames } from "./queries";
 
 /**
  * Seasons = calendar months. Standings are recomputed on the fly from the
@@ -59,6 +60,8 @@ export function previousSeason(s: Season): Season {
 
 export type SeasonStanding = {
   player: typeof players.$inferSelect;
+  /** Account handle of the player, when linked. Null for account-less players. */
+  username: string | null;
   played: number;
   won: number;
   lost: number;
@@ -125,11 +128,12 @@ async function getSeasonStandingsImpl(
   const ids = [...acc.keys()];
   if (!ids.length) return [];
 
-  const playerRows = await db
-    .select()
-    .from(players)
-    .where(inArray(players.id, ids));
+  const [playerRows, unameRows] = await Promise.all([
+    db.select().from(players).where(inArray(players.id, ids)),
+    getPlayerUsernames(),
+  ]);
   const byId = new Map(playerRows.map((p) => [p.id, p]));
+  const usernameById = new Map(unameRows.map((u) => [u.id, u.username]));
 
   const result = ids
     .map((id) => {
@@ -138,6 +142,7 @@ async function getSeasonStandingsImpl(
       if (!player) return null;
       return {
         player,
+        username: usernameById.get(id) ?? null,
         played: a.played,
         won: a.won,
         lost: a.lost,

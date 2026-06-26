@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
+import { PlayerName } from "@/components/player/player-name";
 import { EmptyState } from "@/components/ui/page";
 import { cn, pct } from "@/lib/utils";
 import type { RankRow } from "@/lib/stats";
@@ -106,7 +107,11 @@ export function ClassificaView({
               <RankBadge rank={i + 1} />
               <Avatar name={row.player.name} colorIndex={row.player.avatarColor} imageUrl={row.player.avatarUrl} size="sm" />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-bold">{row.player.name}</p>
+                <PlayerName
+                  name={row.player.name}
+                  username={row.username}
+                  nameClassName="font-bold"
+                />
                 <p className="text-xs text-muted">
                   Lv {row.level} · {row.won}V · {row.lost}S · {pct(row.won, row.played)}%
                 </p>
@@ -171,9 +176,11 @@ function SeasonBoard({
             ring
           />
           <div className="min-w-0 flex-1">
-            <p className="truncate font-display text-lg font-extrabold">
-              {mvp.player.name}
-            </p>
+            <PlayerName
+              name={mvp.player.name}
+              username={mvp.username}
+              nameClassName="font-display text-lg font-extrabold"
+            />
             <p className="text-sm text-muted">
               {mvp.won}V · {mvp.lost}S · {pct(mvp.won, mvp.played)}% win
             </p>
@@ -203,7 +210,11 @@ function SeasonBoard({
                 size="sm"
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-bold">{row.player.name}</p>
+                <PlayerName
+                  name={row.player.name}
+                  username={row.username}
+                  nameClassName="font-bold"
+                />
                 <p className="text-xs text-muted">
                   {row.won}V · {row.lost}S · {pct(row.won, row.played)}%
                 </p>

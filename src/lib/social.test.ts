@@ -9,6 +9,7 @@ function c(id: string, parentId: string | null, day: number): CommentView {
     createdAt: new Date(2026, 0, day),
     userId: `u-${id}`,
     authorName: id.toUpperCase(),
+    authorUsername: null,
     authorSlug: null,
     avatarColor: 0,
     avatarUrl: null,

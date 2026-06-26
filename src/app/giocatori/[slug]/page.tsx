@@ -163,7 +163,7 @@ export default async function PlayerPage({
       {/* Gamification (privacy-gated) */}
       {showCard ? (
         <div className="grid gap-4 lg:grid-cols-[auto_1fr]">
-          <FifaCard player={player} overall={overall} attributes={attributes} level={level} />
+          <FifaCard player={player} username={username} overall={overall} attributes={attributes} level={level} />
           <div className="space-y-4">
             <LevelBar level={level} />
             <Card>

@@ -1,7 +1,12 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "./db";
 import { matches, matchParticipants, players } from "./db/schema";
-import { shapeMatch, matchWith, type ShapedMatch } from "./queries";
+import {
+  shapeMatch,
+  matchWith,
+  getPlayerUsernames,
+  type ShapedMatch,
+} from "./queries";
 import { cachedQuery } from "./cache";
 
 export type H2HPlayer = {
@@ -10,6 +15,8 @@ export type H2HPlayer = {
   slug: string;
   avatarColor: number;
   avatarUrl: string | null;
+  /** Linked account handle, or null for account-less players. */
+  username: string | null;
 };
 
 export type H2HFormatRecord = { total: number; aWins: number; bWins: number };
@@ -29,13 +36,17 @@ export type HeadToHead = {
   matches: ShapedMatch[];
 };
 
-function toLite(p: typeof players.$inferSelect): H2HPlayer {
+function toLite(
+  p: typeof players.$inferSelect,
+  username: string | null,
+): H2HPlayer {
   return {
     id: p.id,
     name: p.name,
     slug: p.slug,
     avatarColor: p.avatarColor,
     avatarUrl: p.avatarUrl,
+    username,
   };
 }
 
@@ -120,16 +131,20 @@ async function getHeadToHeadImpl(
 ): Promise<HeadToHead | null> {
   if (aSlug === bSlug) return null;
 
-  const found = await db
-    .select()
-    .from(players)
-    .where(inArray(players.slug, [aSlug, bSlug]));
+  // Players (by slug) and the id→username map for EVERY player (incl. inactive)
+  // are independent reads — fetch together. getPlayerUsernames is cached and not
+  // filtered by `active`, so account handles resolve for inactive players too.
+  const [found, usernames] = await Promise.all([
+    db.select().from(players).where(inArray(players.slug, [aSlug, bSlug])),
+    getPlayerUsernames(),
+  ]);
   const a = found.find((p) => p.slug === aSlug);
   const b = found.find((p) => p.slug === bSlug);
   if (!a || !b) return null;
 
-  const aLite = toLite(a);
-  const bLite = toLite(b);
+  const usernameById = new Map(usernames.map((u) => [u.id, u.username]));
+  const aLite = toLite(a, usernameById.get(a.id) ?? null);
+  const bLite = toLite(b, usernameById.get(b.id) ?? null);
 
   // Match ids each player took part in, then intersect.
   const [aRows, bRows] = await Promise.all([

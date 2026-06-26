@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Trophy, Flame, Users, Swords, Plus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
+import { PlayerName } from "@/components/player/player-name";
 import { Badge } from "@/components/ui/badge";
 import { MatchCard } from "@/components/match-card";
 import { EmptyState } from "@/components/ui/page";
@@ -63,9 +64,11 @@ export default async function HomePage() {
                 <span className="font-display text-2xl">{["🥇", "🥈", "🥉"][i]}</span>
                 <Avatar name={row.player.name} colorIndex={row.player.avatarColor} imageUrl={row.player.avatarUrl} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-bold group-hover:text-brand">
-                    {row.player.name}
-                  </p>
+                  <PlayerName
+                    name={row.player.name}
+                    username={row.username}
+                    nameClassName="font-bold group-hover:text-brand"
+                  />
                   <p className="text-xs text-muted">{row.won}V · {row.lost}S</p>
                 </div>
                 <Badge tone="gold">{row.elo}</Badge>

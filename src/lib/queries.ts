@@ -1,4 +1,14 @@
-import { desc, eq, isNull, isNotNull, and, asc, inArray, sql } from "drizzle-orm";
+import {
+  desc,
+  eq,
+  isNull,
+  isNotNull,
+  and,
+  asc,
+  inArray,
+  sql,
+  getTableColumns,
+} from "drizzle-orm";
 import { db } from "./db";
 import {
   matches,
@@ -173,7 +183,11 @@ export const getMatchesCount = cachedQuery(async (): Promise<number> => {
 }, ["matches-count"]);
 
 export const getPlayersList = cachedQuery(
-  async () => db.select().from(players).orderBy(desc(players.eloSingles)),
+  async () =>
+    db
+      .select({ ...getTableColumns(players), username: linkedUsername })
+      .from(players)
+      .orderBy(desc(players.eloSingles)),
   ["players-list"],
 );
 

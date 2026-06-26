@@ -8,6 +8,7 @@ import {
   players,
 } from "@/lib/db/schema";
 import { cachedQuery } from "@/lib/cache";
+import { getPlayerUsernames } from "@/lib/queries";
 import {
   computeStandings,
   computeAmericanoStandings,
@@ -61,6 +62,9 @@ export type TournamentMatchView = {
   bId: string | null;
   aName: string;
   bName: string;
+  /** Account handle for a SINGLE-player entrant side; null for pairs/teams. */
+  aUsername: string | null;
+  bUsername: string | null;
 };
 
 export type AmericanoMatchView = {
@@ -101,7 +105,7 @@ export const getTournamentDetail = cachedQuery(
 
   // Entrants and matches only depend on the tournament id — load them together
   // so the detail page pays one round-trip of latency instead of two.
-  const [entrants, matchRows] = await Promise.all([
+  const [entrants, matchRows, unameRows] = await Promise.all([
     db
       .select()
       .from(tournamentEntrants)
@@ -112,9 +116,20 @@ export const getTournamentDetail = cachedQuery(
       .from(matches)
       .where(eq(matches.tournamentId, tournament.id))
       .orderBy(asc(matches.round), asc(matches.slot)),
+    getPlayerUsernames(),
   ]);
 
   const nameById = new Map(entrants.map((e) => [e.id, e.name]));
+  // Account handle per entrant, but ONLY for single-player entrants (a lone
+  // registered player) — doubles pairs and team aliases have no single handle.
+  const usernameByPlayerId = new Map(unameRows.map((u) => [u.id, u.username]));
+  const entrantHandle = (e: (typeof entrants)[number]): string | null =>
+    e.playerId && !e.partnerId && !e.teamId
+      ? (usernameByPlayerId.get(e.playerId) ?? null)
+      : null;
+  const handleByEntrantId = new Map(
+    entrants.map((e) => [e.id, entrantHandle(e)]),
+  );
   const view: TournamentMatchView[] = matchRows.map((m) => ({
     id: m.id,
     stage: m.stage,
@@ -130,6 +145,8 @@ export const getTournamentDetail = cachedQuery(
     bId: m.entrantBId,
     aName: m.entrantAId ? (nameById.get(m.entrantAId) ?? "—") : "—",
     bName: m.entrantBId ? (nameById.get(m.entrantBId) ?? "—") : "—",
+    aUsername: m.entrantAId ? (handleByEntrantId.get(m.entrantAId) ?? null) : null,
+    bUsername: m.entrantBId ? (handleByEntrantId.get(m.entrantBId) ?? null) : null,
   }));
 
   const matchesByStage: Record<string, TournamentMatchView[]> = {};
@@ -143,6 +160,7 @@ export const getTournamentDetail = cachedQuery(
     name: e.name,
     groupName: e.groupName,
     seed: e.seed,
+    username: entrantHandle(e),
   }));
   const stMatches: StandingMatch[] = matchRows.map((m) => ({
     entrantAId: m.entrantAId,

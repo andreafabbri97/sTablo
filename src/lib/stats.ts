@@ -9,6 +9,7 @@ import {
   tournaments,
   tournamentEntrants,
 } from "./db/schema";
+import { getPlayerUsernames } from "./queries";
 import {
   computeAttributes,
   resolveAttributes,
@@ -176,6 +177,8 @@ export type RankingDiscipline = "overall" | "singles" | "doubles";
 
 export type RankRow = {
   player: typeof players.$inferSelect;
+  /** Account handle of the player, when linked. Null for account-less players. */
+  username: string | null;
   played: number;
   won: number;
   lost: number;
@@ -192,7 +195,7 @@ async function getRankingImpl(
   // These three reads are independent: fire them together so a cold ranking
   // computation pays one DB round-trip, not three in series. (Needs a pool of
   // more than one connection to truly parallelize — see lib/db.)
-  const [players_, rows, tWinRows] = await Promise.all([
+  const [players_, rows, tWinRows, unameRows] = await Promise.all([
     db.select().from(players),
     // All completed matches: ranked ones feed the competitive record/Elo, every
     // match (ranked or friendly) feeds XP/level.
@@ -221,6 +224,8 @@ async function getRankingImpl(
         eq(tournaments.winnerEntrantId, tournamentEntrants.id),
       )
       .where(eq(tournaments.status, "completed")),
+    // Account handles for every player (active + inactive), to show @username.
+    getPlayerUsernames(),
   ]);
 
   const acc = new Map<
@@ -259,6 +264,7 @@ async function getRankingImpl(
     if (w.partnerId) tWins.set(w.partnerId, (tWins.get(w.partnerId) ?? 0) + 1);
   }
 
+  const usernameById = new Map(unameRows.map((u) => [u.id, u.username]));
   const result: RankRow[] = players_.map((p) => {
     const a = acc.get(p.id) ?? { played: 0, won: 0, lost: 0, pf: 0, pa: 0, xp: 0 };
     const elo =
@@ -270,6 +276,7 @@ async function getRankingImpl(
     const totalXp = a.xp + (tWins.get(p.id) ?? 0) * 250;
     return {
       player: p,
+      username: usernameById.get(p.id) ?? null,
       played: a.played,
       won: a.won,
       lost: a.lost,

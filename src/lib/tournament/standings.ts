@@ -14,6 +14,13 @@ export type StandingEntrant = {
   name: string;
   groupName: string | null;
   seed: number;
+  /**
+   * Account handle of the entrant, when it is a single registered player.
+   * Null/undefined for doubles pairs and team aliases (no single account), and
+   * left unset by builders that don't resolve handles. Optional so existing
+   * callers keep compiling; the standings table shows it only when present.
+   */
+  username?: string | null;
 };
 
 export type StandingRow = {

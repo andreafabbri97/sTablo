@@ -32,6 +32,8 @@ export type CommentView = {
   /** author's user id — used to gate the delete control. */
   userId: string;
   authorName: string;
+  /** author's account handle (@username), null if the user has none. */
+  authorUsername: string | null;
   /** player slug for the profile link, null if the user has no player. */
   authorSlug: string | null;
   avatarColor: number;
@@ -60,6 +62,7 @@ type CommentRow = {
   userId: string;
   parentId: string | null;
   userName: string;
+  username: string | null;
   playerName: string | null;
   playerSlug: string | null;
   avatarColor: number | null;
@@ -74,6 +77,7 @@ function toCommentView(r: CommentRow): CommentView {
     createdAt: r.createdAt,
     userId: r.userId,
     authorName: r.playerName ?? r.userName,
+    authorUsername: r.username ?? null,
     authorSlug: r.playerSlug ?? null,
     avatarColor: r.avatarColor ?? 0,
     avatarUrl: r.avatarUrl ?? null,
@@ -131,6 +135,7 @@ export async function getMatchSocial(
         userId: matchComments.userId,
         parentId: matchComments.parentId,
         userName: users.name,
+        username: users.username,
         playerName: players.name,
         playerSlug: players.slug,
         avatarColor: players.avatarColor,
@@ -176,6 +181,7 @@ export async function getTournamentComments(
       userId: tournamentComments.userId,
       parentId: tournamentComments.parentId,
       userName: users.name,
+      username: users.username,
       playerName: players.name,
       playerSlug: players.slug,
       avatarColor: players.avatarColor,
