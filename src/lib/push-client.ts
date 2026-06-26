@@ -17,12 +17,6 @@ export function pushSupported(): boolean {
   );
 }
 
-/** Current OS/browser permission, or "unsupported" when push isn't available. */
-export function pushPermission(): NotificationPermission | "unsupported" {
-  if (!pushSupported()) return "unsupported";
-  return Notification.permission;
-}
-
 /**
  * True only when a VAPID public key was compiled into the client bundle.
  * Without it `subscribe()` can't run, so callers should hide any "enable"

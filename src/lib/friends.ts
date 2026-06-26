@@ -239,11 +239,6 @@ export async function getOutgoingRequests(
   });
 }
 
-export async function countIncomingRequests(userId: string): Promise<number> {
-  const rows = await getIncomingRequests(userId);
-  return rows.length;
-}
-
 /** Resolve the account (user id) linked to a player, if any. */
 export async function userIdForPlayer(
   playerId: string,

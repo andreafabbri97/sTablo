@@ -15,7 +15,6 @@ import {
   players,
   eloHistory,
   matchParticipants,
-  teams,
   users,
 } from "./db/schema";
 import { cachedQuery } from "./cache";
@@ -402,16 +401,6 @@ export const getPlayerSlugById = cachedQuery(
     return row[0]?.slug ?? null;
   },
   ["player-slug-by-id"],
-);
-
-export const getTeamOptions = cachedQuery(
-  async () =>
-    db
-      .select({ id: teams.id, name: teams.name })
-      .from(teams)
-      .where(eq(teams.active, true))
-      .orderBy(teams.name),
-  ["team-options"],
 );
 
 /** All accounts with role + linked profile — for the admin account manager. */

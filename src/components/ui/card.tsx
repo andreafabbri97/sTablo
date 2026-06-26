@@ -19,13 +19,6 @@ export function Card({
   );
 }
 
-export function CardHeader({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("mb-4 flex items-center justify-between gap-3", className)} {...props} />;
-}
-
 export function CardTitle({
   className,
   ...props
