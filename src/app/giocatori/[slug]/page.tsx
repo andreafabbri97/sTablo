@@ -1,12 +1,10 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { Lock, Pencil, TrendingUp, Quote, Swords, MessageCircle } from "lucide-react";
+import { Lock, TrendingUp, Quote } from "lucide-react";
 import { PanelSkeleton, RowsSkeleton } from "@/components/ui/skeletons";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardLabel } from "@/components/ui/card";
 import { MatchCard } from "@/components/match-card";
 import { FifaCard } from "@/components/player/fifa-card";
@@ -18,13 +16,11 @@ import { PlayerInsightsPanel } from "@/components/player/player-insights";
 import { PlayerProfileActions } from "@/components/player/player-profile-actions";
 import { getPlayerWithStatsBySlug } from "@/lib/stats";
 import { getPlayerInsights } from "@/lib/player-insights";
-import { getEloSeries, getMatchesForPlayer, getPlayerSlugById } from "@/lib/queries";
+import { getEloSeries, getMatchesForPlayer } from "@/lib/queries";
 import { computeBadges } from "@/lib/badges";
 import { getCurrentUser } from "@/lib/auth-helpers";
-import { userIdForPlayer, getFriendState } from "@/lib/friends";
 import { isPlayerAdmin } from "@/lib/roles";
 import { AdminBadge } from "@/components/player/admin-badge";
-import { AddFriendButton } from "@/components/friends/add-friend-button";
 import { getPlayStyle, FOOT_LABELS } from "@/lib/gamification";
 import { pct } from "@/lib/utils";
 import { safe } from "@/lib/safe";
@@ -109,49 +105,39 @@ async function PlayerProfile({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="card-surface flex flex-col items-center gap-4 p-6 text-center sm:flex-row sm:text-left">
-        <Avatar name={player.name} colorIndex={player.avatarColor} imageUrl={player.avatarUrl} size="xl" />
-        <div className="min-w-0 flex-1">
-          <h1 className="font-display text-2xl font-extrabold tracking-tight">
-            {player.name}
-          </h1>
-          {username && (
-            <p className="text-sm font-semibold text-brand">@{username}</p>
-          )}
-          {playerIsAdmin && (
-            <div className="mt-1.5 flex justify-center sm:justify-start">
-              <AdminBadge />
-            </div>
-          )}
-          {player.motto && (
-            <p className="mt-1 flex items-center justify-center gap-1 text-sm italic text-muted sm:justify-start">
-              <Quote className="h-3.5 w-3.5" /> {player.motto}
-            </p>
-          )}
-          <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
-            <Badge tone="brand">Elo singolo {player.eloSingles}</Badge>
-            <Badge tone="sea">Elo doppio {player.eloDoubles}</Badge>
-            <Badge tone="gold">Picco {player.peakElo}</Badge>
-          </div>
-          {player.bio && (
-            <p className="mt-3 max-w-prose whitespace-pre-line text-sm leading-relaxed text-muted">
-              {player.bio}
-            </p>
-          )}
-        </div>
-        <PlayerProfileActions
-          playerId={player.id}
-          playerSlug={player.slug}
-          isOwner={isOwner}
-        />
-      </div>
-
-      {/* Gamification (privacy-gated) */}
+      {/* Hero — la FifaCard fa da identità (avatar + nome + @username una volta
+          sola). Accanto/sotto solo ciò che la card NON mostra: Elo, motto, bio
+          e le azioni. Niente più header che ripete gli stessi dati subito sopra
+          la card. Per i profili privati (nessuna card) l'identità resta qui. */}
+      <h1 className="sr-only">{player.name}</h1>
       {showCard ? (
         <div className="grid gap-4 lg:grid-cols-[auto_1fr]">
           <FifaCard player={player} username={username} overall={overall} attributes={attributes} level={level} />
           <div className="space-y-4">
+            <div className="card-surface space-y-3 p-5">
+              {playerIsAdmin && <AdminBadge />}
+              {player.motto && (
+                <p className="flex items-center gap-1 text-sm italic text-muted">
+                  <Quote className="h-3.5 w-3.5" /> {player.motto}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Badge tone="brand">Elo singolo {player.eloSingles}</Badge>
+                <Badge tone="sea">Elo doppio {player.eloDoubles}</Badge>
+                <Badge tone="gold">Picco {player.peakElo}</Badge>
+              </div>
+              {player.bio && (
+                <p className="max-w-prose whitespace-pre-line text-sm leading-relaxed text-muted">
+                  {player.bio}
+                </p>
+              )}
+              <PlayerProfileActions
+                playerId={player.id}
+                playerSlug={player.slug}
+                playerName={player.name}
+                isOwner={isOwner}
+              />
+            </div>
             <LevelBar level={level} />
             <Card>
               <CardTitle className="mb-3">Caratteristiche</CardTitle>
@@ -171,16 +157,57 @@ async function PlayerProfile({
           </div>
         </div>
       ) : (
-        <Card className="flex flex-col items-center gap-2 py-10 text-center">
-          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-surface-2 text-muted">
-            <Lock className="h-5 w-5" />
-          </span>
-          <CardTitle>Statistiche private</CardTitle>
-          <p className="max-w-xs text-sm text-muted">
-            {player.name} ha scelto di non condividere livello e caratteristiche.
-            La classifica e i risultati restano pubblici.
-          </p>
-        </Card>
+        <>
+          <div className="card-surface flex flex-col items-center gap-4 p-6 text-center sm:flex-row sm:text-left">
+            <Avatar name={player.name} colorIndex={player.avatarColor} imageUrl={player.avatarUrl} size="xl" />
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-2xl font-extrabold tracking-tight">
+                {player.name}
+              </p>
+              {username && (
+                <p className="text-sm font-semibold text-brand">@{username}</p>
+              )}
+              {playerIsAdmin && (
+                <div className="mt-1.5 flex justify-center sm:justify-start">
+                  <AdminBadge />
+                </div>
+              )}
+              {player.motto && (
+                <p className="mt-1 flex items-center justify-center gap-1 text-sm italic text-muted sm:justify-start">
+                  <Quote className="h-3.5 w-3.5" /> {player.motto}
+                </p>
+              )}
+              <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
+                <Badge tone="brand">Elo singolo {player.eloSingles}</Badge>
+                <Badge tone="sea">Elo doppio {player.eloDoubles}</Badge>
+                <Badge tone="gold">Picco {player.peakElo}</Badge>
+              </div>
+              {player.bio && (
+                <p className="mt-3 max-w-prose whitespace-pre-line text-sm leading-relaxed text-muted">
+                  {player.bio}
+                </p>
+              )}
+              <div className="mt-4">
+                <PlayerProfileActions
+                  playerId={player.id}
+                  playerSlug={player.slug}
+                  playerName={player.name}
+                  isOwner={isOwner}
+                />
+              </div>
+            </div>
+          </div>
+          <Card className="flex flex-col items-center gap-2 py-10 text-center">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-surface-2 text-muted">
+              <Lock className="h-5 w-5" />
+            </span>
+            <CardTitle>Statistiche private</CardTitle>
+            <p className="max-w-xs text-sm text-muted">
+              {player.name} ha scelto di non condividere livello e caratteristiche.
+              La classifica e i risultati restano pubblici.
+            </p>
+          </Card>
+        </>
       )}
 
       {/* Public stats — always visible */}
