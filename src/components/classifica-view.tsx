@@ -85,17 +85,20 @@ export function ClassificaView({
   // `showScope` still keys off the friend count, not the circle.
   const inCircle = (slug: string) => friendSet.has(slug) || slug === selfSlug;
 
-  // The slugs visible in the active player-based tab — drives whether the
-  // friend split is worth showing (only when both groups are non-empty).
+  // The slugs visible in the active player-based tab.
   const activeSlugs =
     tab === "season"
       ? season.map((r) => r.player.slug)
       : tab === "teams"
         ? []
         : players.map((r) => r.player.slug);
-  const friendCount = activeSlugs.filter((s) => friendSet.has(s)).length;
+  // Show the split whenever you actually have friends and the active board has
+  // players. We deliberately DON'T require a friend in this specific tab: in the
+  // leaderboard «Amici» = your circle (you + friends), so it's useful even on a
+  // tab (e.g. the current Stagione) where no friend has played yet — it just
+  // narrows to you. Hidden on Team (no friend concept).
   const showScope =
-    tab !== "teams" && friendCount > 0 && friendCount < activeSlugs.length;
+    tab !== "teams" && friendSet.size > 0 && activeSlugs.length > 0;
   const activeScope = showScope ? scope : "all";
 
   const keep = (slug: string) =>
