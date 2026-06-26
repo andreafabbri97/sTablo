@@ -35,9 +35,15 @@ export type SendResult =
   | { ok: true; message: ChatMessageView; conversationId: string }
   | { ok: false; error: string };
 
-/** Result of a poll — the new messages plus the (possibly changed) block state. */
+/** Result of a poll — new messages, block state, and the partner's read marker
+ *  (so the "Consegnato / Letto" receipt updates as they read). */
 export type PollResult =
-  | { ok: true; messages: ChatMessageView[]; block: BlockState }
+  | {
+      ok: true;
+      messages: ChatMessageView[];
+      block: BlockState;
+      partnerLastReadAt: Date | null;
+    }
   | { ok: false; error: string };
 
 /** Push body preview cap — keep notifications short and tidy. */
@@ -204,7 +210,11 @@ export async function pollConversation(
 
   const block = await getBlockState(user.id, partner.userId);
   const convo = await findConversation(user.id, partner.userId);
-  if (!convo) return { ok: true, messages: [], block };
+  if (!convo) {
+    return { ok: true, messages: [], block, partnerLastReadAt: null };
+  }
+  const partnerLastReadAt =
+    convo.userAId === partner.userId ? convo.aLastReadAt : convo.bLastReadAt;
 
   let after: Date | null = null;
   if (afterIso) {
@@ -231,7 +241,7 @@ export async function pollConversation(
     .orderBy(asc(directMessages.createdAt))
     .limit(200);
 
-  return { ok: true, messages, block };
+  return { ok: true, messages, block, partnerLastReadAt };
 }
 
 /** Advance the viewer's read marker to now, clearing the unread badge. */

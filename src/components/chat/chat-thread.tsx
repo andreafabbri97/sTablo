@@ -35,7 +35,21 @@ type Props = {
   otherSlug: string;
   initialMessages: ChatMessageView[];
   initialBlock: BlockState;
+  /** the partner's read marker at first render (drives Consegnato/Letto) */
+  initialPartnerReadAt: Date | null;
 };
+
+/** Delivery receipt shown under my most recent sent message. */
+function receiptLabel(
+  m: ChatMessageView,
+  partnerReadAt: Date | null,
+): string {
+  if (m.id.startsWith("temp-")) return "Invio…";
+  if (partnerReadAt && new Date(partnerReadAt) >= new Date(m.createdAt)) {
+    return "Letto";
+  }
+  return "Consegnato";
+}
 
 /** How often to poll for new messages while the tab is visible. */
 const POLL_MS = 3000;
@@ -55,9 +69,13 @@ export function ChatThread({
   otherSlug,
   initialMessages,
   initialBlock,
+  initialPartnerReadAt,
 }: Props) {
   const [messages, setMessages] = useState<ChatMessageView[]>(initialMessages);
   const [block, setBlock] = useState<BlockState>(initialBlock);
+  const [partnerReadAt, setPartnerReadAt] = useState<Date | null>(
+    initialPartnerReadAt,
+  );
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -75,6 +93,16 @@ export function ChatThread({
   );
 
   const canSend = !block.iBlocked && !block.blockedMe;
+
+  // Id of my most recent message — the only one that carries a Consegnato/Letto
+  // receipt (like iMessage; older bubbles stay clean).
+  let lastMineId: string | null = null;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].senderId === meId) {
+      lastMineId = messages[i].id;
+      break;
+    }
+  }
 
   const isNearBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -126,6 +154,9 @@ export function ChatThread({
         const res = await pollConversation(otherSlug, lastSyncRef.current);
         if (!active || !res.ok) return;
         setBlock(res.block);
+        // Update the receipt every tick — the partner reading my message changes
+        // nothing about the message list, only their read marker.
+        setPartnerReadAt(res.partnerLastReadAt);
         if (res.messages.length) {
           const fromOther = res.messages.some((m) => m.senderId !== meId);
           const near = isNearBottom();
@@ -361,6 +392,11 @@ export function ChatThread({
                     </p>
                   </div>
                 </div>
+                {mine && m.id === lastMineId && (
+                  <p className="px-1 text-right text-[10px] font-medium text-muted">
+                    {receiptLabel(m, partnerReadAt)}
+                  </p>
+                )}
               </Fragment>
             );
           })

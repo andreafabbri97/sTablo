@@ -81,4 +81,10 @@ export type ThreadData = {
   conversationId: string | null;
   messages: ChatMessageView[];
   block: BlockState;
+  /**
+   * The partner's read marker (their `*LastReadAt`), or null if they've never
+   * opened the thread. Drives the "Consegnato / Letto" receipt under my last
+   * sent message: it's "Letto" once this is ≥ that message's timestamp.
+   */
+  partnerLastReadAt: Date | null;
 };

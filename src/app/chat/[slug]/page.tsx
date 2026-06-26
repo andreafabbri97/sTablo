@@ -68,6 +68,7 @@ async function ChatThreadContent({
       otherSlug={slug}
       initialMessages={thread.messages}
       initialBlock={thread.block}
+      initialPartnerReadAt={thread.partnerLastReadAt}
     />
   );
 }

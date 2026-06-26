@@ -240,11 +240,20 @@ export async function getThread(
     messages = rows.reverse();
   }
 
+  // The partner's read marker (their side of the conversation), so the thread
+  // can show "Consegnato / Letto" under my last sent message.
+  const partnerLastReadAt = convo
+    ? convo.userAId === partner.userId
+      ? convo.aLastReadAt
+      : convo.bLastReadAt
+    : null;
+
   return {
     partner: { ...partner, isAdmin: meta.isAdmin, isFriend, level: meta.level },
     conversationId: convo?.id ?? null,
     messages,
     block,
+    partnerLastReadAt,
   };
 }
 
