@@ -403,6 +403,7 @@ export const GUIDES: Record<string, Guide> = {
         points: [
           "Carica una foto profilo: sostituisce le iniziali ovunque (viene ritagliata quadrata). Con «Rimuovi» torni alle iniziali.",
           "Imposta motto, piede preferito, stile di gioco e mossa speciale.",
+          "Collega il tuo Instagram (facoltativo): comparirà come icona solo sul tuo profilo e linkerà al tuo account, così gli altri capiscono chi sei davvero.",
           "Scegli se rendere pubbliche o private le tue statistiche di gioco.",
           "Più completi il profilo, più la tua scheda è ricca.",
           "In fondo trovi la tua bacheca trofei: si sbloccano giocando e vincendo.",
