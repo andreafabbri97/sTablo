@@ -1,54 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef, useTransition, useCallback } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Bell, Check, X, Clock, Swords } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { respondFriendRequest } from "@/lib/actions/friend-actions";
-import {
-  fetchNotifications,
-  type Notifications,
-} from "@/lib/actions/notification-actions";
+import { useHeaderData } from "./header-data";
 
 export function NotificationsBell() {
   const { status } = useSession();
-  const pathname = usePathname();
+  const { notifications: data, refresh, patchNotifications } = useHeaderData();
   const [open, setOpen] = useState(false);
-  const [data, setData] = useState<Notifications>({
-    friendRequests: [],
-    pendingMatches: [],
-    tournamentInvites: [],
-    feedUnread: 0,
-  });
   const [, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
-
-  const load = useCallback(() => {
-    fetchNotifications().then(setData).catch(() => {});
-  }, []);
-
-  // Refetch on auth and whenever the route changes (e.g. after confirming a
-  // match elsewhere), so the badge count never goes stale.
-  useEffect(() => {
-    if (status === "authenticated") load();
-  }, [status, load, pathname]);
-
-  // Keep fresh while the tab is open: poll lightly and on tab re-focus,
-  // but only when the page is actually visible.
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    const onVisible = () => {
-      if (document.visibilityState === "visible") load();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    const id = window.setInterval(onVisible, 60_000);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      window.clearInterval(id);
-    };
-  }, [status, load]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -75,9 +40,9 @@ export function NotificationsBell() {
   function respond(id: string, accept: boolean) {
     startTransition(async () => {
       await respondFriendRequest(id, accept);
-      setData((d) => ({
-        ...d,
-        friendRequests: d.friendRequests.filter((i) => i.friendshipId !== id),
+      patchNotifications((n) => ({
+        ...n,
+        friendRequests: n.friendRequests.filter((i) => i.friendshipId !== id),
       }));
     });
   }
@@ -87,7 +52,7 @@ export function NotificationsBell() {
       <button
         onClick={() => {
           setOpen((v) => !v);
-          load();
+          refresh();
         }}
         aria-label="Notifiche"
         className="relative grid h-10 w-10 place-items-center rounded-full border border-border bg-surface/60 text-foreground transition hover:bg-surface"

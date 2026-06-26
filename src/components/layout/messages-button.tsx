@@ -1,44 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { MessageCircle } from "lucide-react";
-import { fetchUnreadMessageCount } from "@/lib/actions/chat-actions";
+import { useHeaderData } from "./header-data";
 
 /**
- * Header entry point to the chat. Mirrors <NotificationsBell>: a light unread
- * poll that only runs while authenticated and the tab is visible. The open
- * thread does its own fast (3s) polling, so this badge just needs to feel fresh.
+ * Header entry point to the chat. The unread count comes from the shared
+ * <HeaderDataProvider> (one combined fetch with the notifications bell) rather
+ * than its own poll. The open thread does its own fast (3s) polling, so this
+ * badge just needs to feel fresh — the provider refreshes it on navigation, on
+ * tab re-focus, and on a light background timer.
  */
 export function MessagesButton() {
   const { status } = useSession();
-  const pathname = usePathname();
-  const [count, setCount] = useState(0);
-
-  const load = useCallback(() => {
-    fetchUnreadMessageCount().then(setCount).catch(() => {});
-  }, []);
-
-  // Refetch on auth and on every route change (so the badge clears right after
-  // you read a conversation and navigate away).
-  useEffect(() => {
-    if (status === "authenticated") load();
-  }, [status, load, pathname]);
-
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    const onVisible = () => {
-      if (document.visibilityState === "visible") load();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    const id = window.setInterval(onVisible, 25_000);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      window.clearInterval(id);
-    };
-  }, [status, load]);
+  const { unreadMessages: count } = useHeaderData();
 
   if (status !== "authenticated") return null;
 

@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { UserButton } from "./user-button";
 import { MessagesButton } from "./messages-button";
 import { NotificationsBell } from "./notifications-bell";
+import { HeaderDataProvider } from "./header-data";
 import { NAV_LINKS } from "./nav-links";
 import { cn } from "@/lib/utils";
 
@@ -45,10 +46,12 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <NotificationsBell />
-          <MessagesButton />
-          <ThemeToggle />
-          <UserButton />
+          <HeaderDataProvider>
+            <NotificationsBell />
+            <MessagesButton />
+            <ThemeToggle />
+            <UserButton />
+          </HeaderDataProvider>
         </div>
       </div>
     </header>
