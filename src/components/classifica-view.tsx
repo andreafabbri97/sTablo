@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { PlayerName } from "@/components/player/player-name";
 import { EmptyState } from "@/components/ui/page";
+import { RowsSkeleton } from "@/components/ui/skeletons";
 import { ScopeTabs, type FriendScope } from "@/components/scope-tabs";
+import { classificaOverlay } from "@/lib/actions/classifica-actions";
 import { cn, pct } from "@/lib/utils";
 import type { RankRow } from "@/lib/stats";
 import type { SeasonStanding } from "@/lib/seasons";
@@ -34,26 +36,47 @@ export function ClassificaView({
   singles,
   doubles,
   teams,
-  season,
-  seasonLabel,
-  friendSlugs = [],
-  selfSlug = null,
 }: {
   overall: RankRow[];
   singles: RankRow[];
   doubles: RankRow[];
   teams: TeamRow[];
-  season: SeasonStanding[];
-  seasonLabel: string;
-  friendSlugs?: string[];
-  /** The viewer's own player slug. In the leaderboard, «Amici» includes YOU —
-   *  you want the Elo ranking of your circle, yourself included. */
-  selfSlug?: string | null;
 }) {
   const [tab, setTab] = useState<Tab>("season");
   const [scope, setScope] = useState<FriendScope>("all");
 
-  const friendSet = useMemo(() => new Set(friendSlugs), [friendSlugs]);
+  // Season standings (date-dependent) + the viewer's friends load client-side so
+  // the rankings (Generale/Singolo/Doppio/Team) stay a cached static shell. In
+  // the leaderboard «Amici» includes YOU (selfSlug).
+  const [overlay, setOverlay] = useState<{
+    season: SeasonStanding[];
+    seasonLabel: string;
+    friendSlugs: string[];
+    selfSlug: string | null;
+    loaded: boolean;
+  }>({
+    season: [],
+    seasonLabel: "",
+    friendSlugs: [],
+    selfSlug: null,
+    loaded: false,
+  });
+
+  useEffect(() => {
+    let active = true;
+    classificaOverlay()
+      .then((info) => active && setOverlay({ ...info, loaded: true }))
+      .catch(() => active && setOverlay((o) => ({ ...o, loaded: true })));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const { season, seasonLabel, selfSlug } = overlay;
+  const friendSet = useMemo(
+    () => new Set(overlay.friendSlugs),
+    [overlay.friendSlugs],
+  );
   const rows = tab === "singles" ? singles : tab === "doubles" ? doubles : overall;
   const players = rows.filter((r) => r.played > 0);
 
@@ -120,11 +143,15 @@ export function ClassificaView({
       )}
 
       {tab === "season" ? (
-        <SeasonBoard
-          season={shownSeason}
-          seasonLabel={seasonLabel}
-          filtered={activeScope !== "all"}
-        />
+        !overlay.loaded ? (
+          <RowsSkeleton rows={5} />
+        ) : (
+          <SeasonBoard
+            season={shownSeason}
+            seasonLabel={seasonLabel}
+            filtered={activeScope !== "all"}
+          />
+        )
       ) : TEAMS_ENABLED && tab === "teams" ? (
         teams.length === 0 ? (
           <EmptyState

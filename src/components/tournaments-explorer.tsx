@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Swords, Trophy, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/page";
 import { ScopeTabs, type FriendScope } from "@/components/scope-tabs";
+import { viewerTournaments } from "@/lib/actions/tournament-feed-actions";
 
 const FRIEND_SCOPES: { key: FriendScope; label: string }[] = [
   { key: "all", label: "Tutti" },
@@ -40,25 +41,57 @@ export type TournamentCardData = {
 export function TournamentsExplorer({
   tournaments,
 }: {
+  /** PUBLIC tournaments, from the cached static shell. The viewer's private
+   *  (accessible) tournaments and «Amici» flags are loaded client-side. */
   tournaments: TournamentCardData[];
 }) {
   const [friendScope, setFriendScope] = useState<FriendScope>("all");
+  // Per-viewer overlay: private tournaments this user may see + the set of
+  // tournament ids a friend took part in. Loaded client-side so the page stays
+  // a cached shell (and private tournaments never enter the shared cache).
+  const [privateCards, setPrivateCards] = useState<TournamentCardData[]>([]);
+  const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let active = true;
+    viewerTournaments()
+      .then((info) => {
+        if (!active) return;
+        setPrivateCards(info.privateCards);
+        setFriendIds(new Set(info.friendIds));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Public (shell) + private (client), deduped, with friend flags applied.
+  const all = useMemo(() => {
+    const seen = new Set<string>();
+    const out: TournamentCardData[] = [];
+    for (const t of [...tournaments, ...privateCards]) {
+      if (seen.has(t.id)) continue;
+      seen.add(t.id);
+      out.push({ ...t, hasFriend: friendIds.has(t.id) });
+    }
+    return out;
+  }, [tournaments, privateCards, friendIds]);
 
   // Show the «Amici» scope only when friends' tournaments and others actually
   // coexist — otherwise the split would leave a tab permanently empty.
   const friendCount = useMemo(
-    () => tournaments.filter((t) => t.hasFriend).length,
-    [tournaments],
+    () => all.filter((t) => t.hasFriend).length,
+    [all],
   );
-  const canFilterFriends = friendCount > 0 && friendCount < tournaments.length;
+  const canFilterFriends = friendCount > 0 && friendCount < all.length;
   const activeScope: FriendScope = canFilterFriends ? friendScope : "all";
 
   const filtered = useMemo(() => {
-    if (activeScope === "all") return tournaments;
-    return tournaments.filter((t) =>
+    if (activeScope === "all") return all;
+    return all.filter((t) =>
       activeScope === "friends" ? t.hasFriend : !t.hasFriend,
     );
-  }, [tournaments, activeScope]);
+  }, [all, activeScope]);
 
   return (
     <div className="space-y-4">

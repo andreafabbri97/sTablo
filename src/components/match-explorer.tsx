@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Search, X, Loader2, ChevronDown } from "lucide-react";
 import { MatchCard } from "@/components/match-card";
 import { DeleteMatchButton } from "@/components/admin/delete-match-button";
 import { EmptyState } from "@/components/ui/page";
 import { Input } from "@/components/ui/field";
 import { ScopeTabs, type FriendScope } from "@/components/scope-tabs";
-import { loadMoreMatches } from "@/lib/actions/match-feed-actions";
+import {
+  loadMoreMatches,
+  viewerFeedInfo,
+} from "@/lib/actions/match-feed-actions";
 import { matchInvolvesAnySlug } from "@/lib/match-filter";
 import type { ShapedMatch } from "@/lib/queries";
 
@@ -40,26 +43,37 @@ const FRIEND_SCOPES: { key: FriendScope; label: string }[] = [
 
 export function MatchExplorer({
   matches,
-  isAdmin,
   totalCount,
-  friendSlugs,
 }: {
   matches: ShapedMatch[];
-  isAdmin: boolean;
   /** Total completed matches in the DB; when it exceeds the loaded window we
    *  show a note so the count discrepancy is never confusing. */
   totalCount?: number;
-  /** The viewer's circle (themselves + accepted friends) as player slugs. When
-   *  present and non-empty, the «Solo amici» toggle is shown. Undefined for
-   *  signed-out visitors or users with no friends yet. */
-  friendSlugs?: string[];
 }) {
   const [format, setFormat] = useState<Format>("all");
   const [query, setQuery] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [friendScope, setFriendScope] = useState<FriendScope>("all");
-  const friendSet = useMemo(() => new Set(friendSlugs ?? []), [friendSlugs]);
+  // Per-viewer overlay loaded on the client so the feed page stays a cached
+  // static shell: the friend circle powers the «Amici» toggle; isAdmin shows the
+  // delete buttons (the delete action re-checks admin server-side).
+  const [friendSlugs, setFriendSlugs] = useState<string[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    let active = true;
+    viewerFeedInfo()
+      .then((info) => {
+        if (!active) return;
+        setFriendSlugs(info.friendSlugs);
+        setIsAdmin(info.isAdmin);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+  const friendSet = useMemo(() => new Set(friendSlugs), [friendSlugs]);
   // Older pages fetched via "carica altre". Kept separate from the `matches`
   // prop so that when the page refreshes (e.g. after a new match) the freshest
   // window always wins and the extra history we already pulled isn't lost.
