@@ -105,8 +105,12 @@ async function buildPlayerWithStats(
   player: typeof players.$inferSelect,
   username: string | null,
 ): Promise<PlayerWithStats> {
-  const rows = await loadResultRows(player.id);
-  const tournamentsWon = await countTournamentWins(player.id);
+  // Two independent reads — fire them together to halve the round-trips on
+  // the hottest query (every profile view and every profile save runs this).
+  const [rows, tournamentsWon] = await Promise.all([
+    loadResultRows(player.id),
+    countTournamentWins(player.id),
+  ]);
   // Competitive record & Elo come from ranked matches; XP from all of them.
   const rankedRows = rows.filter((r) => r.ranked);
   const stats = foldResults(rankedRows);
