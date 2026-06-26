@@ -174,9 +174,11 @@ export async function userIdForPlayer(
 export type AccountUser = {
   userId: string;
   name: string;
+  username: string | null;
   slug: string | null;
   avatarColor: number;
   avatarUrl: string | null;
+  isAdmin: boolean;
 };
 
 /** All accounts that have a linked player profile. */
@@ -185,9 +187,11 @@ export async function getAccountUsers(): Promise<AccountUser[]> {
     .select({
       userId: users.id,
       name: users.name,
+      username: users.username,
       slug: players.slug,
       avatarColor: players.avatarColor,
       avatarUrl: players.avatarUrl,
+      role: users.role,
     })
     .from(users)
     .innerJoin(players, eq(users.playerId, players.id))
@@ -195,9 +199,11 @@ export async function getAccountUsers(): Promise<AccountUser[]> {
   return rows.map((r) => ({
     userId: r.userId,
     name: r.name,
+    username: r.username ?? null,
     slug: r.slug,
     avatarColor: r.avatarColor ?? 0,
     avatarUrl: r.avatarUrl ?? null,
+    isAdmin: r.role === "admin",
   }));
 }
 

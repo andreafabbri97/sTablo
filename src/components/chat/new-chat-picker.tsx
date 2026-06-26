@@ -2,31 +2,67 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Search, Users } from "lucide-react";
+import { ArrowLeft, Search, Users, UserCheck } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { AdminBadge } from "@/components/player/admin-badge";
+import { cn } from "@/lib/utils";
 
 /** A player the viewer can start a conversation with. */
 export type MessageablePerson = {
   userId: string;
   name: string;
+  username: string | null;
   slug: string;
   avatarColor: number;
   avatarUrl: string | null;
+  isAdmin: boolean;
+  isFriend: boolean;
 };
+
+type Tab = "all" | "friends" | "others";
 
 /**
  * Searchable list of players to start a new conversation with. Tapping one
  * opens the thread at `/chat/[slug]` (creating the conversation on first send).
  * Fills the detail pane; on mobile a back arrow returns to the list.
+ *
+ * Friends are split from the rest via a Tutti/Amici/Altri filter (shown only
+ * when there's actually a mix), and each row marks friends and admins so you
+ * can tell at a glance who you already know.
  */
 export function NewChatPicker({ people }: { people: MessageablePerson[] }) {
   const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<Tab>("all");
+
+  const friendCount = useMemo(
+    () => people.filter((p) => p.isFriend).length,
+    [people],
+  );
+  // The filter only earns its space when both groups are non-empty.
+  const showTabs = friendCount > 0 && friendCount < people.length;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return people;
-    return people.filter((p) => p.name.toLowerCase().includes(q));
-  }, [people, query]);
+    const activeTab = showTabs ? tab : "all";
+    const byTab = people.filter((p) =>
+      activeTab === "friends"
+        ? p.isFriend
+        : activeTab === "others"
+          ? !p.isFriend
+          : true,
+    );
+    const byQuery = q
+      ? byTab.filter((p) =>
+          [p.name, p.username]
+            .filter(Boolean)
+            .some((s) => (s as string).toLowerCase().includes(q)),
+        )
+      : byTab;
+    // In the combined view, surface friends first so the split stays visible
+    // (sort is stable, so names keep their alphabetical order within a group).
+    return [...byQuery].sort((a, b) => Number(b.isFriend) - Number(a.isFriend));
+  }, [people, query, tab, showTabs]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -48,11 +84,28 @@ export function NewChatPicker({ people }: { people: MessageablePerson[] }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoFocus
-          placeholder="Cerca un giocatore…"
+          placeholder="Cerca per nome o username…"
           aria-label="Cerca un giocatore"
           className="w-full rounded-xl border border-border bg-surface py-2 pl-9 pr-3 text-sm outline-none transition focus:border-brand"
         />
       </div>
+
+      {showTabs && (
+        <div className="flex gap-1 border-b border-border p-2">
+          <TabButton active={tab === "all"} onClick={() => setTab("all")}>
+            Tutti
+          </TabButton>
+          <TabButton
+            active={tab === "friends"}
+            onClick={() => setTab("friends")}
+          >
+            Amici ({friendCount})
+          </TabButton>
+          <TabButton active={tab === "others"} onClick={() => setTab("others")}>
+            Altri
+          </TabButton>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         {filtered.length === 0 ? (
@@ -77,11 +130,52 @@ export function NewChatPicker({ people }: { people: MessageablePerson[] }) {
                 imageUrl={p.avatarUrl}
                 size="md"
               />
-              <p className="min-w-0 flex-1 truncate font-semibold">{p.name}</p>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="truncate font-semibold">{p.name}</span>
+                  {p.isAdmin && <AdminBadge className="shrink-0" />}
+                </div>
+                {p.username && (
+                  <span className="block truncate text-xs text-muted">
+                    @{p.username}
+                  </span>
+                )}
+              </div>
+              {p.isFriend && (
+                <Badge tone="sea" className="shrink-0">
+                  <UserCheck className="h-3 w-3" />
+                  Amico
+                </Badge>
+              )}
             </Link>
           ))
         )}
       </div>
     </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex-1 rounded-xl px-3 py-1.5 text-sm font-semibold transition",
+        active
+          ? "bg-brand-soft text-brand"
+          : "text-muted hover:bg-surface-2 hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
   );
 }
