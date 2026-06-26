@@ -24,7 +24,7 @@ export default async function ClassificaPage() {
       <PageHeader
         icon={<Trophy className="h-6 w-6" />}
         title="Classifica"
-        subtitle="Ranking Elo del tavolino"
+        subtitle="Ranking in base all'Elo"
         help="classifica"
       />
       <ClassificaView
