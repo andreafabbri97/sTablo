@@ -136,6 +136,7 @@ export const GUIDES: Record<string, Guide> = {
           "Apri una partita e tocca un'emoji (🔥 👏 😂 💪 🎯 😱) per reagire: ritocca per togliere la reazione.",
           "Scrivi un commento per festeggiare, sfottere l'avversario o ricordare quel punto ai vantaggi.",
           "Tocca «Rispondi» sotto un commento per rispondere: le risposte si annidano sotto, come su Facebook.",
+          "Scrivi @ seguito dal nome per menzionare un giocatore (come su Facebook): scegli dal menu a comparsa e gli arriva una notifica «ti hanno menzionato». Il nome menzionato diventa un link al suo profilo.",
           "Chi gioca la partita riceve una notifica per ogni nuovo commento; chi viene citato la riceve quando gli rispondi.",
           "Puoi cancellare i tuoi commenti; l'admin può rimuoverne qualsiasi. Cancellando un commento spariscono anche le sue risposte.",
         ],

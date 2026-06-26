@@ -1,19 +1,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   matches,
   matchParticipants,
   matchReactions,
   matchComments,
+  players,
   users,
 } from "@/lib/db/schema";
 import { isValidReaction } from "@/lib/reactions";
 import { commentSchema } from "@/lib/validation";
 import { assertAuth } from "@/lib/auth-helpers";
 import { notify } from "@/lib/notifications";
+import { extractMentions } from "@/lib/mentions";
 import { rateLimit, retryAfterSeconds, RATE_LIMITS } from "@/lib/rate-limit";
 import type { ActionResult } from "./auth-actions";
 
@@ -49,6 +51,48 @@ async function matchParticipantUserIds(
     .select({ userId: users.id })
     .from(users)
     .where(and(inArray(users.playerId, playerIds), ne(users.id, exceptUserId)));
+  return rows.map((r) => r.userId);
+}
+
+/** A player that can be @mentioned — has a linked account with a username. */
+export type Mentionable = { name: string; username: string; slug: string };
+
+/**
+ * Everyone who can be @mentioned in a comment: players whose account has a
+ * username. Powers the composer's autocomplete and the linkified rendering.
+ * Best-effort → empty list (mentions are a nice-to-have, never block commenting).
+ */
+export async function getMentionables(): Promise<Mentionable[]> {
+  try {
+    const rows = await db
+      .select({
+        name: players.name,
+        username: users.username,
+        slug: players.slug,
+      })
+      .from(users)
+      .innerJoin(players, eq(users.playerId, players.id))
+      .where(isNotNull(users.username));
+    return rows
+      .filter((r): r is Mentionable => Boolean(r.username))
+      .map((r) => ({ name: r.name, username: r.username, slug: r.slug }));
+  } catch (err) {
+    console.error("[getMentionables] errore:", err);
+    return [];
+  }
+}
+
+/** Resolve @handles in `body` to account user ids, excluding the author. */
+async function resolveMentionedUserIds(
+  body: string,
+  exceptUserId: string,
+): Promise<string[]> {
+  const handles = extractMentions(body);
+  if (!handles.length) return [];
+  const rows = await db
+    .select({ userId: users.id })
+    .from(users)
+    .where(and(inArray(users.username, handles), ne(users.id, exceptUserId)));
   return rows.map((r) => r.userId);
 }
 
@@ -192,12 +236,32 @@ export async function addComment(
 
   refreshMatch(matchId);
 
-  // Best-effort notifications: a reply pings the person it answers; a root
-  // comment pings the other players on the match.
+  // Best-effort notifications. Anyone @mentioned gets a dedicated "ti hanno
+  // menzionato" ping; then a reply pings the person it answers and a root
+  // comment pings the other players on the match — excluding anyone already
+  // pinged by a mention so nobody gets two notifications for one comment.
   try {
     const actor = user.name?.trim() || "Qualcuno";
+    const mentionedIds = await resolveMentionedUserIds(parsed.data.body, user.id);
+    const mentioned = new Set(mentionedIds);
+
+    if (mentionedIds.length) {
+      await notify({
+        userIds: mentionedIds,
+        kind: "comment",
+        title: "💬 Ti hanno menzionato",
+        body: `${actor} ti ha menzionato in un commento`,
+        url: `/partite/${matchId}`,
+        tag: "match-mention",
+      });
+    }
+
     if (rootParentId) {
-      if (replyToAuthorId && replyToAuthorId !== user.id) {
+      if (
+        replyToAuthorId &&
+        replyToAuthorId !== user.id &&
+        !mentioned.has(replyToAuthorId)
+      ) {
         await notify({
           userIds: [replyToAuthorId],
           kind: "comment",
@@ -208,7 +272,9 @@ export async function addComment(
         });
       }
     } else {
-      const userIds = await matchParticipantUserIds(matchId, user.id);
+      const userIds = (await matchParticipantUserIds(matchId, user.id)).filter(
+        (id) => !mentioned.has(id),
+      );
       if (userIds.length) {
         await notify({
           userIds,
