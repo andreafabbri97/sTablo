@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-helpers";
@@ -8,10 +9,17 @@ import {
   type MessageablePerson,
 } from "@/components/chat/new-chat-picker";
 
-export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Nuova chat" };
 
-export default async function NewChatPage() {
+export default function NewChatPage() {
+  return (
+    <Suspense fallback={<NewChatSkeleton />}>
+      <NewChatContent />
+    </Suspense>
+  );
+}
+
+async function NewChatContent() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?callbackUrl=/chat/nuova");
 
@@ -35,4 +43,15 @@ export default async function NewChatPage() {
     }));
 
   return <NewChatPicker people={people} />;
+}
+
+function NewChatSkeleton() {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-2 p-2" aria-hidden>
+      <div className="h-10 rounded-xl skeleton" />
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="h-16 rounded-2xl skeleton" />
+      ))}
+    </div>
+  );
 }

@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 /**
  * Diagnostics — exposes only booleans, never the secret values.

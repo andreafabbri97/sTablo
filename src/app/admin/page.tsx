@@ -12,7 +12,9 @@ import {
   Download,
   ShieldAlert,
 } from "lucide-react";
+import { Suspense } from "react";
 import { PageHeader } from "@/components/ui/page";
+import { PageHeaderSkeleton, RowsSkeleton } from "@/components/ui/skeletons";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
@@ -35,10 +37,24 @@ import { countDemoMatches } from "@/lib/demo";
 import { cn } from "@/lib/utils";
 import { TEAMS_ENABLED } from "@/lib/features";
 
-export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Admin" };
 
-export default async function AdminPage() {
+export default function AdminPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <PageHeaderSkeleton />
+          <RowsSkeleton rows={6} />
+        </div>
+      }
+    >
+      <AdminContent />
+    </Suspense>
+  );
+}
+
+async function AdminContent() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?callbackUrl=/admin");
   if (user.role !== "admin") redirect("/");

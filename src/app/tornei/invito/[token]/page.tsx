@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Swords, UserPlus, Users, Clock } from "lucide-react";
+import { PanelSkeleton } from "@/components/ui/skeletons";
 import { db } from "@/lib/db";
 import { tournaments, tournamentEntrants } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -11,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import Link from "next/link";
 
-export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Unisciti al torneo" };
 
 async function JoinButton({ token }: { token: string }) {
@@ -29,7 +30,26 @@ async function JoinButton({ token }: { token: string }) {
   );
 }
 
-export default async function TorneoInvitoPage({
+
+export default function TorneoInvitoPage({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-sm py-8">
+          <PanelSkeleton className="h-72" />
+        </div>
+      }
+    >
+      <TorneoInvitoContent params={params} />
+    </Suspense>
+  );
+}
+
+async function TorneoInvitoContent({
   params,
 }: {
   params: Promise<{ token: string }>;

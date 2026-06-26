@@ -7,8 +7,6 @@ import {
   clientKeyFromHeaders,
 } from "@/lib/rate-limit";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 /**
  * Client-side error sink. The error boundaries (and the global error listener)

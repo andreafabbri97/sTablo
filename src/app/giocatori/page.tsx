@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Users } from "lucide-react";
 import { PageHeader, EmptyState } from "@/components/ui/page";
+import { PageHeaderSkeleton, CardGridSkeleton } from "@/components/ui/skeletons";
 import { PlayersGrid, type PlayerCardData } from "@/components/player/players-grid";
 import { getRanking } from "@/lib/stats";
 import { getPlayerUsernames } from "@/lib/queries";
@@ -9,10 +11,27 @@ import { getCurrentUser } from "@/lib/auth-helpers";
 import { getFriends } from "@/lib/friends";
 import { safe } from "@/lib/safe";
 
-export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Giocatori" };
 
-export default async function GiocatoriPage() {
+export default function GiocatoriPage() {
+  return (
+    <Suspense
+      fallback={
+        <div>
+          <PageHeaderSkeleton />
+          <div className="space-y-4">
+            <div className="h-11 rounded-xl skeleton" />
+            <CardGridSkeleton cards={6} />
+          </div>
+        </div>
+      }
+    >
+      <GiocatoriContent />
+    </Suspense>
+  );
+}
+
+async function GiocatoriContent() {
   // Everything fires together; friends chains off the resolved user so it still
   // runs in parallel with the (heavier) ranking/admin queries.
   const [rows, adminIds, friends, usernames] = await Promise.all([
@@ -51,7 +70,7 @@ export default async function GiocatoriPage() {
   }));
 
   return (
-    <div>
+    <>
       <PageHeader
         icon={<Users className="h-6 w-6" />}
         title="Giocatori"
@@ -68,6 +87,6 @@ export default async function GiocatoriPage() {
       ) : (
         <PlayersGrid players={players} />
       )}
-    </div>
+    </>
   );
 }

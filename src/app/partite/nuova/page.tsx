@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/page";
+import { PageHeaderSkeleton, PanelSkeleton } from "@/components/ui/skeletons";
 import { Card } from "@/components/ui/card";
 import { MatchForm } from "@/components/admin/match-form";
 import { getCurrentUser } from "@/lib/auth-helpers";
@@ -9,10 +11,26 @@ import { getPlayerMatchOptions } from "@/lib/queries";
 import { getFriends } from "@/lib/friends";
 import { safe } from "@/lib/safe";
 
-export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Nuova partita" };
 
-export default async function NuovaPartitaPage() {
+export default function NuovaPartitaPage() {
+  return (
+    <div className="mx-auto max-w-2xl">
+      <Suspense
+        fallback={
+          <>
+            <PageHeaderSkeleton />
+            <PanelSkeleton />
+          </>
+        }
+      >
+        <NuovaPartitaContent />
+      </Suspense>
+    </div>
+  );
+}
+
+async function NuovaPartitaContent() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?callbackUrl=/partite/nuova");
 
@@ -32,7 +50,7 @@ export default async function NuovaPartitaPage() {
   }));
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <>
       <PageHeader
         icon={<Plus className="h-6 w-6" />}
         title="Nuova partita"
@@ -50,6 +68,6 @@ export default async function NuovaPartitaPage() {
           currentPlayerId={user.playerId ?? undefined}
         />
       </Card>
-    </div>
+    </>
   );
 }

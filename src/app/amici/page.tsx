@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -5,6 +6,7 @@ import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { Users, Inbox, Send, QrCode as QrIcon, UserPlus } from "lucide-react";
 import { PageHeader, EmptyState } from "@/components/ui/page";
+import { PageHeaderSkeleton, RowsSkeleton } from "@/components/ui/skeletons";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { PlayerName } from "@/components/player/player-name";
@@ -26,10 +28,24 @@ import {
   type FriendProfile,
 } from "@/lib/friends";
 
-export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Amici" };
 
-export default async function AmiciPage() {
+export default function AmiciPage() {
+  return (
+    <Suspense
+      fallback={
+        <div>
+          <PageHeaderSkeleton />
+          <RowsSkeleton rows={5} />
+        </div>
+      }
+    >
+      <AmiciContent />
+    </Suspense>
+  );
+}
+
+async function AmiciContent() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?callbackUrl=/amici");
 

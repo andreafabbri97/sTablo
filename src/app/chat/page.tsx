@@ -1,9 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-helpers";
 
-export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Messaggi" };
 
 /**
@@ -12,10 +12,21 @@ export const metadata: Metadata = { title: "Messaggi" };
  * the screen. On desktop it's the right-hand placeholder shown until you pick a
  * conversation.
  */
-export default async function ChatIndexPage() {
+export default function ChatIndexPage() {
+  return (
+    <Suspense fallback={<ChatIndexPlaceholder />}>
+      <ChatIndexContent />
+    </Suspense>
+  );
+}
+
+async function ChatIndexContent() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?callbackUrl=/chat");
+  return <ChatIndexPlaceholder />;
+}
 
+function ChatIndexPlaceholder() {
   return (
     <div className="flex flex-1 items-center justify-center p-8 text-center">
       <div className="max-w-xs">

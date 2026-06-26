@@ -2,6 +2,12 @@
 
 import { usePathname } from "next/navigation";
 
+// Computed once at module load (build time), not on every render: a `new Date()`
+// during a Client Component's render is non-deterministic and, under Cache
+// Components, blocks the static shell. The copyright year doesn't need to be
+// request-fresh — the build year is fine.
+const YEAR = new Date().getFullYear();
+
 /**
  * Global footer. Shown at the bottom of every page (inside <main>, so its
  * bottom padding clears the fixed mobile BottomNav). Makes the authorship
@@ -16,8 +22,6 @@ export function SiteFooter() {
   const pathname = usePathname();
   if (pathname === "/chat" || pathname.startsWith("/chat/")) return null;
 
-  const year = new Date().getFullYear();
-
   return (
     <footer className="mt-14 border-t border-border pt-6 text-center">
       <p className="text-xs text-muted">
@@ -27,7 +31,7 @@ export function SiteFooter() {
         </span>
       </p>
       <p className="mt-0.5 text-[11px] text-muted">
-        © {year} sTablo · Tutti i diritti riservati
+        © {YEAR} sTablo · Tutti i diritti riservati
       </p>
     </footer>
   );

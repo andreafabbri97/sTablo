@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -9,7 +10,6 @@ import { getCurrentUser } from "@/lib/auth-helpers";
 import { getThread, partnerBySlug } from "@/lib/chat";
 import { safe } from "@/lib/safe";
 
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -21,7 +21,19 @@ export async function generateMetadata({
   return { title: partner ? `Chat con ${partner.name}` : "Messaggi" };
 }
 
-export default async function ChatThreadPage({
+export default function ChatThreadPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  return (
+    <Suspense fallback={<ChatThreadSkeleton />}>
+      <ChatThreadContent params={params} />
+    </Suspense>
+  );
+}
+
+async function ChatThreadContent({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -57,5 +69,22 @@ export default async function ChatThreadPage({
       initialMessages={thread.messages}
       initialBlock={thread.block}
     />
+  );
+}
+
+function ChatThreadSkeleton() {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3 p-3" aria-hidden>
+      <div className="h-12 rounded-xl skeleton" />
+      <div className="flex-1 space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className={i % 2 ? "ml-auto h-10 w-2/3 rounded-2xl skeleton" : "h-10 w-1/2 rounded-2xl skeleton"}
+          />
+        ))}
+      </div>
+      <div className="h-12 rounded-xl skeleton" />
+    </div>
   );
 }

@@ -7,8 +7,6 @@ import {
   formatsFor,
 } from "@/lib/admin-export";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 /** UTF-8 BOM so Excel renders accented characters in CSV correctly. */
 const BOM = "﻿";

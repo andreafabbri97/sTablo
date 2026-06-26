@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Swords, Plus, Trophy } from "lucide-react";
 import { PageHeader, EmptyState } from "@/components/ui/page";
+import { PageHeaderSkeleton, CardGridSkeleton } from "@/components/ui/skeletons";
 import { Button } from "@/components/ui/button";
 import {
   TournamentsExplorer,
@@ -13,7 +15,6 @@ import { getCurrentUser } from "@/lib/auth-helpers";
 import { getFriendTournamentIds } from "@/lib/friends";
 import { safe } from "@/lib/safe";
 
-export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Tornei" };
 
 const STATUS: Record<string, { label: string; tone: "win" | "brand" | "muted" | "ball" }> = {
@@ -22,7 +23,24 @@ const STATUS: Record<string, { label: string; tone: "win" | "brand" | "muted" | 
   draft: { label: "⏳ In attesa", tone: "ball" },
 };
 
-export default async function TorneiPage() {
+export default function TorneiPage() {
+  // Visibility filtering + the «Crea torneo» action depend on the viewer, so the
+  // whole page streams behind a header+grid skeleton.
+  return (
+    <Suspense
+      fallback={
+        <div>
+          <PageHeaderSkeleton />
+          <CardGridSkeleton cards={6} />
+        </div>
+      }
+    >
+      <TorneiContent />
+    </Suspense>
+  );
+}
+
+async function TorneiContent() {
   const [all, user] = await Promise.all([
     safe(() => getTournaments(), []),
     getCurrentUser(),

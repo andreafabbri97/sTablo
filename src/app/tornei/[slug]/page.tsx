@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { Swords, Trophy, QrCode, Users, MessageCircle } from "lucide-react";
+import { PanelSkeleton, RowsSkeleton } from "@/components/ui/skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
 import { TournamentComments } from "@/components/tournament/tournament-comments";
@@ -28,7 +30,6 @@ import { getFriends } from "@/lib/friends";
 import { InviteFriendsButton } from "@/components/tournament/invite-friends-button";
 import { safe } from "@/lib/safe";
 
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -50,7 +51,27 @@ function byRound(matches: TournamentMatchView[]): [number, TournamentMatchView[]
   return [...map.entries()].sort((a, b) => a[0] - b[0]);
 }
 
-export default async function TournamentPage({
+
+export default function TournamentPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <PanelSkeleton className="h-40" />
+          <RowsSkeleton rows={4} />
+        </div>
+      }
+    >
+      <TournamentDetail params={params} />
+    </Suspense>
+  );
+}
+
+async function TournamentDetail({
   params,
 }: {
   params: Promise<{ slug: string }>;

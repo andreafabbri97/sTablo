@@ -11,7 +11,6 @@ import {
 } from "@/lib/og";
 import { safe } from "@/lib/safe";
 
-export const dynamic = "force-dynamic";
 export const alt = "Risultato partita — sTablo";
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
