@@ -15,6 +15,34 @@ function useMounted() {
 }
 
 /**
+ * Tracks the visual viewport (the area actually visible above the on-screen
+ * keyboard) while the modal is open. Returns the offset/height to pin the
+ * overlay to, or null when unsupported (fall back to a normal full-screen
+ * overlay). Without this, an `inset-0` overlay centers the panel in the full
+ * layout viewport — i.e. partly behind the mobile keyboard.
+ */
+function useVisualViewport(open: boolean) {
+  const [rect, setRect] = React.useState<{ top: number; height: number } | null>(
+    null,
+  );
+  React.useEffect(() => {
+    if (!open || typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => setRect({ top: vv.offsetTop, height: vv.height });
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+      setRect(null);
+    };
+  }, [open]);
+  return rect;
+}
+
+/**
  * Accessible, theme-aware modal. Always a centered dialog with fully rounded
  * corners (on mobile too). Closes on Escape, on backdrop tap, and locks body
  * scroll while open.
@@ -37,6 +65,7 @@ export function Modal({
   const mounted = useMounted();
   const panelRef = React.useRef<HTMLDivElement>(null);
   const titleId = React.useId();
+  const viewport = useVisualViewport(open);
 
   // Keep the latest onClose without it driving the effects below — callers often
   // pass an inline function that changes identity on every render.
@@ -68,7 +97,15 @@ export function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className={cn(
+        "fixed left-0 z-[100] flex w-full items-center justify-center p-4",
+        // When we know the visual viewport, pin to it (top/height inline);
+        // otherwise cover the whole screen.
+        viewport ? "" : "inset-0",
+      )}
+      style={
+        viewport ? { top: viewport.top, height: viewport.height } : undefined
+      }
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? titleId : undefined}
@@ -83,7 +120,7 @@ export function Modal({
         ref={panelRef}
         tabIndex={-1}
         className={cn(
-          "relative z-10 max-h-[85vh] w-full overflow-y-auto rounded-3xl border border-border bg-surface p-5 shadow-[var(--shadow-lg)] outline-none animate-fade-up sm:max-w-lg",
+          "relative z-10 max-h-full w-full overflow-y-auto rounded-3xl border border-border bg-surface p-5 shadow-[var(--shadow-lg)] outline-none animate-fade-up sm:max-w-lg",
           className,
         )}
       >
