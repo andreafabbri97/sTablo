@@ -333,7 +333,6 @@ export const getPlayerOptions = cachedQuery(
         id: players.id,
         name: players.name,
         slug: players.slug,
-        nickname: players.nickname,
         avatarColor: players.avatarColor,
         avatarUrl: players.avatarUrl,
         username: linkedUsername,
@@ -357,7 +356,6 @@ export const getPlayerMatchOptions = cachedQuery(
         name: players.name,
         eloSingles: players.eloSingles,
         eloDoubles: players.eloDoubles,
-        nickname: players.nickname,
         avatarColor: players.avatarColor,
         avatarUrl: players.avatarUrl,
         username: linkedUsername,
@@ -366,6 +364,17 @@ export const getPlayerMatchOptions = cachedQuery(
       .where(eq(players.active, true))
       .orderBy(players.name),
   ["player-match-options"],
+);
+
+/**
+ * id → linked account username for EVERY player (active or not). The /giocatori
+ * ranking lists inactive players too, so unlike getPlayerOptions this is NOT
+ * filtered by `active`. Two columns only; cached under its own key.
+ */
+export const getPlayerUsernames = cachedQuery(
+  async () =>
+    db.select({ id: players.id, username: linkedUsername }).from(players),
+  ["player-usernames"],
 );
 
 /** Slug for a player id — used to build links from a session (which has no slug). */

@@ -41,7 +41,7 @@ export async function seed() {
     let player = await db.query.players.findFirst({ where: eq(players.slug, slug) });
     if (!player) {
       const [row] = await db.insert(players).values({
-        name: f.name, nickname: f.nickname, slug,
+        name: f.name, slug,
         avatarColor: colorFromString(f.name),
         playStyle: f.playStyle,
         preferredFoot: f.foot as "left" | "right" | "both",
@@ -81,7 +81,7 @@ export async function seed() {
   let fabbro_player = await db.query.players.findFirst({ where: eq(players.slug, fabbro_slug) });
   if (!fabbro_player) {
     const [row] = await db.insert(players).values({
-      name: FABBRO.name, nickname: FABBRO.nickname, slug: fabbro_slug,
+      name: FABBRO.name, slug: fabbro_slug,
       avatarColor: colorFromString(FABBRO.name),
       playStyle: FABBRO.playStyle, preferredFoot: FABBRO.foot,
       specialMove: FABBRO.special, motto: FABBRO.motto,

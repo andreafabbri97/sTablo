@@ -14,7 +14,7 @@ import { getPlayStyle } from "@/lib/gamification";
 export type PlayerCardData = {
   id: string;
   name: string;
-  nickname: string | null;
+  username: string | null;
   slug: string;
   avatarColor: number;
   avatarUrl: string | null;
@@ -48,13 +48,13 @@ export function PlayersGrid({ players }: { players: PlayerCardData[] }) {
   const showTabs = friendCount > 0 && friendCount < players.length;
 
   const filtered = useMemo(() => {
-    const q = normalize(query.trim());
+    const q = normalize(query.trim().replace(/^@/, ""));
     const activeTab = showTabs ? tab : "all";
     return players.filter((p) => {
       if (activeTab === "friends" && !p.isFriend) return false;
       if (activeTab === "others" && p.isFriend) return false;
       if (q) {
-        const hay = normalize(`${p.name} ${p.nickname ?? ""}`);
+        const hay = normalize(`${p.name} ${p.username ?? ""}`);
         if (!hay.includes(q)) return false;
       }
       return true;

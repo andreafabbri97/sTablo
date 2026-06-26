@@ -63,6 +63,8 @@ async function loadResultRows(playerId: string): Promise<ResultRow[]> {
 
 export type PlayerWithStats = {
   player: typeof players.$inferSelect;
+  /** Username of the linked account (the player's @handle), null if unlinked. */
+  username: string | null;
   stats: StatLine;
   level: LevelInfo;
   /** Attributes actually shown: derived performance + the player's overrides. */
@@ -75,28 +77,33 @@ export type PlayerWithStats = {
 
 export const getPlayerWithStats = cachedQuery(
   async (playerId: string): Promise<PlayerWithStats | null> => {
-    const player = await db.query.players.findFirst({
+    const row = await db.query.players.findFirst({
       where: eq(players.id, playerId),
+      with: { user: { columns: { username: true } } },
     });
-    if (!player) return null;
-    return buildPlayerWithStats(player);
+    if (!row) return null;
+    const { user, ...player } = row;
+    return buildPlayerWithStats(player, user?.username ?? null);
   },
   ["player-by-id"],
 );
 
 export const getPlayerWithStatsBySlug = cachedQuery(
   async (slug: string): Promise<PlayerWithStats | null> => {
-    const player = await db.query.players.findFirst({
+    const row = await db.query.players.findFirst({
       where: eq(players.slug, slug),
+      with: { user: { columns: { username: true } } },
     });
-    if (!player) return null;
-    return buildPlayerWithStats(player);
+    if (!row) return null;
+    const { user, ...player } = row;
+    return buildPlayerWithStats(player, user?.username ?? null);
   },
   ["player-by-slug"],
 );
 
 async function buildPlayerWithStats(
   player: typeof players.$inferSelect,
+  username: string | null,
 ): Promise<PlayerWithStats> {
   const rows = await loadResultRows(player.id);
   const tournamentsWon = await countTournamentWins(player.id);
@@ -128,6 +135,7 @@ async function buildPlayerWithStats(
   );
   return {
     player,
+    username,
     stats,
     level,
     attributes,

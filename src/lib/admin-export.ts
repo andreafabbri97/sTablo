@@ -49,11 +49,14 @@ function stamp(date: Date): string {
 ---------------------------------------------------------------------------- */
 
 async function playersCsv(): Promise<string> {
-  const rows = await db.select().from(players).orderBy(asc(players.name));
+  const rows = await db.query.players.findMany({
+    orderBy: [asc(players.name)],
+    with: { user: { columns: { username: true } } },
+  });
   const cols: CsvColumn<(typeof rows)[number]>[] = [
     { header: "id", get: (p) => p.id },
     { header: "nome", get: (p) => p.name },
-    { header: "soprannome", get: (p) => p.nickname },
+    { header: "username", get: (p) => p.user?.username ?? "" },
     { header: "slug", get: (p) => p.slug },
     { header: "elo_singolo", get: (p) => p.eloSingles },
     { header: "elo_doppio", get: (p) => p.eloDoubles },

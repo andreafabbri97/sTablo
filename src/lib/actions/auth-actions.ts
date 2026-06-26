@@ -83,7 +83,6 @@ export async function registerUser(
         .insert(players)
         .values({
           name,
-          nickname: username,
           slug,
           avatarColor: colorFromString(name),
         })

@@ -91,7 +91,6 @@ export const customAttributesSchema = z
 export const profileSchema = z.object({
   username: usernameSchema,
   email: optionalEmail,
-  nickname: z.string().trim().max(24).optional().or(z.literal("")),
   motto: z.string().trim().max(80).optional().or(z.literal("")),
   bio: z.string().trim().max(280).optional().or(z.literal("")),
   preferredFoot: z.enum(["left", "right", "both"]).optional().or(z.literal("")),
@@ -212,7 +211,6 @@ export const teamSchema = z.object({
 
 export const playerCreateSchema = z.object({
   name: z.string().trim().min(2).max(40),
-  nickname: z.string().trim().max(24).optional().or(z.literal("")),
 });
 
 /** Single match/game score: a non-negative integer in a sane range. */

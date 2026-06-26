@@ -47,7 +47,7 @@ export function PlayerCombobox({
     );
     const matched = q
       ? list.filter((p) =>
-          [p.name, p.nickname, p.username]
+          [p.name, p.username]
             .filter(Boolean)
             .some((s) => (s as string).toLowerCase().includes(q)),
         )

@@ -362,7 +362,7 @@ export const GUIDES: Record<string, Guide> = {
       {
         heading: "Cosa puoi fare",
         points: [
-          "Usa la barra di ricerca per trovare subito un giocatore per nome o nickname.",
+          "Usa la barra di ricerca per trovare subito un giocatore per nome o username.",
           "Tocca un giocatore per aprire il suo profilo completo.",
           "Vedi Elo, statistiche, stile di gioco e i trofei sbloccati.",
           "Dal profilo di un altro giocatore, tocca «Testa a testa» per vedere il vostro storico di sfide dirette.",
@@ -393,7 +393,7 @@ export const GUIDES: Record<string, Guide> = {
         heading: "Personalizzazione",
         points: [
           "Carica una foto profilo: sostituisce le iniziali ovunque (viene ritagliata quadrata). Con «Rimuovi» torni alle iniziali.",
-          "Imposta nickname, motto, piede preferito, stile di gioco e mossa speciale.",
+          "Imposta motto, piede preferito, stile di gioco e mossa speciale.",
           "Scegli se rendere pubbliche o private le tue statistiche di gioco.",
           "Più completi il profilo, più la tua scheda è ricca.",
           "In fondo trovi la tua bacheca trofei: si sbloccano giocando e vincendo.",

@@ -111,7 +111,6 @@ export const players = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
-    nickname: text("nickname"),
     slug: text("slug").notNull(),
     avatarColor: integer("avatar_color").notNull().default(0),
     /** optional uploaded profile picture, stored as a small data-URL */

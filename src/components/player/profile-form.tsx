@@ -68,7 +68,6 @@ export function ProfileForm({
     const res = await updateProfile({
       username: String(form.get("username") ?? "").trim().toLowerCase(),
       email: String(form.get("email") ?? "").trim(),
-      nickname: String(form.get("nickname") ?? ""),
       motto: String(form.get("motto") ?? ""),
       bio: String(form.get("bio") ?? ""),
       preferredFoot: String(form.get("preferredFoot") ?? ""),
@@ -155,15 +154,9 @@ export function ProfileForm({
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor="nickname">Soprannome</Label>
-          <Input id="nickname" name="nickname" defaultValue={player.nickname ?? ""} maxLength={24} placeholder="es. Il Fenomeno" />
-        </div>
-        <div>
-          <Label htmlFor="specialMove">Mossa speciale ⚡</Label>
-          <Input id="specialMove" name="specialMove" defaultValue={player.specialMove ?? ""} maxLength={60} placeholder="es. Rovesciata fronte mare" />
-        </div>
+      <div>
+        <Label htmlFor="specialMove">Mossa speciale ⚡</Label>
+        <Input id="specialMove" name="specialMove" defaultValue={player.specialMove ?? ""} maxLength={60} placeholder="es. Rovesciata fronte mare" />
       </div>
 
       <div>

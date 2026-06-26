@@ -20,7 +20,6 @@ export function CreatePlayerForm() {
       setError(null);
       const res = await createPlayer({
         name: String(form.get("name")),
-        nickname: String(form.get("nickname") ?? ""),
       });
       if (!res.ok) setError(res.error);
       else {
@@ -32,19 +31,12 @@ export function CreatePlayerForm() {
 
   return (
     <form ref={formRef} onSubmit={onSubmit} className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Input
-          name="name"
-          required
-          aria-label="Nome e cognome"
-          placeholder="Nome e cognome"
-        />
-        <Input
-          name="nickname"
-          aria-label="Soprannome (opzionale)"
-          placeholder="Soprannome (opzionale)"
-        />
-      </div>
+      <Input
+        name="name"
+        required
+        aria-label="Nome e cognome"
+        placeholder="Nome e cognome"
+      />
       <FieldError>{error}</FieldError>
       <Button type="submit" size="sm" disabled={pending}>
         <UserPlus className="h-4 w-4" />

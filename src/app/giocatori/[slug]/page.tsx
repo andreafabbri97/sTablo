@@ -57,7 +57,7 @@ export default async function PlayerPage({
   const data = await safe(() => getPlayerWithStatsBySlug(slug), null);
   if (!data) notFound();
 
-  const { player, stats, level, attributes, overall, tournamentsWon } = data;
+  const { player, username, stats, level, attributes, overall, tournamentsWon } = data;
   const badges = computeBadges({
     played: stats.played,
     won: stats.won,
@@ -105,8 +105,8 @@ export default async function PlayerPage({
           <h1 className="font-display text-2xl font-extrabold tracking-tight">
             {player.name}
           </h1>
-          {player.nickname && (
-            <p className="text-sm font-semibold text-brand">“{player.nickname}”</p>
+          {username && (
+            <p className="text-sm font-semibold text-brand">@{username}</p>
           )}
           {playerIsAdmin && (
             <div className="mt-1.5 flex justify-center sm:justify-start">

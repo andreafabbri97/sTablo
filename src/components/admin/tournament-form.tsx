@@ -330,7 +330,7 @@ function SinglesPicker({
   const q = query.trim().toLowerCase();
   const shown = q
     ? players.filter((p) =>
-        [p.name, p.nickname, p.username]
+        [p.name, p.username]
           .filter(Boolean)
           .some((s) => (s as string).toLowerCase().includes(q)),
       )
@@ -456,7 +456,7 @@ function DoublesPicker({
   const q = query.trim().toLowerCase();
   const shownAvail = q
     ? available.filter((p) =>
-        [p.name, p.nickname, p.username]
+        [p.name, p.username]
           .filter(Boolean)
           .some((s) => (s as string).toLowerCase().includes(q)),
       )

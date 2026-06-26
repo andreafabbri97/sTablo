@@ -8,21 +8,18 @@ import { Avatar } from "@/components/ui/avatar";
 export type PlayerOption = {
   id: string;
   name: string;
-  nickname?: string | null;
   username?: string | null;
   avatarColor?: number;
   avatarUrl?: string | null;
 };
 
-/** Secondary line for a player: nickname and/or @username, when present. */
+/** Secondary line for a player: the @username, when present. */
 export function playerSubLabel(p: PlayerOption): string {
-  return [p.nickname, p.username ? `@${p.username}` : null]
-    .filter(Boolean)
-    .join(" · ");
+  return p.username ? `@${p.username}` : "";
 }
 
 /**
- * Avatar + name (+ nickname/username) block, used inside every picker list so
+ * Avatar + name (+ @username) block, used inside every picker list so
  * the look stays consistent. Meant to sit in a flex row; the text takes the
  * remaining space and truncates.
  */

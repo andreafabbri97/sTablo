@@ -102,7 +102,6 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
     await db
       .update(players)
       .set({
-        nickname: orNull(d.nickname),
         motto: orNull(d.motto),
         bio: orNull(d.bio),
         preferredFoot: orNull(d.preferredFoot) as
@@ -181,7 +180,7 @@ export async function createPlayer(input: unknown): Promise<ActionResult> {
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
   }
-  const { name, nickname } = parsed.data;
+  const { name } = parsed.data;
   try {
     let slug = slugify(name) || "giocatore";
     let i = 1;
@@ -191,7 +190,6 @@ export async function createPlayer(input: unknown): Promise<ActionResult> {
     }
     await db.insert(players).values({
       name,
-      nickname: orNull(nickname),
       slug,
       avatarColor: colorFromString(name),
     });
