@@ -5,7 +5,11 @@ import { and, eq, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { friendships } from "@/lib/db/schema";
 import { assertAuth } from "@/lib/auth-helpers";
-import { getIncomingRequests, type FriendProfile } from "@/lib/friends";
+import {
+  getIncomingRequests,
+  getFriends,
+  type FriendProfile,
+} from "@/lib/friends";
 import { notify } from "@/lib/notifications";
 import type { ActionResult } from "./auth-actions";
 
@@ -14,6 +18,25 @@ export async function fetchIncomingRequests(): Promise<FriendProfile[]> {
   try {
     const user = await assertAuth();
     return await getIncomingRequests(user.id);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * The viewer's accepted-friend player slugs. Fetched client-side by friend-aware
+ * lists (e.g. the players grid) so the surrounding page can stay a cached,
+ * instantly-rendered static shell: the global list paints at once, and the
+ * personal «friend» overlay (badges + Tutti/Amici/Altri filter) hydrates after.
+ * Returns [] for signed-out visitors or on any error.
+ */
+export async function myFriendSlugs(): Promise<string[]> {
+  try {
+    const user = await assertAuth();
+    const friends = await getFriends(user.id);
+    return friends
+      .map((f) => f.slug)
+      .filter((s): s is string => Boolean(s));
   } catch {
     return [];
   }
