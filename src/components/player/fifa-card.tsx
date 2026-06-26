@@ -26,7 +26,7 @@ export function FifaCard({
     <div className="relative mx-auto w-full max-w-xs">
       <div
         className={cn(
-          "relative overflow-hidden rounded-[var(--radius-2xl)] border border-border p-5 text-white shadow-[var(--shadow-lg)]",
+          "relative overflow-hidden rounded-[var(--radius-2xl)] border border-white/10 p-5 text-white shadow-[var(--shadow-lg)]",
         )}
         style={{ background: background.css }}
       >

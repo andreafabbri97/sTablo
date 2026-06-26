@@ -139,7 +139,7 @@ export function AttributeEditor({
                 max={cap}
                 value={value}
                 onChange={(e) => setAttr(key, Number(e.target.value))}
-                className="mt-1 w-full accent-brand"
+                className="mt-1 w-full touch-pan-y accent-brand"
                 aria-label={`${meta.label} (max ${cap} a questo livello)`}
               />
               <div className="flex justify-between text-[10px] text-muted">
