@@ -122,6 +122,9 @@ export const players = pgTable(
     playStyle: text("play_style"),
     /** free-text signature move written by the player */
     specialMove: text("special_move"),
+    /** Optional Instagram handle (without the @) so others can find the real
+     *  person behind a profile. Cosmetic/social only; never affects gameplay. */
+    instagram: text("instagram"),
     /**
      * Player-chosen FIFA-card background. Cosmetic slug into the preset catalog
      * in lib/card-backgrounds; `viola` reproduces the original gradient and is

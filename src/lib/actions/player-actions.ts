@@ -111,6 +111,7 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
           | null,
         playStyle: orNull(d.playStyle),
         specialMove: orNull(d.specialMove),
+        instagram: orNull(d.instagram),
         avatarUrl: orNull(d.avatarUrl),
         cardBackground: d.cardBackground,
         statsPublic: d.statsPublic,

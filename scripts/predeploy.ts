@@ -49,6 +49,10 @@ const ENSURE_SCHEMA_SQL = [
   // guarantee it exists regardless of migrate()'s journal bookkeeping. Defaults
   // to 'viola' (the original gradient) so existing cards are unchanged.
   `ALTER TABLE "players" ADD COLUMN IF NOT EXISTS "card_background" text DEFAULT 'viola' NOT NULL;`,
+  // Optional Instagram handle (migration 0020). The public player page reads this
+  // column on every render, so guarantee it exists regardless of migrate()'s
+  // journal bookkeeping. Nullable → existing players simply have no handle.
+  `ALTER TABLE "players" ADD COLUMN IF NOT EXISTS "instagram" text;`,
   // Match social — reactions + comments (migration 0012). The match detail page
   // reads/writes both on every view, so guarantee they exist regardless of
   // migrate()'s journal bookkeeping. ON DELETE CASCADE keeps them tidy when a

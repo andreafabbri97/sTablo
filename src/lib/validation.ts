@@ -88,6 +88,24 @@ export const customAttributesSchema = z
   })
   .partial();
 
+/**
+ * Instagram handle — optional. Accepts what people actually paste: "@handle",
+ * a full "instagram.com/handle" URL, or the bare handle. Normalizes to the bare
+ * handle (letters, numbers, "." and "_"), or "" when blank.
+ */
+const instagramSchema = z
+  .string()
+  .trim()
+  .max(100)
+  .transform((v) => {
+    if (!v) return "";
+    const urlMatch = v.match(/instagram\.com\/([^/?#\s]+)/i);
+    return (urlMatch ? urlMatch[1] : v).replace(/^@+/, "").trim();
+  })
+  .refine((h) => h === "" || /^[a-zA-Z0-9._]{1,30}$/.test(h), {
+    message: "Username Instagram non valido (lettere, numeri, . e _)",
+  });
+
 export const profileSchema = z.object({
   username: usernameSchema,
   email: optionalEmail,
@@ -96,6 +114,7 @@ export const profileSchema = z.object({
   preferredFoot: z.enum(["left", "right", "both"]).optional().or(z.literal("")),
   playStyle: z.enum(styleIds).optional().or(z.literal("")),
   specialMove: z.string().trim().max(60).optional().or(z.literal("")),
+  instagram: instagramSchema.optional(),
   avatarUrl: avatarUrlSchema,
   // Cosmetic card background slug; unknown/empty falls back to the default.
   cardBackground: z

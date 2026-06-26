@@ -73,6 +73,7 @@ export function ProfileForm({
       preferredFoot: String(form.get("preferredFoot") ?? ""),
       playStyle: String(form.get("playStyle") ?? ""),
       specialMove: String(form.get("specialMove") ?? ""),
+      instagram: String(form.get("instagram") ?? ""),
       avatarUrl,
       cardBackground,
       statsPublic,
@@ -162,6 +163,14 @@ export function ProfileForm({
       <div>
         <Label htmlFor="motto">Motto</Label>
         <Input id="motto" name="motto" defaultValue={player.motto ?? ""} maxLength={80} placeholder="Una frase che ti rappresenta" />
+      </div>
+
+      <div>
+        <Label htmlFor="instagram">Instagram (opzionale)</Label>
+        <Input id="instagram" name="instagram" defaultValue={player.instagram ?? ""} maxLength={100} placeholder="es. @mario.rossi" autoComplete="off" />
+        <p className="mt-1 text-xs text-muted">
+          Appare come icona Instagram solo sul tuo profilo e linka al tuo account. Lascia vuoto per non mostrarlo.
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

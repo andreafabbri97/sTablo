@@ -21,6 +21,7 @@ import { computeBadges } from "@/lib/badges";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { isPlayerAdmin } from "@/lib/roles";
 import { AdminBadge } from "@/components/player/admin-badge";
+import { InstagramIcon } from "@/components/icons/instagram-icon";
 import { getPlayStyle, FOOT_LABELS } from "@/lib/gamification";
 import { pct } from "@/lib/utils";
 import { safe } from "@/lib/safe";
@@ -126,6 +127,16 @@ async function PlayerProfile({
                 <Badge tone="sea">Elo doppio {player.eloDoubles}</Badge>
                 <Badge tone="gold">Picco {player.peakElo}</Badge>
               </div>
+              {player.instagram && (
+                <a
+                  href={`https://instagram.com/${player.instagram}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-brand transition hover:underline"
+                >
+                  <InstagramIcon className="h-4 w-4" /> @{player.instagram}
+                </a>
+              )}
               {player.bio && (
                 <p className="max-w-prose whitespace-pre-line text-sm leading-relaxed text-muted">
                   {player.bio}
@@ -182,6 +193,16 @@ async function PlayerProfile({
                 <Badge tone="sea">Elo doppio {player.eloDoubles}</Badge>
                 <Badge tone="gold">Picco {player.peakElo}</Badge>
               </div>
+              {player.instagram && (
+                <a
+                  href={`https://instagram.com/${player.instagram}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition hover:underline"
+                >
+                  <InstagramIcon className="h-4 w-4" /> @{player.instagram}
+                </a>
+              )}
               {player.bio && (
                 <p className="mt-3 max-w-prose whitespace-pre-line text-sm leading-relaxed text-muted">
                   {player.bio}
