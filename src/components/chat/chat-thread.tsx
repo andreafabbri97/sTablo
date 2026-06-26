@@ -9,7 +9,19 @@ import {
   Fragment,
 } from "react";
 import Link from "next/link";
-import { ArrowLeft, Send, MoreVertical, Ban, RotateCcw, Loader2, UserCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  Send,
+  MoreVertical,
+  Ban,
+  RotateCcw,
+  Loader2,
+  UserCheck,
+  Mic,
+  X,
+  Play,
+  Pause,
+} from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { AdminBadge } from "@/components/player/admin-badge";
@@ -24,6 +36,7 @@ import {
   sendMessage,
   pollConversation,
   markConversationRead,
+  getMessageAudio,
   blockUser,
   unblockUser,
 } from "@/lib/actions/chat-actions";
@@ -51,6 +64,148 @@ function receiptLabel(
   return "Consegnato";
 }
 
+/** m:ss for a duration in seconds. */
+function fmtDuration(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+/** Pick a MediaRecorder mime the browser supports (Safari falls back to mp4). */
+function pickAudioMime(): string | undefined {
+  if (typeof MediaRecorder === "undefined") return undefined;
+  const candidates = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4",
+    "audio/ogg;codecs=opus",
+  ];
+  return candidates.find((m) => MediaRecorder.isTypeSupported(m));
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+
+/**
+ * WhatsApp-style voice-note player: play/pause, a progress bar, and the
+ * remaining/total time. The audio itself is lazy — fetched (via getMessageAudio)
+ * only on the first play — except on my own just-sent bubble, which already
+ * carries the recorded data-URL for instant playback.
+ */
+function VoiceBubble({
+  message,
+  mine,
+}: {
+  message: ChatMessageView;
+  mine: boolean;
+}) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const wantPlayRef = useRef(false);
+  const [src, setSrc] = useState<string | null>(message.audioUrl ?? null);
+  const [playing, setPlaying] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0); // 0..1
+  const total = message.audioDuration ?? 0;
+
+  // Once the src lands and a play was requested, start it.
+  useEffect(() => {
+    if (src && wantPlayRef.current) {
+      wantPlayRef.current = false;
+      audioRef.current?.play().catch(() => {});
+    }
+  }, [src]);
+
+  async function toggle() {
+    const a = audioRef.current;
+    if (playing) {
+      a?.pause();
+      return;
+    }
+    if (src) {
+      a?.play().catch(() => {});
+      return;
+    }
+    // Lazy-load then play.
+    wantPlayRef.current = true;
+    setLoading(true);
+    try {
+      const res = await getMessageAudio(message.id);
+      if (res.ok) setSrc(res.audio);
+      else wantPlayRef.current = false;
+    } catch {
+      wantPlayRef.current = false;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const elapsed = progress * total;
+
+  return (
+    <div className="flex min-w-[170px] items-center gap-2 py-0.5">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={playing ? "Pausa" : "Riproduci vocale"}
+        className={cn(
+          "grid h-9 w-9 shrink-0 place-items-center rounded-full transition",
+          mine ? "bg-white/20 text-white hover:bg-white/30" : "bg-brand text-white hover:brightness-105",
+        )}
+      >
+        {loading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : playing ? (
+          <Pause className="h-4 w-4" />
+        ) : (
+          <Play className="h-4 w-4 translate-x-[1px]" />
+        )}
+      </button>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div
+          className={cn(
+            "h-1.5 w-full overflow-hidden rounded-full",
+            mine ? "bg-white/25" : "bg-surface-2",
+          )}
+        >
+          <div
+            className={cn("h-full rounded-full", mine ? "bg-white" : "bg-brand")}
+            style={{ width: `${Math.round(progress * 100)}%` }}
+          />
+        </div>
+        <span
+          className={cn(
+            "font-mono text-[10px] tabular-nums",
+            mine ? "text-white/70" : "text-muted",
+          )}
+        >
+          {fmtDuration(playing || progress > 0 ? elapsed : total)}
+        </span>
+      </div>
+      <audio
+        ref={audioRef}
+        src={src ?? undefined}
+        preload="none"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => {
+          setPlaying(false);
+          setProgress(0);
+        }}
+        onTimeUpdate={(e) => {
+          const el = e.currentTarget;
+          const d = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : total;
+          if (d > 0) setProgress(Math.min(1, el.currentTime / d));
+        }}
+      />
+    </div>
+  );
+}
+
 /** How often to poll for new messages while the tab is visible. */
 const POLL_MS = 3000;
 
@@ -76,6 +231,17 @@ export function ChatThread({
   const [partnerReadAt, setPartnerReadAt] = useState<Date | null>(
     initialPartnerReadAt,
   );
+
+  // Voice recording state.
+  const [recording, setRecording] = useState(false);
+  const [recElapsed, setRecElapsed] = useState(0);
+  const mediaRecRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recTimerRef = useRef<number | null>(null);
+  const recStartRef = useRef(0);
+  const recCancelRef = useRef(false);
+  const recDurationRef = useRef(0);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -247,6 +413,126 @@ export function ChatThread({
     });
   };
 
+  // Send a recorded voice note: optimistic bubble (with the local data-URL for
+  // instant playback), then reconcile with the saved server message.
+  const sendVoice = (dataUrl: string, duration: number) => {
+    if (!canSend) return;
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const optimistic: ChatMessageView = {
+      id: tempId,
+      senderId: meId,
+      body: "",
+      createdAt: new Date(),
+      audioDuration: duration,
+      audioUrl: dataUrl,
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    requestAnimationFrame(() => scrollToBottom(true));
+
+    startTransition(async () => {
+      const res = await sendMessage(otherSlug, { audio: dataUrl, duration });
+      if (res.ok) {
+        setMessages((prev) =>
+          prev
+            .map((m) =>
+              m.id === tempId ? { ...res.message, audioUrl: dataUrl } : m,
+            )
+            .sort(byTime),
+        );
+        const iso = isoOf(res.message);
+        if (!lastSyncRef.current || iso > lastSyncRef.current) {
+          lastSyncRef.current = iso;
+        }
+      } else {
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+        setError(res.error);
+      }
+    });
+  };
+
+  // Stop the recorder, sending the note (or discarding it on cancel). The
+  // recorder's onstop handler does the actual blob → data-URL → send.
+  const finishRecording = (send: boolean) => {
+    if (!recording) return;
+    recCancelRef.current = !send;
+    recDurationRef.current = Math.min(
+      60,
+      Math.max(1, Math.round((Date.now() - recStartRef.current) / 1000)),
+    );
+    if (recTimerRef.current) {
+      window.clearInterval(recTimerRef.current);
+      recTimerRef.current = null;
+    }
+    setRecording(false);
+    try {
+      mediaRecRef.current?.stop();
+    } catch {
+      /* already stopped */
+    }
+  };
+
+  const startRecording = async () => {
+    if (recording || !canSend || pending) return;
+    setError(null);
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices?.getUserMedia ||
+      typeof MediaRecorder === "undefined"
+    ) {
+      setError("Registrazione vocale non supportata su questo dispositivo");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const mime = pickAudioMime();
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      chunksRef.current = [];
+      recCancelRef.current = false;
+      rec.ondataavailable = (e) => {
+        if (e.data.size) chunksRef.current.push(e.data);
+      };
+      rec.onstop = async () => {
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+        if (recTimerRef.current) {
+          window.clearInterval(recTimerRef.current);
+          recTimerRef.current = null;
+        }
+        const chunks = chunksRef.current;
+        chunksRef.current = [];
+        if (recCancelRef.current || !chunks.length) return;
+        try {
+          const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
+          const dataUrl = await blobToDataUrl(blob);
+          sendVoice(dataUrl, recDurationRef.current || 1);
+        } catch {
+          setError("Non è stato possibile salvare il vocale");
+        }
+      };
+      mediaRecRef.current = rec;
+      rec.start();
+      recStartRef.current = Date.now();
+      setRecording(true);
+      setRecElapsed(0);
+      recTimerRef.current = window.setInterval(() => {
+        const s = Math.floor((Date.now() - recStartRef.current) / 1000);
+        setRecElapsed(s);
+        if (s >= 60) finishRecording(true); // auto-send at the 60s cap
+      }, 250);
+    } catch {
+      setError("Microfono non disponibile o permesso negato");
+    }
+  };
+
+  // Stop the mic if the thread unmounts mid-recording.
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (recTimerRef.current) window.clearInterval(recTimerRef.current);
+    };
+  }, []);
+
   const onBlock = () =>
     startTransition(async () => {
       const r = await blockUser(otherSlug);
@@ -381,7 +667,11 @@ export function ChatThread({
                         : "rounded-bl-md bg-surface-2 text-foreground",
                     )}
                   >
-                    <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                    {m.audioDuration != null ? (
+                      <VoiceBubble message={m} mine={mine} />
+                    ) : (
+                      <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                    )}
                     <p
                       className={cn(
                         "mt-0.5 text-right text-[10px] leading-none",
@@ -408,35 +698,72 @@ export function ChatThread({
       {canSend ? (
         <div className="border-t border-border px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           {error && <p className="px-2 pb-1 text-xs font-medium text-loss">{error}</p>}
-          <div className="flex items-end gap-2">
-            <textarea
-              ref={taRef}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  onSend();
-                }
-              }}
-              rows={1}
-              maxLength={MAX_MESSAGE_LENGTH}
-              placeholder={`Messaggio a ${partner.name}…`}
-              className="max-h-32 min-h-[2.5rem] flex-1 resize-none rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-brand"
-            />
-            <button
-              onClick={onSend}
-              disabled={!text.trim() || pending}
-              aria-label="Invia messaggio"
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:brightness-105 disabled:opacity-50"
-            >
-              {pending ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
+          {recording ? (
+            <div className="flex items-center gap-2 py-1">
+              <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-loss" />
+              <span className="font-mono text-sm tabular-nums">
+                {fmtDuration(recElapsed)}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-xs text-muted">
+                Registrando… (max 1:00)
+              </span>
+              <button
+                onClick={() => finishRecording(false)}
+                aria-label="Annulla vocale"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted transition hover:bg-surface-2 hover:text-loss"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => finishRecording(true)}
+                aria-label="Invia vocale"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:brightness-105"
+              >
                 <Send className="h-5 w-5" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-end gap-2">
+              <textarea
+                ref={taRef}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    onSend();
+                  }
+                }}
+                rows={1}
+                maxLength={MAX_MESSAGE_LENGTH}
+                placeholder={`Messaggio a ${partner.name}…`}
+                className="max-h-32 min-h-[2.5rem] flex-1 resize-none rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-brand"
+              />
+              {text.trim() ? (
+                <button
+                  onClick={onSend}
+                  disabled={pending}
+                  aria-label="Invia messaggio"
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:brightness-105 disabled:opacity-50"
+                >
+                  {pending ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Send className="h-5 w-5" />
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={startRecording}
+                  disabled={pending}
+                  aria-label="Registra un messaggio vocale"
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:brightness-105 disabled:opacity-50"
+                >
+                  <Mic className="h-5 w-5" />
+                </button>
               )}
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="border-t border-border px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-sm text-muted">

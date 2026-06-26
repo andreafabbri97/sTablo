@@ -481,6 +481,8 @@ export const GUIDES: Record<string, Guide> = {
         heading: "Scrivere",
         points: [
           "Scrivi nel campo in basso e tocca invia (o premi Invio). Per andare a capo usa Maiusc+Invio.",
+          "Messaggi vocali: quando il campo è vuoto il tasto diventa un microfono 🎤. Toccalo per registrare (max 1 minuto), poi invia ➤ o annulla ✕. Chi riceve preme play per ascoltare.",
+          "Sotto il tuo ultimo messaggio compare «Consegnato», che diventa «Letto» quando l'altra persona apre la conversazione.",
           "I messaggi che invii tu appaiono a destra, quelli dell'altra persona a sinistra.",
           "In cima alla conversazione vedi il nome con l'@username, il badge ✓ Amico / «Non amico», il livello e — se è un amministratore — il distintivo Admin.",
           "Sotto ogni messaggio vedi l'orario; le date dividono i giorni.",
