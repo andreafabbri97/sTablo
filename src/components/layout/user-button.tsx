@@ -3,7 +3,17 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { LogOut, User, Shield, LogIn, ChevronDown, Users } from "lucide-react";
+import { useTheme } from "next-themes";
+import {
+  LogOut,
+  User,
+  Shield,
+  LogIn,
+  ChevronDown,
+  Users,
+  Sun,
+  Moon,
+} from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { colorFromString } from "@/lib/utils";
@@ -100,6 +110,7 @@ export function UserButton() {
           <MenuLink href="/amici" icon={<Users className="h-4 w-4" />} onClick={() => setOpen(false)}>
             Amici
           </MenuLink>
+          <ThemeMenuItem />
           {isAdmin && (
             <MenuLink href="/admin" icon={<Shield className="h-4 w-4" />} onClick={() => setOpen(false)}>
               Pannello admin
@@ -115,6 +126,27 @@ export function UserButton() {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Theme switch as a dropdown row (it used to be an always-visible topbar
+ * button). Lives inside the menu, which only renders on open — well past
+ * next-themes' mount — so reading `resolvedTheme` here can't cause a hydration
+ * mismatch. The icon + label show the theme you'll switch TO.
+ */
+function ThemeMenuItem() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition hover:bg-surface-2"
+    >
+      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      {isDark ? "Passa a chiaro" : "Passa a scuro"}
+    </button>
   );
 }
 

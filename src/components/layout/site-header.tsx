@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/logo";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { UserButton } from "./user-button";
 import { MessagesButton } from "./messages-button";
 import { NotificationsBell } from "./notifications-bell";
@@ -49,7 +48,6 @@ export function SiteHeader() {
           <HeaderDataProvider>
             <NotificationsBell />
             <MessagesButton />
-            <ThemeToggle />
             <UserButton />
           </HeaderDataProvider>
         </div>
