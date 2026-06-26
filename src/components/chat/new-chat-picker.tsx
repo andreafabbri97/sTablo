@@ -81,7 +81,6 @@ export function NewChatPicker({ people }: { people: MessageablePerson[] }) {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          autoFocus
           placeholder="Cerca per nome o username…"
           aria-label="Cerca un giocatore"
           className="w-full rounded-xl border border-border bg-surface py-2 pl-9 pr-3 text-sm outline-none transition focus:border-brand"

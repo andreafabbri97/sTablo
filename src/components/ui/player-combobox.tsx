@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, Search, Check, Users } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Avatar } from "@/components/ui/avatar";
@@ -35,7 +35,6 @@ export function PlayerCombobox({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const selected = players.find((p) => p.id === value);
 
@@ -54,13 +53,6 @@ export function PlayerCombobox({
       : list;
     return matched.slice(0, 100);
   }, [players, query, value, excludeIds]);
-
-  // Focus the search box once the modal has mounted (after Modal's own focus).
-  useEffect(() => {
-    if (!open) return;
-    const t = setTimeout(() => inputRef.current?.focus(), 0);
-    return () => clearTimeout(t);
-  }, [open]);
 
   function choose(id: string) {
     onChange(id);
@@ -111,7 +103,6 @@ export function PlayerCombobox({
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
             <input
-              ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Cerca per nome o username…"
