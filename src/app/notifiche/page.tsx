@@ -13,7 +13,9 @@ import {
   AlertTriangle,
   type LucideIcon,
 } from "lucide-react";
+import { Suspense } from "react";
 import { PageHeader, EmptyState } from "@/components/ui/page";
+import { PageHeaderSkeleton, RowsSkeleton } from "@/components/ui/skeletons";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import {
   fetchNotificationFeed,
@@ -22,7 +24,6 @@ import {
 import { timeAgo } from "@/lib/utils";
 import { MarkReadOnView } from "@/components/notifications/mark-read-on-view";
 
-export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Notifiche" };
 
 /** Icon + accent colour per notification kind. Keep in sync with NotifyKind. */
@@ -43,7 +44,22 @@ function visualFor(kind: string) {
   return VISUAL[kind] ?? VISUAL.generic;
 }
 
-export default async function NotifichePage() {
+export default function NotifichePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <PageHeaderSkeleton />
+          <RowsSkeleton rows={5} />
+        </div>
+      }
+    >
+      <NotificheContent />
+    </Suspense>
+  );
+}
+
+async function NotificheContent() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?callbackUrl=/notifiche");
 

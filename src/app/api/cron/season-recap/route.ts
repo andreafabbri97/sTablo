@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { sendSeasonRecap } from "@/lib/season-recap";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 /**
  * Monthly recap of the season that just ended (see vercel.json — runs on day 1).

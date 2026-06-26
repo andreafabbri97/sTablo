@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Lock, Pencil, TrendingUp, Quote, Swords, MessageCircle } from "lucide-react";
+import { PanelSkeleton, RowsSkeleton } from "@/components/ui/skeletons";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,7 +28,6 @@ import { getPlayStyle, FOOT_LABELS } from "@/lib/gamification";
 import { pct } from "@/lib/utils";
 import { safe } from "@/lib/safe";
 
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -48,7 +49,27 @@ export async function generateMetadata({
   };
 }
 
-export default async function PlayerPage({
+
+export default function PlayerPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <PanelSkeleton className="h-40" />
+          <RowsSkeleton rows={3} />
+        </div>
+      }
+    >
+      <PlayerProfile params={params} />
+    </Suspense>
+  );
+}
+
+async function PlayerProfile({
   params,
 }: {
   params: Promise<{ slug: string }>;

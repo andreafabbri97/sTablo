@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { bustDataCache } from "@/lib/cache";
 import { autoConfirmExpired } from "@/lib/match-engine";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 /**
  * Scheduled backstop that confirms pending results past their 24h deadline.

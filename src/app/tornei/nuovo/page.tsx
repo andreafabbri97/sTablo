@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Swords } from "lucide-react";
 import { PageHeader } from "@/components/ui/page";
+import { PageHeaderSkeleton, PanelSkeleton } from "@/components/ui/skeletons";
 import { Card } from "@/components/ui/card";
 import { TournamentCreateSwitch } from "@/components/admin/tournament-create-switch";
 import { TournamentOpenForm } from "@/components/tournament-open-form";
@@ -10,10 +12,24 @@ import { getPlayerOptions } from "@/lib/queries";
 import { getFriends } from "@/lib/friends";
 import { safe } from "@/lib/safe";
 
-export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Nuovo torneo" };
 
-export default async function NuovoTorneoPage() {
+export default function NuovoTorneoPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-2xl space-y-6">
+          <PageHeaderSkeleton />
+          <PanelSkeleton />
+        </div>
+      }
+    >
+      <NuovoTorneoContent />
+    </Suspense>
+  );
+}
+
+async function NuovoTorneoContent() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?callbackUrl=/tornei/nuovo");
 

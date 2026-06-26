@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -7,10 +8,10 @@ import { PlayerName } from "@/components/player/player-name";
 import { Card, CardLabel } from "@/components/ui/card";
 import { MatchCard } from "@/components/match-card";
 import { EmptyState } from "@/components/ui/page";
+import { PanelSkeleton, RowsSkeleton } from "@/components/ui/skeletons";
 import { getHeadToHead, type HeadToHead, type H2HFormatRecord } from "@/lib/h2h";
 import { safe } from "@/lib/safe";
 
-export const dynamic = "force-dynamic";
 
 const MAX_LISTED = 12;
 
@@ -25,7 +26,26 @@ export async function generateMetadata({
   return { title: `${h2h.a.name} vs ${h2h.b.name}` };
 }
 
-export default async function HeadToHeadPage({
+export default function HeadToHeadPage({
+  params,
+}: {
+  params: Promise<{ slug: string; opp: string }>;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <PanelSkeleton className="h-44" />
+          <RowsSkeleton rows={2} />
+        </div>
+      }
+    >
+      <HeadToHeadContent params={params} />
+    </Suspense>
+  );
+}
+
+async function HeadToHeadContent({
   params,
 }: {
   params: Promise<{ slug: string; opp: string }>;

@@ -4,6 +4,12 @@ const nextConfig: NextConfig = {
   // Don't advertise the framework/version on every response.
   poweredByHeader: false,
 
+  // Cache Components (PPR + `use cache`): each route renders a static shell that
+  // paints instantly while dynamic data streams in, so client navigations are
+  // instant instead of freezing on the old page. Routes opt into validation via
+  // `export const unstable_instant`.
+  cacheComponents: true,
+
   async headers() {
     return [
       {

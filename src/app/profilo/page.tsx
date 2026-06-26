@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { UserCog, ExternalLink, Mail, TrendingUp } from "lucide-react";
 import { PageHeader } from "@/components/ui/page";
+import { PageHeaderSkeleton, PanelSkeleton } from "@/components/ui/skeletons";
 import { Card, CardTitle, CardLabel } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ProfileEditor } from "@/components/player/profile-editor";
@@ -16,10 +18,24 @@ import { getPlayerWithStats } from "@/lib/stats";
 import { getEloSeries } from "@/lib/queries";
 import { computeBadges } from "@/lib/badges";
 
-export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Il mio profilo" };
 
-export default async function ProfiloPage() {
+export default function ProfiloPage() {
+  return (
+    <Suspense
+      fallback={
+        <div>
+          <PageHeaderSkeleton />
+          <PanelSkeleton />
+        </div>
+      }
+    >
+      <ProfiloContent />
+    </Suspense>
+  );
+}
+
+async function ProfiloContent() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?callbackUrl=/profilo");
   if (!user.playerId) {

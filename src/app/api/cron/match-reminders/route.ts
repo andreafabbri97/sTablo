@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { sendScheduledReminders } from "@/lib/reminders";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 /**
  * Daily reminder for upcoming scheduled challenges (see vercel.json). Sends a

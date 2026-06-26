@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Trophy, ArrowLeft, Crown, Star } from "lucide-react";
 import { PageHeader, EmptyState } from "@/components/ui/page";
+import { RowsSkeleton } from "@/components/ui/skeletons";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
@@ -16,24 +18,14 @@ import { getPlayerUsernames } from "@/lib/queries";
 import { getSeasonMvps, type SeasonMvp } from "@/lib/seasons";
 import { formatDate } from "@/lib/utils";
 import { safe } from "@/lib/safe";
+import { connection } from "next/server";
 
-export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Albo d'oro" };
 
-export default async function AlboPage() {
-  const [champions, mvps, usernames] = await Promise.all([
-    safe(() => getTournamentChampions(), [] as TournamentChampion[]),
-    safe(() => getSeasonMvps(), [] as SeasonMvp[]),
-    safe(() => getPlayerUsernames(), [] as { id: string; username: string | null }[]),
-  ]);
-
-  // player id → account handle, to label each season MVP with their @username.
-  const usernameById = new Map(usernames.map((u) => [u.id, u.username]));
-
-  const isEmpty = champions.length === 0 && mvps.length === 0;
-
+export default function AlboPage() {
   return (
     <div>
+      {/* Static shell: title + back-to-tornei action paint instantly. */}
       <PageHeader
         icon={<Trophy className="h-6 w-6" />}
         title="Albo d'oro"
@@ -47,7 +39,30 @@ export default async function AlboPage() {
         }
         help="tornei"
       />
+      <Suspense fallback={<RowsSkeleton rows={4} />}>
+        <AlboContent />
+      </Suspense>
+    </div>
+  );
+}
 
+async function AlboContent() {
+  // `getSeasonMvps()` defaults its reference to `new Date()`; opt into
+  // request-time rendering first so reading the clock is allowed.
+  await connection();
+  const [champions, mvps, usernames] = await Promise.all([
+    safe(() => getTournamentChampions(), [] as TournamentChampion[]),
+    safe(() => getSeasonMvps(), [] as SeasonMvp[]),
+    safe(() => getPlayerUsernames(), [] as { id: string; username: string | null }[]),
+  ]);
+
+  // player id → account handle, to label each season MVP with their @username.
+  const usernameById = new Map(usernames.map((u) => [u.id, u.username]));
+
+  const isEmpty = champions.length === 0 && mvps.length === 0;
+
+  return (
+    <>
       {isEmpty ? (
         <EmptyState
           icon={<Trophy className="h-6 w-6" />}
@@ -90,7 +105,7 @@ export default async function AlboPage() {
           )}
         </div>
       )}
-    </div>
+    </>
   );
 }
 

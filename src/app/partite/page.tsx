@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ListChecks, Plus, Clock, QrCode, Swords, CalendarClock, ShieldAlert } from "lucide-react";
 import { PageHeader, EmptyState } from "@/components/ui/page";
+import { PageHeaderSkeleton, RowsSkeleton } from "@/components/ui/skeletons";
 import { Button } from "@/components/ui/button";
 import { MatchCard } from "@/components/match-card";
 import { MatchExplorer } from "@/components/match-explorer";
@@ -17,13 +19,29 @@ import { getCurrentUser } from "@/lib/auth-helpers";
 import { getFriendFeedSlugs } from "@/lib/friends";
 import { safe } from "@/lib/safe";
 
-export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Partite" };
 
 /** Most-recent matches loaded for the explorer; older ones stay in the DB. */
 const MATCHES_WINDOW = 500;
 
-export default async function PartitePage() {
+export default function PartitePage() {
+  // The header's action + subtitle depend on the viewer and on counts, so the
+  // whole page streams behind a header+list skeleton.
+  return (
+    <Suspense
+      fallback={
+        <div>
+          <PageHeaderSkeleton />
+          <RowsSkeleton rows={6} />
+        </div>
+      }
+    >
+      <PartiteContent />
+    </Suspense>
+  );
+}
+
+async function PartiteContent() {
   const [matches, total, pending, scheduled, user] = await Promise.all([
     safe(() => getAllMatches(MATCHES_WINDOW), []),
     safe(() => getMatchesCount(), 0),

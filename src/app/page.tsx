@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Trophy, Flame, Users, Swords, Plus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { PlayerName } from "@/components/player/player-name";
 import { Badge } from "@/components/ui/badge";
 import { MatchCard } from "@/components/match-card";
 import { EmptyState } from "@/components/ui/page";
+import { RowsSkeleton } from "@/components/ui/skeletons";
 import { getRanking } from "@/lib/stats";
 import { getRecentMatches } from "@/lib/queries";
 import { db } from "@/lib/db";
@@ -15,7 +17,6 @@ import { safe } from "@/lib/safe";
 import { cachedQuery } from "@/lib/cache";
 import { getCurrentUser } from "@/lib/auth-helpers";
 
-export const dynamic = "force-dynamic";
 
 const counts = cachedQuery(async () => {
   const [p, m, t] = await Promise.all([
@@ -26,20 +27,32 @@ const counts = cachedQuery(async () => {
   return { players: p[0].c, matches: m[0].c, tournaments: t[0].c };
 }, ["home-counts"]);
 
-export default async function HomePage() {
-  const [ranking, recent, stats, user] = await Promise.all([
+export default function HomePage() {
+  return (
+    <div className="space-y-10">
+      {/* Hero copy is the LCP and fully static — it paints in the shell. Only
+          the login-dependent CTA streams in. */}
+      <Hero />
+
+      {/* Counts, podium and recent matches all come from the DB → stream. */}
+      <Suspense fallback={<HomeDataSkeleton />}>
+        <HomeData />
+      </Suspense>
+    </div>
+  );
+}
+
+async function HomeData() {
+  const [ranking, recent, stats] = await Promise.all([
     safe(() => getRanking("overall"), []),
     safe(() => getRecentMatches(6), []),
     safe(counts, { players: 0, matches: 0, tournaments: 0 }),
-    getCurrentUser(),
   ]);
 
   const podium = ranking.slice(0, 3);
 
   return (
-    <div className="space-y-10">
-      <Hero loggedIn={!!user} />
-
+    <>
       <section className="grid grid-cols-3 gap-3">
         <StatChip icon={<Users className="h-4 w-4" />} value={stats.players} label="Giocatori" />
         <StatChip icon={<Flame className="h-4 w-4" />} value={stats.matches} label="Partite" />
@@ -98,11 +111,24 @@ export default async function HomePage() {
           </div>
         )}
       </section>
+    </>
+  );
+}
+
+function HomeDataSkeleton() {
+  return (
+    <div className="space-y-10" aria-hidden>
+      <div className="grid grid-cols-3 gap-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-24 rounded-2xl skeleton" />
+        ))}
+      </div>
+      <RowsSkeleton rows={3} />
     </div>
   );
 }
 
-function Hero({ loggedIn }: { loggedIn: boolean }) {
+function Hero() {
   return (
     <section className="relative overflow-hidden rounded-[var(--radius-2xl)] border border-border bg-gradient-to-br from-surface to-surface-2 p-6 sm:p-10">
       <div
@@ -120,20 +146,9 @@ function Hero({ loggedIn }: { loggedIn: boolean }) {
           tornei. Il nostro gioco, come si usa sulla spiaggia di Rimini.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          {loggedIn && (
-            <Button asChild>
-              <Link href="/partite/nuova">
-                <Plus className="h-4 w-4" /> Nuova partita
-              </Link>
-            </Button>
-          )}
-          {!loggedIn && (
-            <Button asChild>
-              <Link href="/register">
-                Crea il tuo profilo <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          )}
+          <Suspense fallback={<div className="h-11 w-40 rounded-full skeleton" aria-hidden />}>
+            <HeroCta />
+          </Suspense>
           <Button asChild variant="secondary">
             <Link href="/classifica">
               <Trophy className="h-4 w-4" /> Classifica
@@ -142,6 +157,23 @@ function Hero({ loggedIn }: { loggedIn: boolean }) {
         </div>
       </div>
     </section>
+  );
+}
+
+async function HeroCta() {
+  const user = await getCurrentUser();
+  return user ? (
+    <Button asChild>
+      <Link href="/partite/nuova">
+        <Plus className="h-4 w-4" /> Nuova partita
+      </Link>
+    </Button>
+  ) : (
+    <Button asChild>
+      <Link href="/register">
+        Crea il tuo profilo <ArrowRight className="h-4 w-4" />
+      </Link>
+    </Button>
   );
 }
 

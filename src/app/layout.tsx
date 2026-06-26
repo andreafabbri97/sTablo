@@ -92,15 +92,28 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <RouteProgress />
           </Suspense>
-          <SiteHeader />
+          {/* The chrome reads usePathname (dynamic under Cache Components), so it
+              streams behind the static shell. A height-reserving header fallback
+              keeps the layout from shifting; footer/nav fall back to nothing. */}
+          <Suspense
+            fallback={
+              <div className="sticky top-0 z-40 h-16 border-b border-border glass pt-[env(safe-area-inset-top)]" />
+            }
+          >
+            <SiteHeader />
+          </Suspense>
           <main
             id="contenuto"
             className="mx-auto w-full max-w-6xl px-4 pb-28 pt-6 md:pb-12"
           >
             {children}
-            <SiteFooter />
+            <Suspense fallback={null}>
+              <SiteFooter />
+            </Suspense>
           </main>
-          <BottomNav />
+          <Suspense fallback={null}>
+            <BottomNav />
+          </Suspense>
           <InstallBanner />
           <PushPrompt />
           <ServiceWorker />
