@@ -80,7 +80,7 @@ export default async function MatchPage({
   const url = `${proto}://${host}/partite/${match.id}`;
 
   return (
-    <div className="mx-auto max-w-md space-y-5">
+    <div className="mx-auto max-w-5xl space-y-5">
       <Link
         href="/partite"
         className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-brand"
@@ -88,7 +88,12 @@ export default async function MatchPage({
         <ArrowLeft className="h-4 w-4" /> Partite
       </Link>
 
-      <MatchCard match={match} linkable={false} />
+      {/* Two columns on desktop: the match + its status/actions on the left,
+          reactions & comments on the right. Stacks to one column on mobile,
+          keeping the confirm/record actions right under the card. */}
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+        <div className="space-y-5">
+          <MatchCard match={match} linkable={false} />
 
       {isScheduled && (
         <Card className="space-y-4">
@@ -188,19 +193,21 @@ export default async function MatchPage({
           )}
         </Card>
       )}
+        </div>
 
-      <Card className="space-y-4">
-        <CardTitle className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5 text-brand" /> Reazioni e commenti
-        </CardTitle>
-        <MatchSocial
-          matchId={match.id}
-          reactions={social.reactions}
-          comments={social.comments}
-          viewerUserId={user?.id ?? null}
-          isAdmin={user?.role === "admin"}
-        />
-      </Card>
+        <Card className="space-y-4">
+          <CardTitle className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-brand" /> Reazioni e commenti
+          </CardTitle>
+          <MatchSocial
+            matchId={match.id}
+            reactions={social.reactions}
+            comments={social.comments}
+            viewerUserId={user?.id ?? null}
+            isAdmin={user?.role === "admin"}
+          />
+        </Card>
+      </div>
     </div>
   );
 }

@@ -95,7 +95,7 @@ export default function RootLayout({
           <SiteHeader />
           <main
             id="contenuto"
-            className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 md:pb-12"
+            className="mx-auto w-full max-w-6xl px-4 pb-28 pt-6 md:pb-12"
           >
             {children}
             <SiteFooter />
