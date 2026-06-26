@@ -1,5 +1,4 @@
 import { Avatar } from "@/components/ui/avatar";
-import { InstagramIcon } from "@/components/icons/instagram-icon";
 import { getPlayStyle, FOOT_LABELS, type Attributes, type LevelInfo } from "@/lib/gamification";
 import { resolveCardBackground } from "@/lib/card-backgrounds";
 import type { Player } from "@/lib/db/schema";
@@ -42,26 +41,9 @@ export function FifaCard({
             <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">OVR</p>
             {style && <p className="mt-1 text-2xl">{style.emoji}</p>}
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="text-right text-[11px] font-semibold uppercase tracking-wider opacity-90">
-              <p>Lv {level.level}</p>
-              <p>{FOOT_LABELS[player.preferredFoot ?? ""] ?? "—"}</p>
-            </div>
-            {player.instagram && (
-              <a
-                href={`https://instagram.com/${player.instagram}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`Instagram di ${player.name}`}
-                className="grid h-7 w-7 place-items-center rounded-lg text-white shadow-md ring-1 ring-white/25 transition hover:scale-105"
-                style={{
-                  background:
-                    "linear-gradient(45deg,#feda75 0%,#fa7e1e 25%,#d62976 50%,#962fbf 75%,#4f5bd5 100%)",
-                }}
-              >
-                <InstagramIcon className="h-4 w-4" />
-              </a>
-            )}
+          <div className="text-right text-[11px] font-semibold uppercase tracking-wider opacity-90">
+            <p>Lv {level.level}</p>
+            <p>{FOOT_LABELS[player.preferredFoot ?? ""] ?? "—"}</p>
           </div>
         </div>
 
