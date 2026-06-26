@@ -1,61 +1,40 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Users } from "lucide-react";
+import { cacheLife, cacheTag } from "next/cache";
 import { PageHeader, EmptyState } from "@/components/ui/page";
-import { PageHeaderSkeleton, CardGridSkeleton } from "@/components/ui/skeletons";
 import { PlayersGrid, type PlayerCardData } from "@/components/player/players-grid";
 import { getRanking } from "@/lib/stats";
-import { getPlayerUsernames } from "@/lib/queries";
 import { getAdminPlayerIds } from "@/lib/roles";
-import { getCurrentUser } from "@/lib/auth-helpers";
-import { getFriends } from "@/lib/friends";
+import { DATA_TAG } from "@/lib/cache";
 import { safe } from "@/lib/safe";
 
 export const metadata: Metadata = { title: "Giocatori" };
 
 export default function GiocatoriPage() {
-  return (
-    <Suspense
-      fallback={
-        <div>
-          <PageHeaderSkeleton />
-          <div className="space-y-4">
-            <div className="h-11 rounded-xl skeleton" />
-            <CardGridSkeleton cards={6} />
-          </div>
-        </div>
-      }
-    >
-      <GiocatoriContent />
-    </Suspense>
-  );
+  return <GiocatoriContent />;
 }
 
+/**
+ * Cached, global view of the roster — no per-user data — so it's baked into the
+ * route's static shell and paints instantly on navigation. The personal «friend»
+ * overlay (Amico badges + Tutti/Amici/Altri filter) is loaded client-side inside
+ * <PlayersGrid>, so it hydrates a beat later without holding back the list.
+ * Invalidated by bustDataCache() (revalidateTag on DATA_TAG) when data changes.
+ */
 async function GiocatoriContent() {
-  // Everything fires together; friends chains off the resolved user so it still
-  // runs in parallel with the (heavier) ranking/admin queries.
-  const [rows, adminIds, friends, usernames] = await Promise.all([
+  "use cache";
+  cacheTag(DATA_TAG);
+  cacheLife("hours");
+
+  const [rows, adminIds] = await Promise.all([
     safe(() => getRanking("overall"), []),
     safe(() => getAdminPlayerIds(), new Set<string>()),
-    getCurrentUser().then((u) => (u ? safe(() => getFriends(u.id), []) : [])),
-    safe(() => getPlayerUsernames(), []),
   ]);
-  // Map player id → @username (linked account). Covers inactive players too,
-  // since the ranking lists them — hence a dedicated query, not the
-  // active-only picker one.
-  const usernameById = new Map(
-    usernames.map((p) => [p.id, p.username] as const),
-  );
-  // Friend player slugs so each card can flag who you already know and the
-  // Amici filter has something to split on.
-  const friendSlugs = new Set(
-    friends.map((f) => f.slug).filter((s): s is string => Boolean(s)),
-  );
 
   const players: PlayerCardData[] = rows.map((row) => ({
     id: row.player.id,
     name: row.player.name,
-    username: usernameById.get(row.player.id) ?? null,
+    username: row.username,
     slug: row.player.slug,
     avatarColor: row.player.avatarColor,
     avatarUrl: row.player.avatarUrl,
@@ -66,11 +45,11 @@ async function GiocatoriContent() {
     won: row.won,
     lost: row.lost,
     isAdmin: adminIds.has(row.player.id),
-    isFriend: friendSlugs.has(row.player.slug),
+    // isFriend is resolved client-side in <PlayersGrid> (per-viewer).
   }));
 
   return (
-    <>
+    <div>
       <PageHeader
         icon={<Users className="h-6 w-6" />}
         title="Giocatori"
@@ -87,6 +66,6 @@ async function GiocatoriContent() {
       ) : (
         <PlayersGrid players={players} />
       )}
-    </>
+    </div>
   );
 }

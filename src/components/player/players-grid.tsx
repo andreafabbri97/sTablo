@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, X, UserCheck } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/page";
 import { AdminBadge } from "@/components/player/admin-badge";
 import { ScopeTabs, type FriendScope } from "@/components/scope-tabs";
+import { myFriendSlugs } from "@/lib/actions/friend-actions";
 import { getPlayStyle } from "@/lib/gamification";
 
 export type PlayerCardData = {
@@ -39,18 +40,41 @@ function normalize(s: string): string {
 export function PlayersGrid({ players }: { players: PlayerCardData[] }) {
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<FriendScope>("all");
+  // The grid is rendered from a cached static shell with no per-user data, so we
+  // load the viewer's friends on the client and overlay them here. Until they
+  // arrive everyone shows as a non-friend and the Amici filter stays hidden.
+  const [friendSlugs, setFriendSlugs] = useState<Set<string> | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    myFriendSlugs()
+      .then((slugs) => active && setFriendSlugs(new Set(slugs)))
+      .catch(() => active && setFriendSlugs(new Set()));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const withFriend = useMemo(
+    () =>
+      players.map((p) => ({
+        ...p,
+        isFriend: friendSlugs?.has(p.slug) ?? false,
+      })),
+    [players, friendSlugs],
+  );
 
   const friendCount = useMemo(
-    () => players.filter((p) => p.isFriend).length,
-    [players],
+    () => withFriend.filter((p) => p.isFriend).length,
+    [withFriend],
   );
-  // Only worth showing the split when there are both friends and non-friends.
-  const showTabs = friendCount > 0 && friendCount < players.length;
+  // Only worth showing the split once friends have loaded and there's a mix.
+  const showTabs = friendCount > 0 && friendCount < withFriend.length;
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim().replace(/^@/, ""));
     const activeTab = showTabs ? tab : "all";
-    return players.filter((p) => {
+    return withFriend.filter((p) => {
       if (activeTab === "friends" && !p.isFriend) return false;
       if (activeTab === "others" && p.isFriend) return false;
       if (q) {
@@ -59,7 +83,7 @@ export function PlayersGrid({ players }: { players: PlayerCardData[] }) {
       }
       return true;
     });
-  }, [players, query, tab, showTabs]);
+  }, [withFriend, query, tab, showTabs]);
 
   return (
     <div className="space-y-4">
