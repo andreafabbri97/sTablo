@@ -1,82 +1,38 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Swords, Plus, Trophy } from "lucide-react";
-import { PageHeader, EmptyState } from "@/components/ui/page";
-import { PageHeaderSkeleton, CardGridSkeleton } from "@/components/ui/skeletons";
-import { Button } from "@/components/ui/button";
+import { Swords } from "lucide-react";
+import { cacheLife, cacheTag } from "next/cache";
+import { PageHeader } from "@/components/ui/page";
 import {
   TournamentsExplorer,
   type TournamentCardData,
 } from "@/components/tournaments-explorer";
-import { getTournaments, FORMAT_META, DISCIPLINE_LABEL } from "@/lib/tournament/queries";
-import { getAccessiblePrivateTournamentIds } from "@/lib/tournament/invites";
-import { getCurrentUser } from "@/lib/auth-helpers";
-import { getFriendTournamentIds } from "@/lib/friends";
+import { TorneiActions } from "@/components/tornei-actions";
+import { getTournaments } from "@/lib/tournament/queries";
+import { toTournamentCard } from "@/lib/tournament/cards";
+import { DATA_TAG } from "@/lib/cache";
 import { safe } from "@/lib/safe";
 
 export const metadata: Metadata = { title: "Tornei" };
 
-const STATUS: Record<string, { label: string; tone: "win" | "brand" | "muted" | "ball" }> = {
-  active: { label: "In corso", tone: "win" },
-  completed: { label: "Concluso", tone: "muted" },
-  draft: { label: "⏳ In attesa", tone: "ball" },
-};
-
 export default function TorneiPage() {
-  // Visibility filtering + the «Crea torneo» action depend on the viewer, so the
-  // whole page streams behind a header+grid skeleton.
-  return (
-    <Suspense
-      fallback={
-        <div>
-          <PageHeaderSkeleton />
-          <CardGridSkeleton cards={6} />
-        </div>
-      }
-    >
-      <TorneiContent />
-    </Suspense>
-  );
+  return <TorneiContent />;
 }
 
+/**
+ * Cached shell of PUBLIC tournaments (global) so the grid paints instantly. The
+ * viewer's private tournaments and «Amici» flags are merged client-side inside
+ * <TournamentsExplorer> (see viewerTournaments) — private ones must never be in
+ * the shared cache. Invalidated by bustDataCache (revalidateTag on DATA_TAG).
+ */
 async function TorneiContent() {
-  const [all, user] = await Promise.all([
-    safe(() => getTournaments(), []),
-    getCurrentUser(),
-  ]);
-  const isAdmin = user?.role === "admin";
+  "use cache";
+  cacheTag(DATA_TAG);
+  cacheLife("hours");
 
-  // Private tournaments stay hidden unless you created, were invited to, or
-  // already joined them. The friend set powers the «Solo amici» toggle.
-  const [accessiblePrivate, friendTournamentIds] = await Promise.all([
-    safe(() => getAccessiblePrivateTournamentIds(user), new Set<string>()),
-    user
-      ? safe(() => getFriendTournamentIds(user.id), new Set<string>())
-      : Promise.resolve(new Set<string>()),
-  ]);
-  const list = all.filter(
-    (t) => t.visibility !== "private" || isAdmin || accessiblePrivate.has(t.id),
-  );
-
-  const cards: TournamentCardData[] = list.map((t) => {
-    const meta = FORMAT_META[t.format];
-    const status = STATUS[t.status] ?? STATUS.draft;
-    return {
-      id: t.id,
-      slug: t.slug,
-      name: t.name,
-      formatEmoji: meta?.emoji ?? "🎯",
-      formatLabel: meta?.label ?? t.format,
-      disciplineLabel: DISCIPLINE_LABEL[t.discipline] ?? t.discipline,
-      entrantCount: t.entrantCount,
-      statusLabel: status.label,
-      statusTone: status.tone,
-      isPrivate: t.visibility === "private",
-      showWinner: t.status === "completed" && !!t.winnerEntrantId,
-      hasFriend: friendTournamentIds.has(t.id),
-    };
-  });
+  const all = await safe(() => getTournaments(), []);
+  const publicCards: TournamentCardData[] = all
+    .filter((t) => t.visibility !== "private")
+    .map((t) => toTournamentCard(t));
 
   return (
     <div>
@@ -84,47 +40,10 @@ async function TorneiContent() {
         icon={<Swords className="h-6 w-6" />}
         title="Tornei"
         subtitle="Campionati, gironi e tabelloni"
-        action={
-          <>
-            <Button asChild size="sm" variant="secondary">
-              <Link href="/tornei/albo">
-                <Trophy className="h-4 w-4" /> Albo d&apos;oro
-              </Link>
-            </Button>
-            {user && (
-              <Button asChild size="sm">
-                <Link href="/tornei/nuovo">
-                  <Plus className="h-4 w-4" /> Crea torneo
-                </Link>
-              </Button>
-            )}
-          </>
-        }
+        action={<TorneiActions />}
         help="tornei"
       />
-
-      {list.length === 0 ? (
-        <EmptyState
-          icon={<Swords className="h-6 w-6" />}
-          title="Nessun torneo"
-          description={
-            isAdmin
-              ? "Crea il primo torneo: campionato, eliminazione, gironi o svizzero."
-              : "L'admin non ha ancora creato tornei."
-          }
-          action={
-            isAdmin && (
-              <Button asChild className="mt-2">
-                <Link href="/tornei/nuovo">
-                  <Plus className="h-4 w-4" /> Crea torneo
-                </Link>
-              </Button>
-            )
-          }
-        />
-      ) : (
-        <TournamentsExplorer tournaments={cards} />
-      )}
+      <TournamentsExplorer tournaments={publicCards} />
     </div>
   );
 }
