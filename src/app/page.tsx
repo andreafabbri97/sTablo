@@ -85,7 +85,7 @@ export default async function HomePage() {
           <EmptyState
             icon={<Flame className="h-6 w-6" />}
             title="Ancora nessuna partita"
-            description="Quando l'admin registra i primi risultati, appariranno qui."
+            description="Quando verranno registrati i primi risultati, appariranno qui."
           />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">

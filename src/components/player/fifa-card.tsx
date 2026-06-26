@@ -69,9 +69,9 @@ export function FifaCard({
         </div>
 
         {player.specialMove && (
-          <div className="relative mt-3 rounded-xl bg-white/15 px-3 py-2 text-center backdrop-blur">
-            <p className="text-[9px] font-bold uppercase tracking-widest opacity-80">Mossa speciale</p>
-            <p className="text-sm font-bold">⚡ {player.specialMove}</p>
+          <div className="relative mt-3 rounded-xl border border-white/15 bg-black/25 px-3 py-2 text-center backdrop-blur">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-white/75">Mossa speciale</p>
+            <p className="text-sm font-bold text-white">⚡ {player.specialMove}</p>
           </div>
         )}
       </div>
