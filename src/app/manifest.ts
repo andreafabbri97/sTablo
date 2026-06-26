@@ -18,16 +18,18 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["sports", "games"],
     lang: "it",
     icons: [
-      // SVG first for crisp scaling on modern browsers; PNG 192/512 as the
-      // widely-required raster fallback so the install prompt (and the home
-      // icon on older Android) always has a valid icon.
-      { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
-      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      // Raster PNGs of the official sTablo logo. The "-v2" suffix is a deliberate
+      // cache-bust: installed PWAs key the home-screen icon by URL, so a NEW path
+      // is what makes existing installs pick up the changed artwork (paired with
+      // the bumped service-worker cache that re-fetches this manifest). No SVG
+      // here on purpose — Chrome prefers an `any`-sized SVG and would keep
+      // rendering the old vector mark instead of this logo.
+      { src: "/icon-192-v2.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon-512-v2.png", sizes: "512x512", type: "image/png", purpose: "any" },
       {
-        src: "/icon-maskable.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: "/icon-maskable-v2.png",
+        sizes: "512x512",
+        type: "image/png",
         purpose: "maskable",
       },
     ],

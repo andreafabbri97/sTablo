@@ -9,7 +9,10 @@
 // v2: bump the cache name (wipes the old one on activate), fetch navigations
 // with `no-store` so the shell is always fresh while online, and only ever
 // cache-first the immutable, content-hashed /_next/static assets.
-const CACHE = "stablo-v2";
+// v3: new app icon. The manifest is precached cache-first, so bumping the cache
+// name is what purges the stale manifest and forces installed clients to re-read
+// it (and thus the new icon-*-v2.png set) on the next launch.
+const CACHE = "stablo-v3";
 const PRECACHE = ["/offline", "/icon.svg", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
