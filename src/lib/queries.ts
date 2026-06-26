@@ -332,12 +332,20 @@ export const getEloSeries = cachedQuery(
  * Username of the account linked to a player, as a scalar subquery so the
  * picker queries stay one-row-per-player (a LEFT JOIN could duplicate a player
  * if two accounts ever pointed at it). Null for players with no account.
+ *
+ * Built from a query builder rather than a hand-written `sql` template ON
+ * PURPOSE: interpolating bare columns into a raw template renders them
+ * UNQUALIFIED (`"id"`, `"player_id"`), and since `users` also has an `id`
+ * column the correlation `${players.id}` silently bound to `users.id` — making
+ * the WHERE always false and the handle always null. Letting Drizzle build the
+ * sub-select forces fully-qualified names (`"users"."player_id" =
+ * "players"."id"`), so the correlation is correct.
  */
-const linkedUsername = sql<string | null>`(
-  select ${users.username} from ${users}
-  where ${users.playerId} = ${players.id}
-  limit 1
-)`;
+const linkedUsername = sql<string | null>`(${db
+  .select({ username: users.username })
+  .from(users)
+  .where(eq(users.playerId, players.id))
+  .limit(1)})`;
 
 export const getPlayerOptions = cachedQuery(
   async () =>

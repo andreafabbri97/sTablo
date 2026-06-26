@@ -38,21 +38,31 @@ export function Modal({
   const panelRef = React.useRef<HTMLDivElement>(null);
   const titleId = React.useId();
 
+  // Keep the latest onClose without it driving the effects below — callers often
+  // pass an inline function that changes identity on every render.
+  const onCloseRef = React.useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // Escape-to-close + body scroll lock, tied only to `open`.
   React.useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    // Move focus into the dialog so keyboard/screen-reader users land inside it.
-    panelRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, onClose]);
+  }, [open]);
+
+  // Move focus into the dialog ONLY when it opens — never on later re-renders,
+  // otherwise we'd steal focus from inputs inside (closing the mobile keyboard).
+  React.useEffect(() => {
+    if (open) panelRef.current?.focus();
+  }, [open]);
 
   if (!mounted || !open) return null;
 
