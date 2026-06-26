@@ -1,6 +1,7 @@
 import { and, eq, or, desc } from "drizzle-orm";
 import { db } from "./db";
 import { cachedQuery } from "./cache";
+import { avatarSrc } from "./avatar-src";
 import {
   matchParticipants,
   matches,
@@ -139,7 +140,7 @@ async function buildPlayerWithStats(
     level.level,
   );
   return {
-    player,
+    player: { ...player, avatarUrl: avatarSrc(player.id, player.avatarUrl) },
     username,
     stats,
     level,
@@ -275,7 +276,7 @@ async function getRankingImpl(
           : Math.round((p.eloSingles + p.eloDoubles) / 2);
     const totalXp = a.xp + (tWins.get(p.id) ?? 0) * 250;
     return {
-      player: p,
+      player: { ...p, avatarUrl: avatarSrc(p.id, p.avatarUrl) },
       username: usernameById.get(p.id) ?? null,
       played: a.played,
       won: a.won,

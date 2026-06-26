@@ -29,6 +29,7 @@ import {
 } from "./chat-core";
 import { cachedQuery } from "./cache";
 import { safe } from "./safe";
+import { avatarSrc } from "./avatar-src";
 import { getPlayerWithStatsBySlug } from "./stats";
 import { getAdminPlayerIds } from "./roles";
 import { getFriends } from "./friends";
@@ -44,6 +45,7 @@ async function partnerBySlugImpl(slug: string): Promise<ChatPartner | null> {
   const rows = await db
     .select({
       userId: users.id,
+      playerId: players.id,
       name: players.name,
       username: users.username,
       slug: players.slug,
@@ -62,7 +64,7 @@ async function partnerBySlugImpl(slug: string): Promise<ChatPartner | null> {
     username: r.username ?? null,
     slug: r.slug,
     avatarColor: r.avatarColor ?? 0,
-    avatarUrl: r.avatarUrl ?? null,
+    avatarUrl: avatarSrc(r.playerId, r.avatarUrl),
   };
 }
 
@@ -110,6 +112,7 @@ async function partnersForUsers(
       userId: users.id,
       userName: users.name,
       username: users.username,
+      playerId: players.id,
       playerName: players.name,
       slug: players.slug,
       avatarColor: players.avatarColor,
@@ -127,7 +130,7 @@ async function partnersForUsers(
         username: r.username ?? null,
         slug: r.slug ?? null,
         avatarColor: r.avatarColor ?? 0,
-        avatarUrl: r.avatarUrl ?? null,
+        avatarUrl: r.playerId ? avatarSrc(r.playerId, r.avatarUrl) : null,
       },
     ]),
   );

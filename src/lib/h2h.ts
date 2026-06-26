@@ -8,6 +8,7 @@ import {
   type ShapedMatch,
 } from "./queries";
 import { cachedQuery } from "./cache";
+import { avatarSrc } from "./avatar-src";
 
 export type H2HPlayer = {
   id: string;
@@ -45,7 +46,7 @@ function toLite(
     name: p.name,
     slug: p.slug,
     avatarColor: p.avatarColor,
-    avatarUrl: p.avatarUrl,
+    avatarUrl: avatarSrc(p.id, p.avatarUrl),
     username,
   };
 }

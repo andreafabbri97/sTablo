@@ -3,6 +3,7 @@ import { db } from "./db";
 import { matches, matchParticipants, players } from "./db/schema";
 import { cachedQuery } from "./cache";
 import { getPlayerUsernames } from "./queries";
+import { avatarSrc } from "./avatar-src";
 
 /**
  * Seasons = calendar months. Standings are recomputed on the fly from the
@@ -141,7 +142,7 @@ async function getSeasonStandingsImpl(
       const player = byId.get(id);
       if (!player) return null;
       return {
-        player,
+        player: { ...player, avatarUrl: avatarSrc(player.id, player.avatarUrl) },
         username: usernameById.get(id) ?? null,
         played: a.played,
         won: a.won,

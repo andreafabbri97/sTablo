@@ -8,6 +8,7 @@ import {
   players,
 } from "./db/schema";
 import { MATCH_REACTIONS } from "./reactions";
+import { avatarSrc } from "./avatar-src";
 
 /**
  * Social layer for a single match — reactions + comments.
@@ -63,6 +64,7 @@ type CommentRow = {
   parentId: string | null;
   userName: string;
   username: string | null;
+  playerId: string | null;
   playerName: string | null;
   playerSlug: string | null;
   avatarColor: number | null;
@@ -80,7 +82,7 @@ function toCommentView(r: CommentRow): CommentView {
     authorUsername: r.username ?? null,
     authorSlug: r.playerSlug ?? null,
     avatarColor: r.avatarColor ?? 0,
-    avatarUrl: r.avatarUrl ?? null,
+    avatarUrl: r.playerId ? avatarSrc(r.playerId, r.avatarUrl) : null,
     parentId: r.parentId,
   };
 }
@@ -136,6 +138,7 @@ export async function getMatchSocial(
         parentId: matchComments.parentId,
         userName: users.name,
         username: users.username,
+        playerId: players.id,
         playerName: players.name,
         playerSlug: players.slug,
         avatarColor: players.avatarColor,
@@ -182,6 +185,7 @@ export async function getTournamentComments(
       parentId: tournamentComments.parentId,
       userName: users.name,
       username: users.username,
+      playerId: players.id,
       playerName: players.name,
       playerSlug: players.slug,
       avatarColor: players.avatarColor,
