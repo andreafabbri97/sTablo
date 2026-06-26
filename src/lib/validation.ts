@@ -222,6 +222,28 @@ export const messageSchema = z.object({
 
 export type MessageInput = z.infer<typeof messageSchema>;
 
+/**
+ * A voice note: the recorded audio as a data-URL plus its length in seconds.
+ * The size cap (~1.5MB of base64) and the 60s duration keep a single note small
+ * enough to live inline in the DB, matching how avatars are stored.
+ */
+export const voiceMessageSchema = z.object({
+  audio: z
+    .string()
+    .regex(
+      /^data:audio\/(webm|mp4|ogg|mpeg|wav)(;[^,]*)?;base64,/,
+      "Formato audio non valido",
+    )
+    .max(2_000_000, "Vocale troppo pesante"),
+  duration: z
+    .number()
+    .int()
+    .min(1, "Vocale troppo corto")
+    .max(60, "Massimo 60 secondi"),
+});
+
+export type VoiceMessageInput = z.infer<typeof voiceMessageSchema>;
+
 export const teamSchema = z.object({
   name: z.string().trim().min(2).max(32),
   player1Id: z.string().uuid(),

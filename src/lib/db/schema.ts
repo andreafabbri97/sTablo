@@ -624,7 +624,16 @@ export const directMessages = pgTable(
     senderId: uuid("sender_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /** Text body; empty string for a voice note (see audioUrl). */
     body: text("body").notNull(),
+    /**
+     * Voice note payload as an audio data-URL. Nullable — only set for voice
+     * messages. Deliberately never selected by the thread/poll list reads (it's
+     * large); the client fetches it on demand when you press play.
+     */
+    audioUrl: text("audio_url"),
+    /** Voice note length in whole seconds; non-null marks a message as a voice note. */
+    audioDuration: integer("audio_duration"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -53,6 +53,17 @@ export type ChatMessageView = {
   senderId: string;
   body: string;
   createdAt: Date;
+  /**
+   * Voice note length in seconds. Non-null marks this message as a voice note;
+   * the audio itself is fetched lazily on play (never carried in list reads).
+   */
+  audioDuration?: number | null;
+  /**
+   * Inline audio data-URL — only set on the client's own optimistic bubble so
+   * a just-recorded note plays instantly without a round-trip. Server reads
+   * never populate this (the audio is fetched on demand via getMessageAudio).
+   */
+  audioUrl?: string | null;
 };
 
 /** Directional block state between the viewer and the other participant. */

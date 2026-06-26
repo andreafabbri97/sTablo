@@ -232,6 +232,7 @@ export async function getThread(
         senderId: directMessages.senderId,
         body: directMessages.body,
         createdAt: directMessages.createdAt,
+        audioDuration: directMessages.audioDuration,
       })
       .from(directMessages)
       .where(eq(directMessages.conversationId, convo.id))

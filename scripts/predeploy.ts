@@ -53,6 +53,12 @@ const ENSURE_SCHEMA_SQL = [
   // column on every render, so guarantee it exists regardless of migrate()'s
   // journal bookkeeping. Nullable → existing players simply have no handle.
   `ALTER TABLE "players" ADD COLUMN IF NOT EXISTS "instagram" text;`,
+  // Voice notes in chat (migration 0021). sendMessage writes these and the
+  // thread reads audio_duration on every poll, so guarantee they exist
+  // regardless of migrate()'s journal bookkeeping. Both nullable → existing
+  // text messages are unaffected.
+  `ALTER TABLE "direct_messages" ADD COLUMN IF NOT EXISTS "audio_url" text;`,
+  `ALTER TABLE "direct_messages" ADD COLUMN IF NOT EXISTS "audio_duration" integer;`,
   // Match social — reactions + comments (migration 0012). The match detail page
   // reads/writes both on every view, so guarantee they exist regardless of
   // migrate()'s journal bookkeeping. ON DELETE CASCADE keeps them tidy when a

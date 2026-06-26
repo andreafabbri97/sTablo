@@ -3,7 +3,7 @@
 import { and, asc, eq, gt } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { conversations, directMessages, userBlocks } from "@/lib/db/schema";
-import { messageSchema } from "@/lib/validation";
+import { messageSchema, voiceMessageSchema } from "@/lib/validation";
 import { assertAuth } from "@/lib/auth-helpers";
 import { rateLimit, retryAfterSeconds, RATE_LIMITS } from "@/lib/rate-limit";
 import { sendPushToUser } from "@/lib/push";
@@ -49,6 +49,10 @@ export type PollResult =
 /** Push body preview cap — keep notifications short and tidy. */
 const PUSH_BODY_MAX = 140;
 
+/** uuid guard — a malformed literal against a uuid column throws, so gate first. */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Send a direct message to the player behind `otherSlug`. Validates, rate-limits
  * (generous, ~1/s), refuses if either side has blocked the other, finds-or-
@@ -77,14 +81,36 @@ export async function sendMessage(
     };
   }
 
-  const parsed = messageSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "Messaggio non valido",
-    };
+  // A message is either text ({ body }) or a voice note ({ audio, duration }).
+  const isVoice =
+    typeof input === "object" && input !== null && "audio" in input;
+  let body: string;
+  let audioUrl: string | null = null;
+  let audioDuration: number | null = null;
+  let preview: string;
+  if (isVoice) {
+    const parsed = voiceMessageSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        error: parsed.error.issues[0]?.message ?? "Vocale non valido",
+      };
+    }
+    body = "";
+    audioUrl = parsed.data.audio;
+    audioDuration = parsed.data.duration;
+    preview = "🎤 Messaggio vocale";
+  } else {
+    const parsed = messageSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        error: parsed.error.issues[0]?.message ?? "Messaggio non valido",
+      };
+    }
+    body = parsed.data.body;
+    preview = body;
   }
-  const body = parsed.data.body;
 
   const partner = await partnerBySlug(otherSlug);
   if (!partner) {
@@ -143,19 +169,26 @@ export async function sendMessage(
     const message = await db.transaction(async (tx) => {
       const inserted = await tx
         .insert(directMessages)
-        .values({ conversationId: convoId, senderId: user.id, body })
+        .values({
+          conversationId: convoId,
+          senderId: user.id,
+          body,
+          audioUrl,
+          audioDuration,
+        })
         .returning({
           id: directMessages.id,
           senderId: directMessages.senderId,
           body: directMessages.body,
           createdAt: directMessages.createdAt,
+          audioDuration: directMessages.audioDuration,
         });
       const msg = inserted[0];
       await tx
         .update(conversations)
         .set({
           lastMessageAt: msg.createdAt,
-          lastMessageBody: body,
+          lastMessageBody: preview,
           lastMessageSenderId: user.id,
           ...(isA
             ? { aLastReadAt: msg.createdAt }
@@ -172,7 +205,10 @@ export async function sendMessage(
         : null;
       await sendPushToUser(partner.userId, {
         title: `💬 ${user.name?.trim() || "Nuovo messaggio"}`,
-        body: body.length > PUSH_BODY_MAX ? `${body.slice(0, PUSH_BODY_MAX)}…` : body,
+        body:
+          preview.length > PUSH_BODY_MAX
+            ? `${preview.slice(0, PUSH_BODY_MAX)}…`
+            : preview,
         url: mySlug ? `/chat/${mySlug}` : "/chat",
         tag: `chat:${convoId}`,
       });
@@ -228,6 +264,7 @@ export async function pollConversation(
       senderId: directMessages.senderId,
       body: directMessages.body,
       createdAt: directMessages.createdAt,
+      audioDuration: directMessages.audioDuration,
     })
     .from(directMessages)
     .where(
@@ -266,6 +303,44 @@ export async function markConversationRead(otherSlug: string): Promise<void> {
     .set(isA ? { aLastReadAt: readAt } : { bLastReadAt: readAt })
     .where(eq(conversations.id, convo.id))
     .catch(() => {});
+}
+
+/**
+ * Fetch a voice note's audio (a data-URL) on demand. The thread/poll reads
+ * never carry the audio (it's large), so the player presses play and this
+ * returns it. Only a participant of the message's conversation may read it.
+ */
+export async function getMessageAudio(
+  messageId: string,
+): Promise<{ ok: true; audio: string } | { ok: false; error: string }> {
+  let user;
+  try {
+    user = await assertAuth();
+  } catch {
+    return { ok: false, error: "Devi accedere" };
+  }
+  if (!UUID_RE.test(messageId)) {
+    return { ok: false, error: "Messaggio non valido" };
+  }
+  const rows = await db
+    .select({
+      audioUrl: directMessages.audioUrl,
+      userAId: conversations.userAId,
+      userBId: conversations.userBId,
+    })
+    .from(directMessages)
+    .innerJoin(
+      conversations,
+      eq(directMessages.conversationId, conversations.id),
+    )
+    .where(eq(directMessages.id, messageId))
+    .limit(1);
+  const row = rows[0];
+  if (!row || (row.userAId !== user.id && row.userBId !== user.id)) {
+    return { ok: false, error: "Vocale non trovato" };
+  }
+  if (!row.audioUrl) return { ok: false, error: "Nessun audio" };
+  return { ok: true, audio: row.audioUrl };
 }
 
 /** Block the player behind `otherSlug` — hides them and forbids messaging both ways. */
