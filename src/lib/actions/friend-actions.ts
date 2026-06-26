@@ -4,14 +4,44 @@ import { revalidatePath } from "next/cache";
 import { and, eq, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { friendships } from "@/lib/db/schema";
-import { assertAuth } from "@/lib/auth-helpers";
+import { assertAuth, getCurrentUser } from "@/lib/auth-helpers";
 import {
   getIncomingRequests,
   getFriends,
+  getFriendState,
+  userIdForPlayer,
   type FriendProfile,
+  type FriendState,
 } from "@/lib/friends";
+import { getPlayerSlugById } from "@/lib/queries";
 import { notify } from "@/lib/notifications";
 import type { ActionResult } from "./auth-actions";
+
+/**
+ * Per-viewer interaction state for another player's public profile, fetched
+ * client-side so the profile body itself can render from cached data without
+ * waiting on this (sequential) auth → user → friendship chain. Returns
+ * `canInteract: false` for signed-out visitors (no buttons shown).
+ */
+export async function playerInteractions(playerId: string): Promise<{
+  canInteract: boolean;
+  targetUserId: string | null;
+  friendState: FriendState;
+  viewerSlug: string | null;
+}> {
+  const user = await getCurrentUser();
+  const targetUserId = await userIdForPlayer(playerId).catch(() => null);
+  if (!user) {
+    return { canInteract: false, targetUserId, friendState: "no-account", viewerSlug: null };
+  }
+  const [friendState, viewerSlug] = await Promise.all([
+    getFriendState(user.id, targetUserId).catch(() => "none" as FriendState),
+    user.playerId && user.playerId !== playerId
+      ? getPlayerSlugById(user.playerId).catch(() => null)
+      : Promise.resolve(null),
+  ]);
+  return { canInteract: true, targetUserId, friendState, viewerSlug };
+}
 
 /** Incoming pending requests for the current user (for the notification bell). */
 export async function fetchIncomingRequests(): Promise<FriendProfile[]> {

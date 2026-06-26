@@ -15,6 +15,7 @@ import { AttributeBars } from "@/components/player/attribute-bars";
 import { EloChart } from "@/components/player/elo-chart";
 import { BadgeShelf } from "@/components/player/badge-shelf";
 import { PlayerInsightsPanel } from "@/components/player/player-insights";
+import { PlayerProfileActions } from "@/components/player/player-profile-actions";
 import { getPlayerWithStatsBySlug } from "@/lib/stats";
 import { getPlayerInsights } from "@/lib/player-insights";
 import { getEloSeries, getMatchesForPlayer, getPlayerSlugById } from "@/lib/queries";
@@ -106,17 +107,6 @@ async function PlayerProfile({
   const showCard = player.statsPublic || isOwner || user?.role === "admin";
   const style = getPlayStyle(player.playStyle);
 
-  // Slug of the logged-in viewer's own profile, to build the head-to-head link.
-  const viewerSlug =
-    user?.playerId && user.playerId !== player.id
-      ? await safe(() => getPlayerSlugById(user.playerId as string), null)
-      : null;
-
-  const targetUserId = await userIdForPlayer(player.id);
-  const friendState = user
-    ? await getFriendState(user.id, targetUserId)
-    : "no-account";
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -150,35 +140,11 @@ async function PlayerProfile({
             </p>
           )}
         </div>
-        {isOwner ? (
-          <Button asChild variant="secondary" size="sm">
-            <Link href="/profilo">
-              <Pencil className="h-4 w-4" /> Modifica
-            </Link>
-          </Button>
-        ) : (
-          user && (
-            <div className="flex flex-col gap-2">
-              {targetUserId && (
-                <AddFriendButton targetUserId={targetUserId} state={friendState} />
-              )}
-              {targetUserId && (
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/chat/${player.slug}`}>
-                    <MessageCircle className="h-4 w-4" /> Messaggio
-                  </Link>
-                </Button>
-              )}
-              {viewerSlug && (
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/giocatori/${viewerSlug}/vs/${player.slug}`}>
-                    <Swords className="h-4 w-4" /> Testa a testa
-                  </Link>
-                </Button>
-              )}
-            </div>
-          )
-        )}
+        <PlayerProfileActions
+          playerId={player.id}
+          playerSlug={player.slug}
+          isOwner={isOwner}
+        />
       </div>
 
       {/* Gamification (privacy-gated) */}
