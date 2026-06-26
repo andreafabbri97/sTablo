@@ -10,6 +10,7 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { RouteProgress } from "@/components/layout/route-progress";
 import { ServiceWorker } from "@/components/service-worker";
+import { KeepWarm } from "@/components/keep-warm";
 import { InstallBanner } from "@/components/install-banner";
 import { PushPrompt } from "@/components/push-prompt";
 import { ErrorListener } from "@/components/error-listener";
@@ -117,6 +118,7 @@ export default function RootLayout({
           <InstallBanner />
           <PushPrompt />
           <ServiceWorker />
+          <KeepWarm />
           <ErrorListener />
         </Providers>
         <Analytics />

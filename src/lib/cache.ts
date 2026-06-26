@@ -8,6 +8,13 @@ import { unstable_cache, revalidateTag } from "next/cache";
  */
 export const DATA_TAG = "stablo-data";
 
+/**
+ * Tag for the per-account "is blocked?" lookup that runs on every authenticated
+ * page (see getCurrentUser). Cached briefly so navigation doesn't hit the DB
+ * each time; busted on block/unblock so a ban still takes effect promptly.
+ */
+export const ACCOUNTS_TAG = "stablo-accounts";
+
 export function cachedQuery<T extends (...args: never[]) => Promise<unknown>>(
   fn: T,
   keyParts: string[],

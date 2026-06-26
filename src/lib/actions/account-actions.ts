@@ -1,12 +1,13 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { randomInt } from "crypto";
 import { and, eq, ne } from "drizzle-orm";
 import { hash } from "bcryptjs";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { assertAdmin } from "@/lib/auth-helpers";
+import { ACCOUNTS_TAG } from "@/lib/cache";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import type { ActionResult } from "./auth-actions";
 
@@ -131,6 +132,9 @@ export async function setUserBlocked(
         .set({ blocked: false })
         .where(eq(users.id, userId));
     }
+    // Bust the cached blocked-lookup so the ban/unban lands on the next request
+    // instead of waiting out the ~1-min cache window.
+    revalidateTag(ACCOUNTS_TAG, { expire: 0 });
     revalidatePath("/admin");
     return { ok: true };
   } catch (error) {
