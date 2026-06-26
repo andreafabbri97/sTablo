@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, X } from "lucide-react";
+import { Search, X, UserCheck } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/page";
 import { AdminBadge } from "@/components/player/admin-badge";
 import { getPlayStyle } from "@/lib/gamification";
+import { cn } from "@/lib/utils";
 
 export type PlayerCardData = {
   id: string;
@@ -24,7 +25,10 @@ export type PlayerCardData = {
   won: number;
   lost: number;
   isAdmin?: boolean;
+  isFriend?: boolean;
 };
+
+type Tab = "all" | "friends" | "others";
 
 /** Accent- and case-insensitive normalization so "andrè" matches "andre". */
 function normalize(s: string): string {
@@ -36,15 +40,28 @@ function normalize(s: string): string {
 
 export function PlayersGrid({ players }: { players: PlayerCardData[] }) {
   const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<Tab>("all");
+
+  const friendCount = useMemo(
+    () => players.filter((p) => p.isFriend).length,
+    [players],
+  );
+  // Only worth showing the split when there are both friends and non-friends.
+  const showTabs = friendCount > 0 && friendCount < players.length;
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim());
-    if (!q) return players;
+    const activeTab = showTabs ? tab : "all";
     return players.filter((p) => {
-      const hay = normalize(`${p.name} ${p.nickname ?? ""}`);
-      return hay.includes(q);
+      if (activeTab === "friends" && !p.isFriend) return false;
+      if (activeTab === "others" && p.isFriend) return false;
+      if (q) {
+        const hay = normalize(`${p.name} ${p.nickname ?? ""}`);
+        if (!hay.includes(q)) return false;
+      }
+      return true;
     });
-  }, [players, query]);
+  }, [players, query, tab, showTabs]);
 
   return (
     <div className="space-y-4">
@@ -68,10 +85,41 @@ export function PlayersGrid({ players }: { players: PlayerCardData[] }) {
         )}
       </div>
 
+      {showTabs && (
+        <div className="flex gap-1.5 rounded-xl border border-border bg-surface p-1">
+          {(
+            [
+              { key: "all", label: "Tutti" },
+              { key: "friends", label: `Amici (${friendCount})` },
+              { key: "others", label: "Altri" },
+            ] as { key: Tab; label: string }[]
+          ).map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              aria-pressed={tab === t.key}
+              onClick={() => setTab(t.key)}
+              className={cn(
+                "flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition",
+                tab === t.key
+                  ? "bg-brand text-white"
+                  : "text-muted hover:bg-surface-2",
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {filtered.length === 0 ? (
         <EmptyState
           title="Nessun giocatore trovato"
-          description="Prova con un altro nome."
+          description={
+            showTabs && tab === "friends"
+              ? "Nessuno dei tuoi amici corrisponde alla ricerca."
+              : "Prova con un altro nome."
+          }
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -101,6 +149,12 @@ export function PlayersGrid({ players }: { players: PlayerCardData[] }) {
                     <p className="text-xs text-muted">{p.played} partite</p>
                   )}
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    {p.isFriend && (
+                      <Badge tone="sea">
+                        <UserCheck className="h-3 w-3" />
+                        Amico
+                      </Badge>
+                    )}
                     {p.isAdmin && <AdminBadge />}
                     <Badge tone="brand">{p.elo} Elo</Badge>
                     <Badge tone="ball">Lv {p.level}</Badge>

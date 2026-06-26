@@ -3,10 +3,14 @@ import Link from "next/link";
 import { Swords, Plus, Trophy } from "lucide-react";
 import { PageHeader, EmptyState } from "@/components/ui/page";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import {
+  TournamentsExplorer,
+  type TournamentCardData,
+} from "@/components/tournaments-explorer";
 import { getTournaments, FORMAT_META, DISCIPLINE_LABEL } from "@/lib/tournament/queries";
 import { getAccessiblePrivateTournamentIds } from "@/lib/tournament/invites";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { getFriendTournamentIds } from "@/lib/friends";
 import { safe } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
@@ -26,14 +30,36 @@ export default async function TorneiPage() {
   const isAdmin = user?.role === "admin";
 
   // Private tournaments stay hidden unless you created, were invited to, or
-  // already joined them.
-  const accessiblePrivate = await safe(
-    () => getAccessiblePrivateTournamentIds(user),
-    new Set<string>(),
-  );
+  // already joined them. The friend set powers the «Solo amici» toggle.
+  const [accessiblePrivate, friendTournamentIds] = await Promise.all([
+    safe(() => getAccessiblePrivateTournamentIds(user), new Set<string>()),
+    user
+      ? safe(() => getFriendTournamentIds(user.id), new Set<string>())
+      : Promise.resolve(new Set<string>()),
+  ]);
   const list = all.filter(
     (t) => t.visibility !== "private" || isAdmin || accessiblePrivate.has(t.id),
   );
+
+  const cards: TournamentCardData[] = list.map((t) => {
+    const meta = FORMAT_META[t.format];
+    const status = STATUS[t.status] ?? STATUS.draft;
+    return {
+      id: t.id,
+      slug: t.slug,
+      name: t.name,
+      formatEmoji: meta?.emoji ?? "🎯",
+      formatLabel: meta?.label ?? t.format,
+      disciplineLabel: DISCIPLINE_LABEL[t.discipline] ?? t.discipline,
+      entrantCount: t.entrantCount,
+      statusLabel: status.label,
+      statusTone: status.tone,
+      isPrivate: t.visibility === "private",
+      showWinner: t.status === "completed" && !!t.winnerEntrantId,
+      hasFriend: friendTournamentIds.has(t.id),
+    };
+  });
+  const canFilterFriends = friendTournamentIds.size > 0;
 
   return (
     <div>
@@ -80,40 +106,10 @@ export default async function TorneiPage() {
           }
         />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {list.map((t) => {
-            const meta = FORMAT_META[t.format];
-            const status = STATUS[t.status] ?? STATUS.draft;
-            return (
-              <Link
-                key={t.id}
-                href={`/tornei/${t.slug}`}
-                className="card-surface group p-5 transition hover:-translate-y-0.5"
-              >
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-3xl">{meta?.emoji}</span>
-                  <div className="flex items-center gap-1.5">
-                    {t.visibility === "private" && (
-                      <Badge tone="muted">🔒 Privato</Badge>
-                    )}
-                    <Badge tone={status.tone}>{status.label}</Badge>
-                  </div>
-                </div>
-                <h3 className="font-display text-lg font-extrabold group-hover:text-brand">
-                  {t.name}
-                </h3>
-                <p className="text-sm text-muted">
-                  {meta?.label} · {DISCIPLINE_LABEL[t.discipline]} · {t.entrantCount} iscritti
-                </p>
-                {t.status === "completed" && t.winnerEntrantId && (
-                  <p className="mt-2 flex items-center gap-1 text-sm font-semibold text-[var(--gold)]">
-                    <Trophy className="h-4 w-4" /> Vincitore decretato
-                  </p>
-                )}
-              </Link>
-            );
-          })}
-        </div>
+        <TournamentsExplorer
+          tournaments={cards}
+          canFilterFriends={canFilterFriends}
+        />
       )}
     </div>
   );

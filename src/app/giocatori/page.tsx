@@ -4,16 +4,26 @@ import { PageHeader, EmptyState } from "@/components/ui/page";
 import { PlayersGrid, type PlayerCardData } from "@/components/player/players-grid";
 import { getRanking } from "@/lib/stats";
 import { getAdminPlayerIds } from "@/lib/roles";
+import { getCurrentUser } from "@/lib/auth-helpers";
+import { getFriends } from "@/lib/friends";
 import { safe } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Giocatori" };
 
 export default async function GiocatoriPage() {
-  const [rows, adminIds] = await Promise.all([
+  // Everything fires together; friends chains off the resolved user so it still
+  // runs in parallel with the (heavier) ranking/admin queries.
+  const [rows, adminIds, friends] = await Promise.all([
     safe(() => getRanking("overall"), []),
     safe(() => getAdminPlayerIds(), new Set<string>()),
+    getCurrentUser().then((u) => (u ? safe(() => getFriends(u.id), []) : [])),
   ]);
+  // Friend player slugs so each card can flag who you already know and the
+  // Amici filter has something to split on.
+  const friendSlugs = new Set(
+    friends.map((f) => f.slug).filter((s): s is string => Boolean(s)),
+  );
 
   const players: PlayerCardData[] = rows.map((row) => ({
     id: row.player.id,
@@ -29,6 +39,7 @@ export default async function GiocatoriPage() {
     won: row.won,
     lost: row.lost,
     isAdmin: adminIds.has(row.player.id),
+    isFriend: friendSlugs.has(row.player.slug),
   }));
 
   return (

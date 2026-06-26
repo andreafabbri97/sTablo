@@ -1,6 +1,12 @@
 import { and, eq, or, inArray } from "drizzle-orm";
 import { db } from "./db";
-import { friendships, users, players } from "./db/schema";
+import {
+  friendships,
+  users,
+  players,
+  tournamentEntrants,
+  teams,
+} from "./db/schema";
 
 export type FriendProfile = {
   friendshipId: string;
@@ -102,6 +108,75 @@ export async function getFriendFeedSlugs(userId: string): Promise<string[]> {
     .limit(1);
   if (me[0]?.slug) slugs.add(me[0].slug);
   return [...slugs];
+}
+
+/**
+ * Player ids of the viewer's accepted friends that have a linked profile.
+ * One round-trip: joins each accepted friendship straight to the friend's user
+ * row, so we never fetch the names/avatars/slugs we'd immediately discard.
+ */
+async function getFriendPlayerIds(userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ playerId: users.playerId })
+    .from(friendships)
+    .innerJoin(
+      users,
+      or(
+        and(
+          eq(friendships.requesterId, userId),
+          eq(users.id, friendships.addresseeId),
+        ),
+        and(
+          eq(friendships.addresseeId, userId),
+          eq(users.id, friendships.requesterId),
+        ),
+      ),
+    )
+    .where(eq(friendships.status, "accepted"));
+  return rows
+    .map((r) => r.playerId)
+    .filter((id): id is string => Boolean(id));
+}
+
+/**
+ * Tournament ids in which at least one of the viewer's accepted friends took
+ * part — as a singles player, an ad-hoc doubles partner, or a member of a
+ * registered team. Empty when no friend appears in any tournament (no friends,
+ * none with a profile, or none entered) — the UI then hides the «Solo amici»
+ * toggle.
+ */
+export async function getFriendTournamentIds(
+  userId: string,
+): Promise<Set<string>> {
+  const friendPlayerIds = await getFriendPlayerIds(userId);
+  if (friendPlayerIds.length === 0) return new Set();
+
+  const [direct, viaTeam] = await Promise.all([
+    db
+      .selectDistinct({ tournamentId: tournamentEntrants.tournamentId })
+      .from(tournamentEntrants)
+      .where(
+        or(
+          inArray(tournamentEntrants.playerId, friendPlayerIds),
+          inArray(tournamentEntrants.partnerId, friendPlayerIds),
+        ),
+      ),
+    db
+      .selectDistinct({ tournamentId: tournamentEntrants.tournamentId })
+      .from(tournamentEntrants)
+      .innerJoin(teams, eq(tournamentEntrants.teamId, teams.id))
+      .where(
+        or(
+          inArray(teams.player1Id, friendPlayerIds),
+          inArray(teams.player2Id, friendPlayerIds),
+        ),
+      ),
+  ]);
+
+  const ids = new Set<string>();
+  for (const r of direct) ids.add(r.tournamentId);
+  for (const r of viaTeam) ids.add(r.tournamentId);
+  return ids;
 }
 
 export async function getIncomingRequests(

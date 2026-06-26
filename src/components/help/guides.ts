@@ -245,6 +245,14 @@ export const GUIDES: Record<string, Guide> = {
         ],
       },
       {
+        heading: "Solo con i miei amici",
+        points: [
+          "Se almeno un tuo amico ha partecipato a un torneo, compare il filtro «Solo con i miei amici».",
+          "Attivalo per vedere soltanto i tornei dove ha giocato qualcuno della tua cerchia (come singolo, in coppia o in un team).",
+          "Il badge ✓ Amici sulla card segnala a colpo d'occhio i tornei a cui ha preso parte un amico.",
+        ],
+      },
+      {
         heading: "🏆 Albo d'oro",
         points: [
           "Dal pulsante «Albo d'oro» apri la bacheca dei trofei di sempre.",
@@ -359,6 +367,7 @@ export const GUIDES: Record<string, Guide> = {
           "Vedi Elo, statistiche, stile di gioco e i trofei sbloccati.",
           "Dal profilo di un altro giocatore, tocca «Testa a testa» per vedere il vostro storico di sfide dirette.",
           "Aggiungi un giocatore agli amici per seguirlo più da vicino.",
+          "Quando hai amici tra i giocatori, il filtro «Tutti / Amici / Altri» separa chi conosci dal resto e il badge ✓ Amico li evidenzia.",
           "Il badge 🛡️ Admin segnala gli amministratori della community, nella lista e sul profilo.",
         ],
       },
@@ -451,7 +460,9 @@ export const GUIDES: Record<string, Guide> = {
         points: [
           "Tocca «Nuova» in alto nella lista e scegli il giocatore: si apre subito la chat con lui.",
           "In alternativa, dal profilo di un giocatore tocca «Messaggio».",
-          "Usa la barra «Cerca» per filtrare al volo le conversazioni (o i giocatori) per nome.",
+          "Nella schermata «Nuova chat» cerchi per nome o @username; ogni riga mostra l'@username e, per gli admin, il distintivo 🛡️ Admin.",
+          "Quando hai amici, il filtro «Tutti / Amici / Altri» li separa dal resto e il badge ✓ Amico te li evidenzia.",
+          "Usa la barra «Cerca» nella lista per filtrare al volo le conversazioni per nome.",
         ],
       },
       {
