@@ -2,7 +2,8 @@ import Link from "next/link";
 import { CalendarClock, Swords } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { cn, timeAgo, timeUntil, formatDateTime } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
+import { RelativeTime } from "@/components/relative-time";
 import type { ShapedMatch, ShapedSide } from "@/lib/queries";
 import { tournamentRoundLabel } from "@/lib/tournament/round-label";
 import { TEAMS_ENABLED } from "@/lib/features";
@@ -60,9 +61,11 @@ export function MatchCard({
           {isScheduled && <Badge tone="sea">📅 In programma</Badge>}
           {roundLabel && <Badge tone="muted">{roundLabel}</Badge>}
         </div>
-        <span className="text-xs text-muted">
-          {isScheduled ? timeUntil(match.playedAt) : timeAgo(match.playedAt)}
-        </span>
+        <RelativeTime
+          date={match.playedAt}
+          mode={isScheduled ? "until" : "ago"}
+          className="text-xs text-muted"
+        />
       </div>
 
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 py-4">
