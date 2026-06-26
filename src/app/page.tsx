@@ -1,22 +1,21 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Trophy, Flame, Users, Swords, Plus, ArrowRight } from "lucide-react";
+import { cacheLife, cacheTag } from "next/cache";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { PlayerName } from "@/components/player/player-name";
 import { Badge } from "@/components/ui/badge";
 import { MatchCard } from "@/components/match-card";
 import { EmptyState } from "@/components/ui/page";
-import { RowsSkeleton } from "@/components/ui/skeletons";
 import { getRanking } from "@/lib/stats";
 import { getRecentMatches } from "@/lib/queries";
 import { db } from "@/lib/db";
 import { players, matches, tournaments } from "@/lib/db/schema";
 import { sql } from "drizzle-orm";
 import { safe } from "@/lib/safe";
-import { cachedQuery } from "@/lib/cache";
+import { cachedQuery, DATA_TAG } from "@/lib/cache";
 import { getCurrentUser } from "@/lib/auth-helpers";
-import { connection } from "next/server";
 
 
 const counts = cachedQuery(async () => {
@@ -35,19 +34,18 @@ export default function HomePage() {
           the login-dependent CTA streams in. */}
       <Hero />
 
-      {/* Counts, podium and recent matches all come from the DB → stream. */}
-      <Suspense fallback={<HomeDataSkeleton />}>
-        <HomeData />
-      </Suspense>
+      {/* Counts, podium and recent matches are global → cached into the static
+          shell so they appear instantly on navigation (match-card timestamps
+          render client-side via <RelativeTime>, so no Date.now() blocks it). */}
+      <HomeData />
     </div>
   );
 }
 
 async function HomeData() {
-  // Recent-match cards call timeAgo() (Date.now()); this content fetches only
-  // DB data (no cookies/params), so opt into request time first or the clock
-  // read is flagged during prerender.
-  await connection();
+  "use cache";
+  cacheTag(DATA_TAG);
+  cacheLife("hours");
   const [ranking, recent, stats] = await Promise.all([
     safe(() => getRanking("overall"), []),
     safe(() => getRecentMatches(6), []),
@@ -117,19 +115,6 @@ async function HomeData() {
         )}
       </section>
     </>
-  );
-}
-
-function HomeDataSkeleton() {
-  return (
-    <div className="space-y-10" aria-hidden>
-      <div className="grid grid-cols-3 gap-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-24 rounded-2xl skeleton" />
-        ))}
-      </div>
-      <RowsSkeleton rows={3} />
-    </div>
   );
 }
 
