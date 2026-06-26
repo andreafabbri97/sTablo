@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/page";
 import { AdminBadge } from "@/components/player/admin-badge";
+import { ScopeTabs, type FriendScope } from "@/components/scope-tabs";
 import { getPlayStyle } from "@/lib/gamification";
-import { cn } from "@/lib/utils";
 
 export type PlayerCardData = {
   id: string;
@@ -28,8 +28,6 @@ export type PlayerCardData = {
   isFriend?: boolean;
 };
 
-type Tab = "all" | "friends" | "others";
-
 /** Accent- and case-insensitive normalization so "andrè" matches "andre". */
 function normalize(s: string): string {
   return s
@@ -40,7 +38,7 @@ function normalize(s: string): string {
 
 export function PlayersGrid({ players }: { players: PlayerCardData[] }) {
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState<Tab>("all");
+  const [tab, setTab] = useState<FriendScope>("all");
 
   const friendCount = useMemo(
     () => players.filter((p) => p.isFriend).length,
@@ -86,30 +84,16 @@ export function PlayersGrid({ players }: { players: PlayerCardData[] }) {
       </div>
 
       {showTabs && (
-        <div className="flex gap-1.5 rounded-xl border border-border bg-surface p-1">
-          {(
-            [
-              { key: "all", label: "Tutti" },
-              { key: "friends", label: `Amici (${friendCount})` },
-              { key: "others", label: "Altri" },
-            ] as { key: Tab; label: string }[]
-          ).map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              aria-pressed={tab === t.key}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                "flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition",
-                tab === t.key
-                  ? "bg-brand text-white"
-                  : "text-muted hover:bg-surface-2",
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <ScopeTabs
+          options={[
+            { key: "all", label: "Tutti" },
+            { key: "friends", label: "Amici" },
+            { key: "others", label: "Altri" },
+          ]}
+          value={tab}
+          onChange={setTab}
+          ariaLabel="Filtra giocatori"
+        />
       )}
 
       {filtered.length === 0 ? (

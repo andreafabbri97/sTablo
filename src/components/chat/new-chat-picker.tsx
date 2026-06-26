@@ -6,7 +6,7 @@ import { ArrowLeft, Search, Users, UserCheck } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { AdminBadge } from "@/components/player/admin-badge";
-import { cn } from "@/lib/utils";
+import { ScopeTabs, type FriendScope } from "@/components/scope-tabs";
 
 /** A player the viewer can start a conversation with. */
 export type MessageablePerson = {
@@ -20,8 +20,6 @@ export type MessageablePerson = {
   isFriend: boolean;
 };
 
-type Tab = "all" | "friends" | "others";
-
 /**
  * Searchable list of players to start a new conversation with. Tapping one
  * opens the thread at `/chat/[slug]` (creating the conversation on first send).
@@ -33,7 +31,7 @@ type Tab = "all" | "friends" | "others";
  */
 export function NewChatPicker({ people }: { people: MessageablePerson[] }) {
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState<Tab>("all");
+  const [tab, setTab] = useState<FriendScope>("all");
 
   const friendCount = useMemo(
     () => people.filter((p) => p.isFriend).length,
@@ -91,19 +89,17 @@ export function NewChatPicker({ people }: { people: MessageablePerson[] }) {
       </div>
 
       {showTabs && (
-        <div className="flex gap-1 border-b border-border p-2">
-          <TabButton active={tab === "all"} onClick={() => setTab("all")}>
-            Tutti
-          </TabButton>
-          <TabButton
-            active={tab === "friends"}
-            onClick={() => setTab("friends")}
-          >
-            Amici ({friendCount})
-          </TabButton>
-          <TabButton active={tab === "others"} onClick={() => setTab("others")}>
-            Altri
-          </TabButton>
+        <div className="border-b border-border p-2">
+          <ScopeTabs
+            options={[
+              { key: "all", label: "Tutti" },
+              { key: "friends", label: "Amici" },
+              { key: "others", label: "Altri" },
+            ]}
+            value={tab}
+            onChange={setTab}
+            ariaLabel="Filtra giocatori"
+          />
         </div>
       )}
 
@@ -152,30 +148,5 @@ export function NewChatPicker({ people }: { people: MessageablePerson[] }) {
         )}
       </div>
     </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex-1 rounded-xl px-3 py-1.5 text-sm font-semibold transition",
-        active
-          ? "bg-brand-soft text-brand"
-          : "text-muted hover:bg-surface-2 hover:text-foreground",
-      )}
-    >
-      {children}
-    </button>
   );
 }

@@ -137,7 +137,7 @@ export const GUIDES: Record<string, Guide> = {
         heading: "Cercare e filtrare",
         points: [
           "Filtra per tipo: Tutte, 1 vs 1 o 2 vs 2.",
-          "«Solo amici» mostra solo le partite tue e dei tuoi amici (compare quando hai almeno un amico).",
+          "Il selettore «Tutti / Amici / Altri» filtra per coinvolgimento dei tuoi amici: «Amici» mostra le partite tue e dei tuoi amici, «Altri» le altre (compare quando hai almeno un amico).",
           "Cerca per nome, soprannome, username o nome del torneo.",
           "Restringi per data con i campi «Dal» e «Al».",
           "Tocca «Azzera filtri» per tornare all'elenco completo.",
@@ -245,10 +245,10 @@ export const GUIDES: Record<string, Guide> = {
         ],
       },
       {
-        heading: "Solo con i miei amici",
+        heading: "Tutti / Amici / Altri",
         points: [
-          "Se almeno un tuo amico ha partecipato a un torneo, compare il filtro «Solo con i miei amici».",
-          "Attivalo per vedere soltanto i tornei dove ha giocato qualcuno della tua cerchia (come singolo, in coppia o in un team).",
+          "Quando almeno un tuo amico ha partecipato a un torneo, compare il selettore «Tutti / Amici / Altri».",
+          "«Amici» mostra i tornei dove ha giocato qualcuno della tua cerchia (come singolo, in coppia o in un team); «Altri» quelli senza tuoi amici.",
           "Il badge ✓ Amici sulla card segnala a colpo d'occhio i tornei a cui ha preso parte un amico.",
         ],
       },

@@ -2,10 +2,16 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Swords, Trophy, Users, UserCheck } from "lucide-react";
+import { Swords, Trophy, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/page";
-import { cn } from "@/lib/utils";
+import { ScopeTabs, type FriendScope } from "@/components/scope-tabs";
+
+const FRIEND_SCOPES: { key: FriendScope; label: string }[] = [
+  { key: "all", label: "Tutti" },
+  { key: "friends", label: "Amici" },
+  { key: "others", label: "Altri" },
+];
 
 /** Everything a tournament card needs, pre-computed on the server so this
  *  client component never imports the tournament query module (which pulls in
@@ -27,51 +33,55 @@ export type TournamentCardData = {
 };
 
 /**
- * Tournament grid with an optional «Solo amici» scope, mirroring the matches
- * explorer: when the viewer has friends who joined tournaments, a toggle keeps
- * only the tournaments they took part in.
+ * Tournament grid with the app-wide «Tutti / Amici / Altri» scope, mirroring the
+ * matches explorer: «Amici» keeps the tournaments a friend took part in, «Altri»
+ * the rest. The selector appears only when both groups are present.
  */
 export function TournamentsExplorer({
   tournaments,
-  canFilterFriends,
 }: {
   tournaments: TournamentCardData[];
-  canFilterFriends: boolean;
 }) {
-  const [friendsOnly, setFriendsOnly] = useState(false);
+  const [friendScope, setFriendScope] = useState<FriendScope>("all");
 
-  const filtered = useMemo(
-    () =>
-      friendsOnly && canFilterFriends
-        ? tournaments.filter((t) => t.hasFriend)
-        : tournaments,
-    [tournaments, friendsOnly, canFilterFriends],
+  // Show the «Amici» scope only when friends' tournaments and others actually
+  // coexist — otherwise the split would leave a tab permanently empty.
+  const friendCount = useMemo(
+    () => tournaments.filter((t) => t.hasFriend).length,
+    [tournaments],
   );
+  const canFilterFriends = friendCount > 0 && friendCount < tournaments.length;
+  const activeScope: FriendScope = canFilterFriends ? friendScope : "all";
+
+  const filtered = useMemo(() => {
+    if (activeScope === "all") return tournaments;
+    return tournaments.filter((t) =>
+      activeScope === "friends" ? t.hasFriend : !t.hasFriend,
+    );
+  }, [tournaments, activeScope]);
 
   return (
     <div className="space-y-4">
       {canFilterFriends && (
-        <button
-          type="button"
-          onClick={() => setFriendsOnly((v) => !v)}
-          aria-pressed={friendsOnly}
-          className={cn(
-            "flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition",
-            friendsOnly
-              ? "border-transparent bg-brand text-white"
-              : "border-border bg-surface text-muted hover:bg-surface-2",
-          )}
-        >
-          <Users className="h-4 w-4" />
-          Solo con i miei amici
-        </button>
+        <ScopeTabs
+          options={FRIEND_SCOPES}
+          value={friendScope}
+          onChange={setFriendScope}
+          ariaLabel="Filtra per amici"
+        />
       )}
 
       {filtered.length === 0 ? (
         <EmptyState
           icon={<Swords className="h-6 w-6" />}
-          title="Nessun torneo con i tuoi amici"
-          description="Disattiva «Solo con i miei amici» per vedere tutti i tornei."
+          title={
+            activeScope === "friends"
+              ? "Nessun torneo con i tuoi amici"
+              : activeScope === "others"
+                ? "Nessun altro torneo"
+                : "Nessun torneo"
+          }
+          description="Scegli «Tutti» per vedere tutti i tornei."
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">

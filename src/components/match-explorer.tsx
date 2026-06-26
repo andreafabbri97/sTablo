@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Search, X, Loader2, ChevronDown, Users } from "lucide-react";
+import { Search, X, Loader2, ChevronDown } from "lucide-react";
 import { MatchCard } from "@/components/match-card";
 import { DeleteMatchButton } from "@/components/admin/delete-match-button";
 import { EmptyState } from "@/components/ui/page";
 import { Input } from "@/components/ui/field";
-import { cn } from "@/lib/utils";
+import { ScopeTabs, type FriendScope } from "@/components/scope-tabs";
 import { loadMoreMatches } from "@/lib/actions/match-feed-actions";
 import { matchInvolvesAnySlug } from "@/lib/match-filter";
 import type { ShapedMatch } from "@/lib/queries";
@@ -32,6 +32,12 @@ const FORMATS: { key: Format; label: string }[] = [
   { key: "doubles", label: "2 vs 2" },
 ];
 
+const FRIEND_SCOPES: { key: FriendScope; label: string }[] = [
+  { key: "all", label: "Tutti" },
+  { key: "friends", label: "Amici" },
+  { key: "others", label: "Altri" },
+];
+
 export function MatchExplorer({
   matches,
   isAdmin,
@@ -52,8 +58,7 @@ export function MatchExplorer({
   const [query, setQuery] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [friendsOnly, setFriendsOnly] = useState(false);
-  const canFilterFriends = !!friendSlugs && friendSlugs.length > 0;
+  const [friendScope, setFriendScope] = useState<FriendScope>("all");
   const friendSet = useMemo(() => new Set(friendSlugs ?? []), [friendSlugs]);
   // Older pages fetched via "carica altre". Kept separate from the `matches`
   // prop so that when the page refreshes (e.g. after a new match) the freshest
@@ -66,6 +71,19 @@ export function MatchExplorer({
     () => dedupeById([...matches, ...extra]),
     [matches, extra],
   );
+
+  // The «Amici» scope only earns its slot when the loaded window actually mixes
+  // friends' matches with strangers' — an all-or-nothing split is just noise.
+  const friendMatchCount = useMemo(
+    () =>
+      friendSet.size === 0
+        ? 0
+        : all.filter((m) => matchInvolvesAnySlug(m, friendSet)).length,
+    [all, friendSet],
+  );
+  const canFilterFriends =
+    friendMatchCount > 0 && friendMatchCount < all.length;
+  const activeScope: FriendScope = canFilterFriends ? friendScope : "all";
 
   const hasMore =
     typeof totalCount === "number" && all.length < totalCount;
@@ -91,7 +109,9 @@ export function MatchExplorer({
     return all.filter((m) => {
       if (format !== "all" && m.format !== format) return false;
 
-      if (friendsOnly && canFilterFriends && !matchInvolvesAnySlug(m, friendSet))
+      if (activeScope === "friends" && !matchInvolvesAnySlug(m, friendSet))
+        return false;
+      if (activeScope === "others" && matchInvolvesAnySlug(m, friendSet))
         return false;
 
       const ts = new Date(m.playedAt).getTime();
@@ -111,45 +131,30 @@ export function MatchExplorer({
       }
       return true;
     });
-  }, [all, format, query, from, to, friendsOnly, canFilterFriends, friendSet]);
+  }, [all, format, query, from, to, activeScope, friendSet]);
 
-  const hasFilters = format !== "all" || query || from || to || friendsOnly;
+  const hasFilters =
+    format !== "all" || query || from || to || activeScope !== "all";
 
   return (
     <div className="space-y-4">
       <div className="card-surface space-y-3 p-3">
         {/* Format segmented */}
-        <div className="flex gap-1.5 rounded-xl border border-border bg-surface p-1">
-          {FORMATS.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFormat(f.key)}
-              className={cn(
-                "flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition",
-                format === f.key ? "bg-brand text-white" : "text-muted hover:bg-surface-2",
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <ScopeTabs
+          options={FORMATS}
+          value={format}
+          onChange={setFormat}
+          ariaLabel="Filtra per formato"
+        />
 
-        {/* Friends-only scope — only when the viewer has friends to filter by */}
+        {/* Friends scope — only when the loaded window mixes friends & others */}
         {canFilterFriends && (
-          <button
-            type="button"
-            onClick={() => setFriendsOnly((v) => !v)}
-            aria-pressed={friendsOnly}
-            className={cn(
-              "flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition",
-              friendsOnly
-                ? "border-transparent bg-brand text-white"
-                : "border-border bg-surface text-muted hover:bg-surface-2",
-            )}
-          >
-            <Users className="h-4 w-4" />
-            Solo amici
-          </button>
+          <ScopeTabs
+            options={FRIEND_SCOPES}
+            value={friendScope}
+            onChange={setFriendScope}
+            ariaLabel="Filtra per amici"
+          />
         )}
 
         {/* Search */}
@@ -202,7 +207,7 @@ export function MatchExplorer({
                 setQuery("");
                 setFrom("");
                 setTo("");
-                setFriendsOnly(false);
+                setFriendScope("all");
               }}
               className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
             >
@@ -223,9 +228,11 @@ export function MatchExplorer({
         <EmptyState
           title="Nessuna partita trovata"
           description={
-            friendsOnly
-              ? "Nessuna partita tra i tuoi amici qui. Disattiva «Solo amici» o usa «Carica altre» per cercare più indietro."
-              : "Prova a cambiare i filtri."
+            activeScope === "friends"
+              ? "Nessuna partita tra i tuoi amici qui. Prova «Tutti» o «Carica altre» per cercare più indietro."
+              : activeScope === "others"
+                ? "Qui ci sono solo partite con i tuoi amici. Prova «Tutti»."
+                : "Prova a cambiare i filtri."
           }
         />
       ) : (

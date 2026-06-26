@@ -59,7 +59,6 @@ export default async function TorneiPage() {
       hasFriend: friendTournamentIds.has(t.id),
     };
   });
-  const canFilterFriends = friendTournamentIds.size > 0;
 
   return (
     <div>
@@ -106,10 +105,7 @@ export default async function TorneiPage() {
           }
         />
       ) : (
-        <TournamentsExplorer
-          tournaments={cards}
-          canFilterFriends={canFilterFriends}
-        />
+        <TournamentsExplorer tournaments={cards} />
       )}
     </div>
   );
