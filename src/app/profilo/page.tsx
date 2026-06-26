@@ -17,6 +17,9 @@ import { getCurrentUser } from "@/lib/auth-helpers";
 import { getPlayerWithStats } from "@/lib/stats";
 import { getEloSeries } from "@/lib/queries";
 import { computeBadges } from "@/lib/badges";
+import { db } from "@/lib/db";
+import { players } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 export const metadata: Metadata = { title: "Il mio profilo" };
 
@@ -51,6 +54,18 @@ async function ProfiloContent() {
 
   const data = await getPlayerWithStats(user.playerId);
   if (!data) redirect("/");
+
+  // The editor's avatar field round-trips the RAW value (data-URL) on save, so
+  // give it the stored base64 — not the /api/avatar URL that getPlayerWithStats
+  // returns for display elsewhere — or saving would overwrite the avatar.
+  const rawAvatar = await db.query.players.findFirst({
+    where: eq(players.id, user.playerId),
+    columns: { avatarUrl: true },
+  });
+  const editorPlayer = {
+    ...data.player,
+    avatarUrl: rawAvatar?.avatarUrl ?? null,
+  };
 
   const badges = computeBadges({
     played: data.stats.played,
@@ -95,7 +110,7 @@ async function ProfiloContent() {
       )}
 
       <ProfileEditor
-        player={data.player}
+        player={editorPlayer}
         overall={data.overall}
         attributes={data.attributes}
         level={data.level}

@@ -8,6 +8,7 @@ import {
 } from "@/lib/db/schema";
 import { cachedQuery } from "@/lib/cache";
 import { getPlayerUsernames } from "@/lib/queries";
+import { avatarSrc } from "@/lib/avatar-src";
 
 /**
  * Albo d'oro — the tournament hall of fame. Champions are derived on read from
@@ -134,7 +135,7 @@ export const getTournamentChampions = cachedQuery(
             : null,
           slug: primary.slug,
           avatarColor: primary.avatarColor,
-          avatarUrl: primary.avatarUrl,
+          avatarUrl: avatarSrc(primary.id, primary.avatarUrl),
         };
       } else if (primary) {
         // an ad-hoc doubles pair ("A & B"): primary player's avatar, no link/handle
@@ -143,7 +144,7 @@ export const getTournamentChampions = cachedQuery(
           username: null,
           slug: null,
           avatarColor: primary.avatarColor,
-          avatarUrl: primary.avatarUrl,
+          avatarUrl: avatarSrc(primary.id, primary.avatarUrl),
         };
       } else if (team) {
         winner = {

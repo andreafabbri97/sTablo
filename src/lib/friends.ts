@@ -7,6 +7,7 @@ import {
   tournamentEntrants,
   teams,
 } from "./db/schema";
+import { avatarSrc } from "./avatar-src";
 
 export type FriendProfile = {
   friendshipId: string;
@@ -42,6 +43,7 @@ async function profilesForUsers(userIds: string[]) {
       userId: users.id,
       userName: users.name,
       username: users.username,
+      playerId: players.id,
       slug: players.slug,
       avatarColor: players.avatarColor,
       avatarUrl: players.avatarUrl,
@@ -57,7 +59,7 @@ async function profilesForUsers(userIds: string[]) {
         username: r.username ?? null,
         slug: r.slug,
         avatarColor: r.avatarColor ?? 0,
-        avatarUrl: r.avatarUrl ?? null,
+        avatarUrl: r.playerId ? avatarSrc(r.playerId, r.avatarUrl) : null,
       },
     ]),
   );
@@ -266,6 +268,7 @@ export async function getAccountUsers(): Promise<AccountUser[]> {
       userId: users.id,
       name: users.name,
       username: users.username,
+      playerId: players.id,
       slug: players.slug,
       avatarColor: players.avatarColor,
       avatarUrl: players.avatarUrl,
@@ -280,7 +283,7 @@ export async function getAccountUsers(): Promise<AccountUser[]> {
     username: r.username ?? null,
     slug: r.slug,
     avatarColor: r.avatarColor ?? 0,
-    avatarUrl: r.avatarUrl ?? null,
+    avatarUrl: avatarSrc(r.playerId, r.avatarUrl),
     isAdmin: r.role === "admin",
   }));
 }

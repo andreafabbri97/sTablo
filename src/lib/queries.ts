@@ -18,6 +18,7 @@ import {
   users,
 } from "./db/schema";
 import { cachedQuery } from "./cache";
+import { avatarSrc } from "./avatar-src";
 
 /**
  * Relational `with` shared by every match loader so a ShapedMatch always carries
@@ -87,7 +88,7 @@ function shapeSide(parts: MatchRow["participants"], side: "A" | "B"): ShapedSide
       slug: r.player!.slug,
       username: r.player!.user?.username ?? null,
       colorIndex: r.player!.avatarColor,
-      imageUrl: r.player!.avatarUrl,
+      imageUrl: avatarSrc(r.player!.id, r.player!.avatarUrl),
     }));
   return {
     label: team ? team.name : ps.map((p) => p.name).join(" & "),
@@ -182,11 +183,13 @@ export const getMatchesCount = cachedQuery(async (): Promise<number> => {
 }, ["matches-count"]);
 
 export const getPlayersList = cachedQuery(
-  async () =>
-    db
+  async () => {
+    const rows = await db
       .select({ ...getTableColumns(players), username: linkedUsername })
       .from(players)
-      .orderBy(desc(players.eloSingles)),
+      .orderBy(desc(players.eloSingles));
+    return rows.map((r) => ({ ...r, avatarUrl: avatarSrc(r.id, r.avatarUrl) }));
+  },
   ["players-list"],
 );
 
@@ -348,8 +351,8 @@ const linkedUsername = sql<string | null>`(${db
   .limit(1)})`;
 
 export const getPlayerOptions = cachedQuery(
-  async () =>
-    db
+  async () => {
+    const rows = await db
       .select({
         id: players.id,
         name: players.name,
@@ -360,7 +363,9 @@ export const getPlayerOptions = cachedQuery(
       })
       .from(players)
       .where(eq(players.active, true))
-      .orderBy(players.name),
+      .orderBy(players.name);
+    return rows.map((r) => ({ ...r, avatarUrl: avatarSrc(r.id, r.avatarUrl) }));
+  },
   ["player-options"],
 );
 
@@ -370,8 +375,8 @@ export const getPlayerOptions = cachedQuery(
  * getPlayerOptions so the picker modal can show a rich row.
  */
 export const getPlayerMatchOptions = cachedQuery(
-  async () =>
-    db
+  async () => {
+    const rows = await db
       .select({
         id: players.id,
         name: players.name,
@@ -384,7 +389,9 @@ export const getPlayerMatchOptions = cachedQuery(
       })
       .from(players)
       .where(eq(players.active, true))
-      .orderBy(players.name),
+      .orderBy(players.name);
+    return rows.map((r) => ({ ...r, avatarUrl: avatarSrc(r.id, r.avatarUrl) }));
+  },
   ["player-match-options"],
 );
 
@@ -414,13 +421,14 @@ export const getPlayerSlugById = cachedQuery(
 
 /** All accounts with role + linked profile — for the admin account manager. */
 export async function getAllAccounts() {
-  return db
+  const rows = await db
     .select({
       userId: users.id,
       name: users.name,
       username: users.username,
       role: users.role,
       blocked: users.blocked,
+      playerId: players.id,
       slug: players.slug,
       avatarColor: players.avatarColor,
       avatarUrl: players.avatarUrl,
@@ -428,4 +436,8 @@ export async function getAllAccounts() {
     .from(users)
     .leftJoin(players, eq(users.playerId, players.id))
     .orderBy(asc(users.role), users.name);
+  return rows.map((r) => ({
+    ...r,
+    avatarUrl: r.playerId ? avatarSrc(r.playerId, r.avatarUrl) : null,
+  }));
 }
