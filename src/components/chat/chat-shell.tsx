@@ -20,6 +20,42 @@ import { fetchInbox } from "@/lib/actions/chat-actions";
 const INBOX_POLL_MS = 20000;
 
 /**
+ * localStorage key for the last-known inbox. The list is loaded client-side
+ * (the layout seeds it empty to keep the chrome instant), so without this a
+ * fresh entry into /chat shows nothing for the ~2-3s the server action takes.
+ * We cache the last render and paint it immediately on the next open, then let
+ * the normal fetch refresh it in the background.
+ */
+const INBOX_CACHE_KEY = "stablo-inbox-v1";
+
+/** Parse a cached inbox, reviving `lastMessageAt` back into a Date. */
+const reviveInbox = (raw: string): InboxItem[] =>
+  (JSON.parse(raw) as InboxItem[]).map((it) => ({
+    ...it,
+    lastMessageAt: new Date(it.lastMessageAt),
+  }));
+
+/** Shimmer rows shown on the very first load, when there's no cache yet. */
+function InboxSkeleton() {
+  return (
+    <div className="space-y-1.5" aria-hidden>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3"
+        >
+          <div className="h-11 w-11 shrink-0 animate-pulse rounded-full bg-surface-2" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="h-3.5 w-1/2 animate-pulse rounded bg-surface-2" />
+            <div className="h-3 w-3/4 animate-pulse rounded bg-surface-2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
  * Track the on-screen keyboard height via the VisualViewport API, as a pixel
  * number (0 when closed or unsupported). We deliberately keep the layout
  * viewport at its default and shrink the thread ourselves: this behaves
@@ -76,8 +112,42 @@ export function ChatShell({ initialInbox, children }: Props) {
       : null;
 
   const [inbox, setInbox] = useState<InboxItem[]>(initialInbox);
+  // False until the first server fetch settles. Drives the skeleton so the
+  // empty "Nessuna conversazione" copy can't flash during the initial load.
+  const [loaded, setLoaded] = useState(initialInbox.length > 0);
   const [query, setQuery] = useState("");
   const kb = useKeyboardInset();
+
+  // Paint the last-known conversation list instantly from cache while the fresh
+  // copy loads. Deferred a microtask so we don't setState synchronously inside
+  // the effect body; the guard keeps it from clobbering server-seeded data or a
+  // fetch that already landed.
+  useEffect(() => {
+    if (initialInbox.length) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      try {
+        const raw = localStorage.getItem(INBOX_CACHE_KEY);
+        if (raw) setInbox((prev) => (prev.length ? prev : reviveInbox(raw)));
+      } catch {
+        /* corrupt/disabled storage — ignore, the fetch will fill the list */
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialInbox.length]);
+
+  // Persist the latest list so the next open paints instantly from cache.
+  useEffect(() => {
+    if (!inbox.length) return;
+    try {
+      localStorage.setItem(INBOX_CACHE_KEY, JSON.stringify(inbox));
+    } catch {
+      /* quota / disabled — non-critical */
+    }
+  }, [inbox]);
 
   // Keep the conversation list fresh without a full navigation: poll while the
   // tab is visible, refresh when it regains focus, and — because the effect
@@ -97,6 +167,9 @@ export function ChatShell({ initialInbox, children }: Props) {
       } catch {
         // a dropped refresh is harmless — the next tick recovers
       } finally {
+        // Clear the skeleton after the first attempt, success or not, so a
+        // failing fetch can't leave it spinning forever.
+        if (!cancelled) setLoaded(true);
         busy = false;
       }
     };
@@ -160,7 +233,9 @@ export function ChatShell({ initialInbox, children }: Props) {
         </div>
 
         <div className="mt-3 space-y-1.5 lg:flex-1 lg:overflow-y-auto lg:px-3 lg:pb-3">
-          {filtered.length === 0 ? (
+          {!loaded && inbox.length === 0 ? (
+            <InboxSkeleton />
+          ) : filtered.length === 0 ? (
             <p className="px-2 py-8 text-center text-sm text-muted">
               {inbox.length === 0
                 ? "Nessuna conversazione. Tocca «Nuova» per scrivere a qualcuno."
