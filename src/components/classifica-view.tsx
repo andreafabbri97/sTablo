@@ -37,6 +37,7 @@ export function ClassificaView({
   season,
   seasonLabel,
   friendSlugs = [],
+  selfSlug = null,
 }: {
   overall: RankRow[];
   singles: RankRow[];
@@ -45,6 +46,9 @@ export function ClassificaView({
   season: SeasonStanding[];
   seasonLabel: string;
   friendSlugs?: string[];
+  /** The viewer's own player slug. In the leaderboard, «Amici» includes YOU —
+   *  you want the Elo ranking of your circle, yourself included. */
+  selfSlug?: string | null;
 }) {
   const [tab, setTab] = useState<Tab>("season");
   const [scope, setScope] = useState<FriendScope>("all");
@@ -52,6 +56,11 @@ export function ClassificaView({
   const friendSet = useMemo(() => new Set(friendSlugs), [friendSlugs]);
   const rows = tab === "singles" ? singles : tab === "doubles" ? doubles : overall;
   const players = rows.filter((r) => r.played > 0);
+
+  // Your circle = friends + you. The split is worth showing only when you
+  // actually have friends (your own row alone isn't a reason to show it), so
+  // `showScope` still keys off the friend count, not the circle.
+  const inCircle = (slug: string) => friendSet.has(slug) || slug === selfSlug;
 
   // The slugs visible in the active player-based tab — drives whether the
   // friend split is worth showing (only when both groups are non-empty).
@@ -70,8 +79,8 @@ export function ClassificaView({
     activeScope === "all"
       ? true
       : activeScope === "friends"
-        ? friendSet.has(slug)
-        : !friendSet.has(slug);
+        ? inCircle(slug)
+        : !inCircle(slug);
 
   const shownSeason = season.filter((r) => keep(r.player.slug));
   const shownPlayers = players.filter((r) => keep(r.player.slug));
@@ -141,10 +150,10 @@ export function ClassificaView({
       ) : shownPlayers.length === 0 ? (
         <EmptyState
           icon={<Trophy className="h-6 w-6" />}
-          title={activeScope === "friends" ? "Nessun amico in classifica" : "Classifica vuota"}
+          title={activeScope === "friends" ? "Cerchia ancora a secco" : "Classifica vuota"}
           description={
             activeScope === "friends"
-              ? "Nessuno dei tuoi amici ha ancora giocato partite di classifica."
+              ? "Né tu né i tuoi amici avete ancora giocato partite di classifica."
               : "Servono partite giocate per popolare il ranking."
           }
         />
@@ -203,10 +212,10 @@ function SeasonBoard({
     return (
       <EmptyState
         icon={<Trophy className="h-6 w-6" />}
-        title={filtered ? "Nessun amico in classifica" : "Stagione ancora a secco"}
+        title={filtered ? "Cerchia ancora a secco" : "Stagione ancora a secco"}
         description={
           filtered
-            ? `Nessuno dei tuoi amici ha giocato partite di classifica a ${seasonLabel}.`
+            ? `Né tu né i tuoi amici avete giocato partite di classifica a ${seasonLabel}.`
             : `Nessuna partita di classifica giocata a ${seasonLabel}. Scendi in campo!`
         }
       />
