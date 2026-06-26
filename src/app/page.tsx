@@ -16,6 +16,7 @@ import { sql } from "drizzle-orm";
 import { safe } from "@/lib/safe";
 import { cachedQuery } from "@/lib/cache";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { connection } from "next/server";
 
 
 const counts = cachedQuery(async () => {
@@ -43,6 +44,10 @@ export default function HomePage() {
 }
 
 async function HomeData() {
+  // Recent-match cards call timeAgo() (Date.now()); this content fetches only
+  // DB data (no cookies/params), so opt into request time first or the clock
+  // read is flagged during prerender.
+  await connection();
   const [ranking, recent, stats] = await Promise.all([
     safe(() => getRanking("overall"), []),
     safe(() => getRecentMatches(6), []),
