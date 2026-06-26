@@ -1,8 +1,10 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
+import { ACCOUNTS_TAG } from "@/lib/cache";
 
 export type SessionUser = {
   id: string;
@@ -14,24 +16,33 @@ export type SessionUser = {
 };
 
 /**
- * Has an admin blocked this account ("blocca profilo")? One indexed primary-key
- * lookup, deduped per request via React `cache` so the many getCurrentUser()
- * calls in a single render (layout + page + actions) share a single query.
- * Fails OPEN (returns false) on any DB error: a transient DB blip must never
- * lock the whole group out of the app.
+ * Has an admin blocked this account ("blocca profilo")?
+ *
+ * This runs on every authenticated page, so it was the main reason navigation
+ * still woke the (scale-to-zero) DB even on otherwise-cached pages. It's now
+ * cached across requests (per user, tag ACCOUNTS_TAG, ~1 min) so most clicks
+ * skip the DB entirely; block/unblock busts the tag so a ban still lands
+ * promptly. Still deduped per render via React `cache`, and fails OPEN on any DB
+ * error so a transient blip never locks the whole group out.
  */
-const isAccountBlocked = cache(async (userId: string): Promise<boolean> => {
-  try {
-    const row = await db.query.users.findFirst({
-      where: eq(users.id, userId),
-      columns: { blocked: true },
-    });
-    return row?.blocked ?? false;
-  } catch (error) {
-    console.error("[isAccountBlocked]", error);
-    return false;
-  }
-});
+const readBlocked = unstable_cache(
+  async (userId: string): Promise<boolean> => {
+    try {
+      const row = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+        columns: { blocked: true },
+      });
+      return row?.blocked ?? false;
+    } catch (error) {
+      console.error("[isAccountBlocked]", error);
+      return false;
+    }
+  },
+  ["account-blocked"],
+  { tags: [ACCOUNTS_TAG], revalidate: 60 },
+);
+
+const isAccountBlocked = cache((userId: string) => readBlocked(userId));
 
 export async function getCurrentUser(): Promise<SessionUser | null> {
   const session = await auth();
